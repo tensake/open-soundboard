@@ -1,2 +1,3 @@
-# open-soundboard
+# Open SoundBoard
+
 Soundboard written in Rust
