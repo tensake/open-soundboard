@@ -47,4 +47,4 @@ jobs:
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
       - name: Build Tauri App
-        run: bun tauri build --debug
+        run: bun tauri build --debug --no-bundle
