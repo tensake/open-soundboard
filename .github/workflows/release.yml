@@ -15,16 +15,22 @@ jobs:
         include:
           - platform: "macos-latest"
             target: "aarch64-apple-darwin"
+            name: "macOS-ARM"
           - platform: "macos-latest"
             target: "x86_64-apple-darwin"
+            name: "macOS-x86"
           - platform: "ubuntu-22.04"
             target: ""
+            name: "Linux-x86"
           - platform: "ubuntu-22.04-arm"
             target: ""
+            name: "Linux-ARM"
           - platform: "windows-latest"
             target: ""
+            name: "Windows-x86"
           - platform: "windows-11-arm"
             target: ""
+            name: "Windows-ARM"
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -70,4 +76,4 @@ jobs:
           prerelease: false
           generateReleaseNotes: true
           args: ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
-          assetNamePattern: "[name]-v[version]_${{ matrix.platform }}[ext]"
+          assetNamePattern: "[name]-v[version]_${{ matrix.name }}[ext]"
