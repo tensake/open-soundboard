@@ -39,6 +39,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: "src-tauri -> target"
+          key: ${{ matrix.platform }}
 
       - name: Install Frontend Dependencies
         run: bun install
