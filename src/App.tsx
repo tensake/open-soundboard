@@ -2,6 +2,10 @@ import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
 const play = (path: string) => invoke("play_sound", { path });
+const pause = (id: number) => invoke("pause_sound", { id });
+const resume = (id: number) => invoke("resume_sound", { id });
+const stop = (id: number) => invoke("stop_sound", { id });
+const stopAll = () => invoke("stop_all_sounds");
 
 export default function App() {
   return (
@@ -26,6 +30,10 @@ export default function App() {
         >
           Play Sound 2
         </button>
+        <button onClick={() => pause(1)}>Pause Sound 1</button>
+        <button onClick={() => resume(1)}>Resume Sound 1</button>
+        <button onClick={() => stop(1)}>Stop Sound 1</button>
+        <button onClick={() => stopAll()}>Stop All Sounds</button>
       </div>
     </main>
   );
