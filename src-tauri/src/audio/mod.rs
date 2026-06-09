@@ -4,12 +4,60 @@ use rubato::{
     calculate_cutoff, Async, FixedAsync, Indexing, Resampler, SincInterpolationParameters,
     SincInterpolationType, WindowFunction,
 };
+use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use symphonia::core::{
     audio::SampleBuffer, codecs::DecoderOptions, formats::FormatOptions, io::MediaSourceStream,
     meta::MetadataOptions, probe::Hint,
 };
+
+/// State of the sound playback.
+#[repr(u8)]
+pub enum PlaybackState {
+    Playing = 0,
+    Paused = 1,
+    Stopped = 2,
+}
+
+impl From<u8> for PlaybackState {
+    fn from(v: u8) -> Self {
+        match v {
+            1 => Self::Paused,
+            2 => Self::Stopped,
+            _ => Self::Playing,
+        }
+    }
+}
+
+/// Handle to control playback of a sound.
+pub struct PlaybackHandle {
+    state: Arc<AtomicU8>,
+}
+
+impl PlaybackHandle {
+    pub fn pause(&self) {
+        self.state
+            .store(PlaybackState::Paused as u8, Ordering::Relaxed);
+    }
+    pub fn resume(&self) {
+        self.state
+            .store(PlaybackState::Playing as u8, Ordering::Relaxed);
+    }
+    pub fn stop(&self) {
+        self.state
+            .store(PlaybackState::Stopped as u8, Ordering::Relaxed);
+    }
+
+    // Will be used later for removing finished sounds
+    #[allow(unused)]
+    pub fn is_done(&self) -> bool {
+        matches!(
+            PlaybackState::from(self.state.load(Ordering::Relaxed)),
+            PlaybackState::Stopped
+        )
+    }
+}
 
 fn resample_chunk(
     chunk: &[f32],
@@ -57,6 +105,7 @@ fn process_audio_loop(
     cable_rate: u32,
     cable_channels: usize,
     tx: mpsc::SyncSender<Vec<f32>>,
+    state: Arc<AtomicU8>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Decode MP3
     let file =
@@ -119,6 +168,14 @@ fn process_audio_loop(
 
     // Process audio chunks
     loop {
+        // Respect stop signal from handle
+        if matches!(
+            PlaybackState::from(state.load(Ordering::Relaxed)),
+            PlaybackState::Stopped
+        ) {
+            break;
+        }
+
         // Read the next packet and verify track id
         let packet = match format.next_packet() {
             Ok(p) => p,
@@ -164,38 +221,56 @@ fn process_audio_loop(
     Ok(())
 }
 
-pub fn play_mp3(path: &str, device: Arc<cpal::Device>) -> Result<(), Box<dyn std::error::Error>> {
+/// Play an MP3 file.
+///
+/// Returns a handle to control playback.
+pub fn play_mp3(
+    path: &str,
+    device: Arc<cpal::Device>,
+) -> Result<PlaybackHandle, Box<dyn std::error::Error>> {
     let config = device
         .default_output_config()
         .map_err(|e| format!("Failed to get output device config: {e}"))?;
     let cable_rate = config.sample_rate().0;
     let cable_channels = config.channels() as usize;
 
-    // Channel for audio for cable
+    // Channel for audio for cable, initialize playback state
     let (tx, rx) = mpsc::sync_channel::<Vec<f32>>(8);
+    let state = Arc::new(AtomicU8::new(PlaybackState::Playing as u8));
+
+    // Channel to signal when the audio thread is ready
+    let (ready_tx, ready_rx) = mpsc::sync_channel::<Result<(), String>>(1);
 
     // Spawn audio processing thread
     let path = path.to_owned();
+    let state_process = state.clone();
     std::thread::spawn(move || {
-        if let Err(e) = process_audio_loop(&path, cable_rate, cable_channels, tx) {
+        if let Err(e) = process_audio_loop(&path, cable_rate, cable_channels, tx, state_process) {
             eprintln!("Error while processing audio file: {e}");
         }
     });
 
-    // Create leftover buffer and done flag for stream callback
+    // Create output stream in a separate thread.
+    // Spawn everything in a thread because Stream is !Send.
     let leftover = Arc::new(Mutex::new(Vec::<f32>::new()));
-    let leftover_cb = leftover.clone();
-    let done = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let done_cb = done.clone();
-
-    // Build output stream
-    let stream = device
-        .build_output_stream(
+    let state_cb = state.clone();
+    let state_kt = state.clone();
+    std::thread::spawn(move || {
+        let leftover_cb = leftover.clone();
+        let stream = match device.build_output_stream(
             &config.into(),
             move |data: &mut [f32], _| {
+                match PlaybackState::from(state_cb.load(Ordering::Relaxed)) {
+                    PlaybackState::Paused | PlaybackState::Stopped => {
+                        data.fill(0.0);
+                        return;
+                    }
+                    PlaybackState::Playing => {}
+                }
+
                 let mut buf = leftover_cb.lock().unwrap();
                 let mut written = 0;
-                
+
                 // Write until we fill output buffer
                 while written < data.len() {
                     if buf.is_empty() {
@@ -207,10 +282,10 @@ pub fn play_mp3(path: &str, device: Arc<cpal::Device>) -> Result<(), Box<dyn std
                                 data[written..].fill(0.0);
                                 return;
                             }
-                            // Flag done if the channel is closed
+                            // Flag as stopped if the channel is closed
                             Err(mpsc::TryRecvError::Disconnected) => {
                                 data[written..].fill(0.0);
-                                done_cb.store(true, std::sync::atomic::Ordering::Relaxed);
+                                state_cb.store(PlaybackState::Stopped as u8, Ordering::Relaxed);
                                 return;
                             }
                         }
@@ -228,14 +303,38 @@ pub fn play_mp3(path: &str, device: Arc<cpal::Device>) -> Result<(), Box<dyn std
             },
             |e| eprintln!("{e}"),
             None,
-        )
-        .map_err(|e| format!("Failed to build output stream: {e}"))?;
+        ) {
+            Ok(s) => s,
+            Err(e) => {
+                let _ = ready_tx.send(Err(format!("Failed to build output stream: {e}")));
+                return;
+            }
+        };
 
-    // Play stream and wait until done
-    stream.play().map_err(|e| format!("Failed to play output stream: {e}"))?;
-    while !done.load(std::sync::atomic::Ordering::Relaxed) {
-        std::thread::sleep(std::time::Duration::from_millis(10));
-    }
+        // Play stream
+        if let Err(e) = stream.play() {
+            let _ = ready_tx.send(Err(format!("Failed to play output stream: {e}")));
+            return;
+        }
 
-    Ok(())
+        // Mark stream as successful
+        let _ = ready_tx.send(Ok(()));
+
+        // Keep stream alive until stopped
+        while !matches!(
+            PlaybackState::from(state_kt.load(Ordering::Relaxed)),
+            PlaybackState::Stopped
+        ) {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        drop(stream);
+    });
+
+    // Block until stream is built and playing (or failed)
+    ready_rx
+        .recv()
+        .map_err(|_| "Audio thread died unexpectedly")?
+        .map_err(|e| e)?;
+
+    Ok(PlaybackHandle { state })
 }

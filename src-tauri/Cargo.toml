@@ -28,3 +28,4 @@ rubato = "3.0"
 ringbuf = "0.4"
 symphonia = { version = "0.5", features = ["mp3"] }
 audioadapter-buffers = "3.0"
+parking_lot = "0.12.5"
