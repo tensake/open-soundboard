@@ -2662,6 +2662,7 @@ version = "0.1.0"
 dependencies = [
  "audioadapter-buffers",
  "cpal",
+ "parking_lot",
  "ringbuf",
  "rodio",
  "rubato",
