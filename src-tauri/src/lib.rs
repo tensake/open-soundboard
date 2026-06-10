@@ -8,7 +8,7 @@ mod audio;
 
 struct AppState {
     cable_device: Arc<cpal::Device>,
-    playing_sounds: Mutex<HashMap<u32, audio::PlaybackHandle>>,
+    playing_sounds: Arc<Mutex<HashMap<u32, audio::PlaybackHandle>>>,
     next_id: AtomicU32,
 }
 
@@ -44,6 +44,13 @@ fn stop_sound(id: u32, state: State<AppState>) {
 }
 
 #[tauri::command]
+fn set_general_volume(volume: f32, state: State<AppState>) {
+    for (_, h) in state.playing_sounds.lock().iter() {
+        h.set_volume(volume);
+    }
+}
+
+#[tauri::command]
 fn set_volume(id: u32, volume: f32, state: State<AppState>) {
     if let Some(h) = state.playing_sounds.lock().get(&id) {
         h.set_volume(volume);
@@ -59,10 +66,19 @@ fn stop_all_sounds(state: State<AppState>) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let playing_sounds = Arc::new(Mutex::new(HashMap::<u32, audio::PlaybackHandle>::new()));
+
+    // Sound cleanup thread
+    let playing_sounds_cleanup = playing_sounds.clone();
+    std::thread::spawn(move || loop {
+        std::thread::sleep(std::time::Duration::from_secs(1));
+        playing_sounds_cleanup.lock().retain(|_, h| !h.is_done());
+    });
+
     tauri::Builder::default()
         .manage(AppState {
             cable_device: Arc::new(audio::get_cable_device()),
-            playing_sounds: Mutex::new(HashMap::new()),
+            playing_sounds,
             next_id: AtomicU32::new(0),
         })
         .plugin(tauri_plugin_opener::init())
@@ -71,6 +87,7 @@ pub fn run() {
             pause_sound,
             resume_sound,
             stop_sound,
+            set_general_volume,
             set_volume,
             stop_all_sounds
         ])

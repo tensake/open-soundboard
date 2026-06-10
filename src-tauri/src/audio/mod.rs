@@ -61,8 +61,7 @@ impl PlaybackHandle {
         self.volume.store(clamped.to_bits(), Ordering::Relaxed);
     }
 
-    // Will be used later for removing finished sounds
-    #[allow(unused)]
+    /// Check if the sound is completed.
     pub fn is_done(&self) -> bool {
         matches!(
             PlaybackState::from(self.state.load(Ordering::Relaxed)),

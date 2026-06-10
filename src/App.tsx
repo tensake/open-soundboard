@@ -7,8 +7,7 @@ const playSound = (path: string, volume: number) =>
 const pauseSound = (id: number) => invoke("pause_sound", { id });
 const resumeSound = (id: number) => invoke("resume_sound", { id });
 const stopSound = (id: number) => invoke("stop_sound", { id });
-const setVolume = (id: number, volume: number) =>
-  invoke("set_volume", { id, volume });
+const setVolume = (volume: number) => invoke("set_general_volume", { volume });
 const stopAllSounds = () => invoke("stop_all_sounds");
 
 const SOUNDS = [
@@ -47,8 +46,7 @@ export default function App() {
   const handleVolume = (e: Event) => {
     const value = parseFloat((e.currentTarget as HTMLInputElement).value);
     setVolumePct(value);
-    const id = activeId();
-    if (id != null) setVolume(id, value / 100);
+    setVolume(value / 100);
   };
 
   return (
