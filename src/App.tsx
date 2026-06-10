@@ -1,39 +1,82 @@
 import { invoke } from "@tauri-apps/api/core";
+import { createSignal } from "solid-js";
 import "./App.css";
 
-const play = (path: string) => invoke("play_sound", { path });
-const pause = (id: number) => invoke("pause_sound", { id });
-const resume = (id: number) => invoke("resume_sound", { id });
-const stop = (id: number) => invoke("stop_sound", { id });
-const stopAll = () => invoke("stop_all_sounds");
+const playSound = (path: string, volume: number) =>
+  invoke<number>("play_sound", { path, volume });
+const pauseSound = (id: number) => invoke("pause_sound", { id });
+const resumeSound = (id: number) => invoke("resume_sound", { id });
+const stopSound = (id: number) => invoke("stop_sound", { id });
+const setVolume = (id: number, volume: number) =>
+  invoke("set_volume", { id, volume });
+const stopAllSounds = () => invoke("stop_all_sounds");
+
+const SOUNDS = [
+  {
+    label: "Sound 1",
+    path: "C:/Users/kitfc/dev/open-soundboard/src/test_assets/sound1.mp3",
+  },
+  {
+    label: "Sound 2",
+    path: "C:/Users/kitfc/dev/open-soundboard/src/test_assets/sound2.mp3",
+  },
+];
 
 export default function App() {
+  const [volumePct, setVolumePct] = createSignal(100);
+  const [activeId, setActiveId] = createSignal<number | null>(null);
+
+  const handlePlay = async (path: string) => {
+    const id = await playSound(path, volumePct() / 100);
+    setActiveId(id);
+  };
+
+  const handlePause = () => {
+    const id = activeId();
+    if (id != null) pauseSound(id);
+  };
+  const handleResume = () => {
+    const id = activeId();
+    if (id != null) resumeSound(id);
+  };
+  const handleStop = () => {
+    const id = activeId();
+    if (id != null) stopSound(id);
+  };
+
+  const handleVolume = (e: Event) => {
+    const value = parseFloat((e.currentTarget as HTMLInputElement).value);
+    setVolumePct(value);
+    const id = activeId();
+    if (id != null) setVolume(id, value / 100);
+  };
+
   return (
     <main class="container">
       <h1>SoundBoard</h1>
       <div class="buttons">
-        <button
-          onClick={() =>
-            play(
-              "C:/Users/kitfc/dev/open-soundboard/src/test_assets/sound1.mp3",
-            )
-          }
-        >
-          Play Sound 1
-        </button>
-        <button
-          onClick={() =>
-            play(
-              "C:/Users/kitfc/dev/open-soundboard/src/test_assets/sound2.mp3",
-            )
-          }
-        >
-          Play Sound 2
-        </button>
-        <button onClick={() => pause(1)}>Pause Sound 1</button>
-        <button onClick={() => resume(1)}>Resume Sound 1</button>
-        <button onClick={() => stop(1)}>Stop Sound 1</button>
-        <button onClick={() => stopAll()}>Stop All Sounds</button>
+        <h2>Sounds</h2>
+
+        {SOUNDS.map((s) => (
+          <button onClick={() => handlePlay(s.path)}>{s.label}</button>
+        ))}
+
+        <h2>Controls</h2>
+        <button onClick={handlePause}>Pause</button>
+        <button onClick={handleResume}>Resume</button>
+        <button onClick={handleStop}>Stop</button>
+        <button onClick={() => stopAllSounds()}>Stop All</button>
+
+        <h2>Volume</h2>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          value={volumePct()}
+          onInput={handleVolume}
+        />
+        <span>{volumePct()}%</span>
       </div>
     </main>
   );
