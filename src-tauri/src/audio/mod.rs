@@ -104,7 +104,9 @@ fn process_audio_loop(
     path: &str,
     cable_rate: u32,
     cable_channels: usize,
+    local_channels: usize,
     tx: mpsc::SyncSender<Vec<f32>>,
+    tx_local: mpsc::SyncSender<Vec<f32>>,
     state: Arc<AtomicU8>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Decode MP3
@@ -200,7 +202,7 @@ fn process_audio_loop(
         buf.copy_interleaved_ref(decoded);
         let mut chunk = buf.samples().to_vec();
 
-        // Downmix if needed
+        // Downmix for cable if needed
         if mp3_channels == 2 && cable_channels == 1 {
             chunk = chunk
                 .chunks_exact(2)
@@ -213,7 +215,15 @@ fn process_audio_loop(
             chunk = resample_chunk(&chunk, r, resample_channels)?;
         }
 
-        if tx.send(chunk).is_err() {
+        // Upmix for local output if needed
+        let local_chunk = if cable_channels == 1 && 2 == local_channels {
+            chunk.iter().flat_map(|&s| [s, s]).collect()
+        } else {
+            chunk.clone()
+        };
+
+        // Send to local and cable output stream
+        if tx.send(chunk).is_err() || tx_local.send(local_chunk).is_err() {
             break;
         }
     }
@@ -221,35 +231,13 @@ fn process_audio_loop(
     Ok(())
 }
 
-/// Play an MP3 file.
-///
-/// Returns a handle to control playback.
-pub fn play_mp3(
-    path: &str,
+fn spawn_output_stream(
     device: Arc<cpal::Device>,
-) -> Result<PlaybackHandle, Box<dyn std::error::Error>> {
-    let config = device
-        .default_output_config()
-        .map_err(|e| format!("Failed to get output device config: {e}"))?;
-    let cable_rate = config.sample_rate().0;
-    let cable_channels = config.channels() as usize;
-
-    // Channel for audio for cable, initialize playback state
-    let (tx, rx) = mpsc::sync_channel::<Vec<f32>>(8);
-    let state = Arc::new(AtomicU8::new(PlaybackState::Playing as u8));
-
-    // Channel to signal when the audio thread is ready
-    let (ready_tx, ready_rx) = mpsc::sync_channel::<Result<(), String>>(1);
-
-    // Spawn audio processing thread
-    let path = path.to_owned();
-    let state_process = state.clone();
-    std::thread::spawn(move || {
-        if let Err(e) = process_audio_loop(&path, cable_rate, cable_channels, tx, state_process) {
-            eprintln!("Error while processing audio file: {e}");
-        }
-    });
-
+    config: cpal::SupportedStreamConfig,
+    rx: mpsc::Receiver<Vec<f32>>,
+    state: Arc<AtomicU8>,
+    ready_tx: Option<mpsc::SyncSender<Result<(), String>>>,
+) {
     // Create output stream in a separate thread.
     // Spawn everything in a thread because Stream is !Send.
     let leftover = Arc::new(Mutex::new(Vec::<f32>::new()));
@@ -306,19 +294,25 @@ pub fn play_mp3(
         ) {
             Ok(s) => s,
             Err(e) => {
-                let _ = ready_tx.send(Err(format!("Failed to build output stream: {e}")));
+                if let Some(tx) = ready_tx {
+                    let _ = tx.send(Err(format!("Failed to build output stream: {e}")));
+                }
                 return;
             }
         };
 
         // Play stream
         if let Err(e) = stream.play() {
-            let _ = ready_tx.send(Err(format!("Failed to play output stream: {e}")));
+            if let Some(tx) = ready_tx {
+                let _ = tx.send(Err(format!("Failed to play stream: {e}")));
+            }
             return;
         }
 
         // Mark stream as successful
-        let _ = ready_tx.send(Ok(()));
+        if let Some(tx) = ready_tx {
+            let _ = tx.send(Ok(()));
+        }
 
         // Keep stream alive until stopped
         while !matches!(
@@ -329,8 +323,62 @@ pub fn play_mp3(
         }
         drop(stream);
     });
+}
 
-    // Block until stream is built and playing (or failed)
+/// Play an MP3 file.
+///
+/// Returns a handle to control playback.
+pub fn play_mp3(
+    path: &str,
+    device: Arc<cpal::Device>,
+) -> Result<PlaybackHandle, Box<dyn std::error::Error>> {
+    let config = device
+        .default_output_config()
+        .map_err(|e| format!("Failed to get output device config: {e}"))?;
+    let cable_rate = config.sample_rate().0;
+    let cable_channels = config.channels() as usize;
+
+    // Get local device info
+    let local_device = Arc::new(
+        cpal::default_host()
+            .default_output_device()
+            .ok_or("No default output device found")?,
+    );
+    let local_config = local_device
+        .default_output_config()
+        .map_err(|e| format!("Failed to get local device config: {e}"))?;
+    let local_channels = local_config.channels() as usize;
+
+    // Initialize channels and state
+    let (tx, rx) = mpsc::sync_channel::<Vec<f32>>(8);
+    let (tx_local, rx_local) = mpsc::sync_channel::<Vec<f32>>(8);
+    let state = Arc::new(AtomicU8::new(PlaybackState::Playing as u8));
+    let (ready_tx, ready_rx) = mpsc::sync_channel::<Result<(), String>>(1);
+
+    // Spawn audio processing thread
+    let path = path.to_owned();
+    let state_process = state.clone();
+    std::thread::spawn(move || {
+        if let Err(e) = process_audio_loop(
+            &path,
+            cable_rate,
+            cable_channels,
+            local_channels,
+            tx,
+            tx_local,
+            state_process,
+        ) {
+            eprintln!("Error while processing audio file: {e}");
+        }
+    });
+
+    // Virtual cable playback
+    spawn_output_stream(device, config, rx, state.clone(), Some(ready_tx));
+
+    // Local stream playback
+    spawn_output_stream(local_device, local_config, rx_local, state.clone(), None);
+
+    // Wait until the output stream is fully ready
     ready_rx
         .recv()
         .map_err(|_| "Audio thread died unexpectedly")?
