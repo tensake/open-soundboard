@@ -4,7 +4,7 @@ use rubato::{
     calculate_cutoff, Async, FixedAsync, Indexing, Resampler, SincInterpolationParameters,
     SincInterpolationType, WindowFunction,
 };
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use symphonia::core::{
@@ -33,20 +33,32 @@ impl From<u8> for PlaybackState {
 /// Handle to control playback of a sound.
 pub struct PlaybackHandle {
     state: Arc<AtomicU8>,
+    volume: Arc<AtomicU32>,
 }
 
 impl PlaybackHandle {
+    /// Pause audio playback.
     pub fn pause(&self) {
         self.state
             .store(PlaybackState::Paused as u8, Ordering::Relaxed);
     }
+
+    /// Resume audio playback after pausing.
     pub fn resume(&self) {
         self.state
             .store(PlaybackState::Playing as u8, Ordering::Relaxed);
     }
+
+    /// Stop audio playback.
     pub fn stop(&self) {
         self.state
             .store(PlaybackState::Stopped as u8, Ordering::Relaxed);
+    }
+
+    /// Set the volume level for the playback.
+    pub fn set_volume(&self, volume: f32) {
+        let clamped = volume.clamp(0.0, 1.0);
+        self.volume.store(clamped.to_bits(), Ordering::Relaxed);
     }
 
     // Will be used later for removing finished sounds
@@ -236,6 +248,7 @@ fn spawn_output_stream(
     config: cpal::SupportedStreamConfig,
     rx: mpsc::Receiver<Vec<f32>>,
     state: Arc<AtomicU8>,
+    volume: Arc<AtomicU32>,
     ready_tx: Option<mpsc::SyncSender<Result<(), String>>>,
 ) {
     // Create output stream in a separate thread.
@@ -256,6 +269,8 @@ fn spawn_output_stream(
                     PlaybackState::Playing => {}
                 }
 
+                let raw_vol = f32::from_bits(volume.load(Ordering::Relaxed));
+                let gain = raw_vol * raw_vol;
                 let mut buf = leftover_cb.lock().unwrap();
                 let mut written = 0;
 
@@ -281,7 +296,9 @@ fn spawn_output_stream(
 
                     // Copy as much as fits from leftover into output
                     let take = (data.len() - written).min(buf.len());
-                    data[written..written + take].copy_from_slice(&buf[..take]);
+                    for (dst, src) in data[written..written + take].iter_mut().zip(&buf[..take]) {
+                        *dst = src * gain;
+                    }
 
                     // Remove what was consumed from the buffer
                     buf.drain(..take);
@@ -331,7 +348,11 @@ fn spawn_output_stream(
 pub fn play_mp3(
     path: &str,
     device: Arc<cpal::Device>,
+    volume: f32,
 ) -> Result<PlaybackHandle, Box<dyn std::error::Error>> {
+    let volume = Arc::new(AtomicU32::new(volume.clamp(0.0, 1.0).to_bits()));
+
+    // Get cable device info
     let config = device
         .default_output_config()
         .map_err(|e| format!("Failed to get output device config: {e}"))?;
@@ -373,10 +394,24 @@ pub fn play_mp3(
     });
 
     // Virtual cable playback
-    spawn_output_stream(device, config, rx, state.clone(), Some(ready_tx));
+    spawn_output_stream(
+        device,
+        config,
+        rx,
+        state.clone(),
+        volume.clone(),
+        Some(ready_tx),
+    );
 
     // Local stream playback
-    spawn_output_stream(local_device, local_config, rx_local, state.clone(), None);
+    spawn_output_stream(
+        local_device,
+        local_config,
+        rx_local,
+        state.clone(),
+        volume.clone(),
+        None,
+    );
 
     // Wait until the output stream is fully ready
     ready_rx
@@ -384,5 +419,5 @@ pub fn play_mp3(
         .map_err(|_| "Audio thread died unexpectedly")?
         .map_err(|e| e)?;
 
-    Ok(PlaybackHandle { state })
+    Ok(PlaybackHandle { state, volume })
 }

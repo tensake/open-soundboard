@@ -13,9 +13,10 @@ struct AppState {
 }
 
 #[tauri::command]
-fn play_sound(path: String, state: State<AppState>) -> Result<u32, String> {
+fn play_sound(path: String, volume: Option<f32>, state: State<AppState>) -> Result<u32, String> {
     let device = state.cable_device.clone();
-    let handle = audio::play_mp3(&path, device).map_err(|e| e.to_string())?;
+    let handle =
+        audio::play_mp3(&path, device, volume.unwrap_or(1.0)).map_err(|e| e.to_string())?;
     let id = state.next_id.fetch_add(1, Ordering::Relaxed);
     state.playing_sounds.lock().insert(id, handle);
     Ok(id)
@@ -43,6 +44,13 @@ fn stop_sound(id: u32, state: State<AppState>) {
 }
 
 #[tauri::command]
+fn set_volume(id: u32, volume: f32, state: State<AppState>) {
+    if let Some(h) = state.playing_sounds.lock().get(&id) {
+        h.set_volume(volume);
+    }
+}
+
+#[tauri::command]
 fn stop_all_sounds(state: State<AppState>) {
     for (_, h) in state.playing_sounds.lock().drain() {
         h.stop();
@@ -63,6 +71,7 @@ pub fn run() {
             pause_sound,
             resume_sound,
             stop_sound,
+            set_volume,
             stop_all_sounds
         ])
         .run(tauri::generate_context!())
