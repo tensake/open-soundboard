@@ -102,14 +102,14 @@ fn resample_chunk(
     Ok(out)
 }
 
-/// On Windows, get virtual cable device that contains CABLE Input in the name.
+/// On Windows, get VB-Audio virtual cable device.
 #[cfg(target_os = "windows")]
 pub fn get_cable_device() -> cpal::Device {
     let host = cpal::default_host();
     host.output_devices()
         .unwrap()
         .find(|d| d.name().unwrap_or_default().contains("CABLE Input"))
-        .expect("Virtual Cable not found")
+        .expect("Virtual Cable not found. Install on https://vb-audio.com/Cable/")
 }
 
 #[cfg(target_os = "linux")]
@@ -144,6 +144,24 @@ pub fn get_cable_device() -> cpal::Device {
             name.contains("OpenSoundBoard")
         })
         .expect("Virtual sink not found")
+}
+
+/// On macOS, get BlackHole virtual audio device.
+#[cfg(target_os = "macos")]
+pub fn get_cable_device() -> cpal::Device {
+    let host = cpal::default_host();
+    host.output_devices()
+        .unwrap()
+        .find(|d| d.name().unwrap_or_default().contains("BlackHole"))
+        .expect(
+            "BlackHole not found — install it from https://github.com/ExistentialAudio/BlackHole",
+        )
+}
+
+/// Fallback for any other unsupported OS.
+#[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
+pub fn get_cable_device() -> cpal::Device {
+    panic!("Your OS is not supported.")
 }
 
 fn process_audio_loop(
