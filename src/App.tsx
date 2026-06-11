@@ -13,11 +13,11 @@ const stopAllSounds = () => invoke("stop_all_sounds");
 const SOUNDS = [
   {
     label: "Sound 1",
-    path: "C:/Users/kitfc/dev/open-soundboard/src/test_assets/sound1.mp3",
+    path: "/home/kitfc/Dev/open-soundboard/src/test_assets/sound1.mp3",
   },
   {
     label: "Sound 2",
-    path: "C:/Users/kitfc/dev/open-soundboard/src/test_assets/sound2.mp3",
+    path: "/home/kitfc/Dev/open-soundboard/src/test_assets/sound2.mp3",
   },
 ];
 

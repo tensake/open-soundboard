@@ -114,19 +114,40 @@ pub fn get_cable_device() -> cpal::Device {
 
 #[cfg(target_os = "linux")]
 fn ensure_virtual_sink() {
+    // Unload any existing OpenSoundBoard modules first
+    let _ = std::process::Command::new("pactl")
+        .args(["unload-module", "module-remap-source"])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status();
+    
     // Check if sink already exists
     let check = std::process::Command::new("pactl")
         .args(["get-sink-info", "OpenSoundBoard"])
         .output();
 
     if check.map(|o| !o.status.success()).unwrap_or(true) {
+        // Create null sink
         let _ = std::process::Command::new("pactl")
             .args([
                 "load-module",
                 "module-null-sink",
                 "sink_name=OpenSoundBoard",
-                "sink_properties=device.description=OpenSoundBoard",
+                "sink_properties=device.description=OpenSoundBoard_Output device.class=abstract",
             ])
+            .stdout(std::process::Stdio::null())
+            .status();
+        
+        // Create virtual microphone
+        let _ = std::process::Command::new("pactl")
+            .args([
+                "load-module",
+                "module-remap-source",
+                "master=OpenSoundBoard.monitor",
+                "source_name=OpenSoundBoard_Input",
+                "source_properties=device.description=OpenSoundBoard_Input device.class=abstract device.type=virtual",
+            ])
+            .stdout(std::process::Stdio::null())
             .status();
     }
 }
@@ -140,8 +161,9 @@ pub fn get_cable_device() -> cpal::Device {
     host.output_devices()
         .unwrap()
         .find(|d| {
-            let name = d.name().unwrap_or_default();
-            name.contains("OpenSoundBoard")
+            d.description()
+                .map(|desc| desc.name().contains("OpenSoundBoard"))
+                .unwrap_or(false)
         })
         .expect("Virtual sink not found")
 }
@@ -311,7 +333,7 @@ fn spawn_output_stream(
     std::thread::spawn(move || {
         let leftover_cb = leftover.clone();
         let stream = match device.build_output_stream(
-            &config.into(),
+            config.into(),
             move |data: &mut [f32], _| {
                 match PlaybackState::from(state_cb.load(Ordering::Relaxed)) {
                     PlaybackState::Paused | PlaybackState::Stopped => {
@@ -408,7 +430,7 @@ pub fn play_mp3(
     let config = device
         .default_output_config()
         .map_err(|e| format!("Failed to get output device config: {e}"))?;
-    let cable_rate = config.sample_rate().0;
+    let cable_rate = config.sample_rate();
     let cable_channels = config.channels() as usize;
 
     // Get local device info
