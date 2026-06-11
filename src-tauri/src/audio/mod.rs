@@ -102,13 +102,48 @@ fn resample_chunk(
     Ok(out)
 }
 
-/// Get virtual cable device that contains CABLE Input in the name.
+/// On Windows, get virtual cable device that contains CABLE Input in the name.
+#[cfg(target_os = "windows")]
 pub fn get_cable_device() -> cpal::Device {
     let host = cpal::default_host();
     host.output_devices()
         .unwrap()
         .find(|d| d.name().unwrap_or_default().contains("CABLE Input"))
         .expect("Virtual Cable not found")
+}
+
+#[cfg(target_os = "linux")]
+fn ensure_virtual_sink() {
+    // Check if sink already exists
+    let check = std::process::Command::new("pactl")
+        .args(["get-sink-info", "OpenSoundBoard"])
+        .output();
+
+    if check.map(|o| !o.status.success()).unwrap_or(true) {
+        let _ = std::process::Command::new("pactl")
+            .args([
+                "load-module",
+                "module-null-sink",
+                "sink_name=OpenSoundBoard",
+                "sink_properties=device.description=OpenSoundBoard",
+            ])
+            .status();
+    }
+}
+
+/// On Linux, get virtual sink.
+#[cfg(target_os = "linux")]
+pub fn get_cable_device() -> cpal::Device {
+    ensure_virtual_sink();
+
+    let host = cpal::default_host();
+    host.output_devices()
+        .unwrap()
+        .find(|d| {
+            let name = d.name().unwrap_or_default();
+            name.contains("OpenSoundBoard")
+        })
+        .expect("Virtual sink not found")
 }
 
 fn process_audio_loop(
