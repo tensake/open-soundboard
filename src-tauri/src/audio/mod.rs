@@ -108,7 +108,11 @@ pub fn get_cable_device() -> cpal::Device {
     let host = cpal::default_host();
     host.output_devices()
         .unwrap()
-        .find(|d| d.name().unwrap_or_default().contains("CABLE Input"))
+        .find(|d| {
+            d.description()
+                .map(|desc| desc.name().contains("CABLE Input"))
+                .unwrap_or(false)
+        })
         .expect("Virtual Cable not found. Install on https://vb-audio.com/Cable/")
 }
 
@@ -174,7 +178,11 @@ pub fn get_cable_device() -> cpal::Device {
     let host = cpal::default_host();
     host.output_devices()
         .unwrap()
-        .find(|d| d.name().unwrap_or_default().contains("BlackHole"))
+        .find(|d| {
+            d.description()
+                .map(|desc| desc.name().contains("BlackHole"))
+                .unwrap_or(false)
+        })
         .expect(
             "BlackHole not found — install it from https://github.com/ExistentialAudio/BlackHole",
         )
