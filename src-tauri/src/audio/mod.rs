@@ -4,7 +4,7 @@ use rubato::{
     calculate_cutoff, Async, FixedAsync, Indexing, Resampler, SincInterpolationParameters,
     SincInterpolationType, WindowFunction,
 };
-use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU64, AtomicU8, Ordering};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use symphonia::core::{
@@ -34,6 +34,9 @@ impl From<u8> for PlaybackState {
 pub struct PlaybackHandle {
     state: Arc<AtomicU8>,
     volume: Arc<AtomicU32>,
+    frames_progress: Arc<AtomicU64>,
+    frames_total: Arc<AtomicU64>,
+    sample_rate: u32,
 }
 
 impl PlaybackHandle {
@@ -67,6 +70,19 @@ impl PlaybackHandle {
             PlaybackState::from(self.state.load(Ordering::Relaxed)),
             PlaybackState::Stopped
         )
+    }
+
+    pub fn progress_secs(&self) -> f64 {
+        self.frames_progress.load(Ordering::Relaxed) as f64 / self.sample_rate as f64
+    }
+
+    pub fn total_secs(&self) -> f64 {
+        let total = self.frames_total.load(Ordering::Relaxed);
+        if total == 0 {
+            0.0
+        } else {
+            total as f64 / self.sample_rate as f64
+        }
     }
 }
 
@@ -235,6 +251,7 @@ fn process_audio_loop(
     tx: mpsc::SyncSender<Vec<f32>>,
     tx_local: mpsc::SyncSender<Vec<f32>>,
     state: Arc<AtomicU8>,
+    frames_total: Arc<AtomicU64>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Decode audio file
     let file =
@@ -301,6 +318,12 @@ fn process_audio_loop(
             .map_err(|e| format!("Failed to create resampler: {e}"))
         })
         .transpose()?;
+
+    // Set total frame count
+    if let Some(n) = track.codec_params.n_frames {
+        let cable_total = (n as f64 * ratio) as u64;
+        frames_total.store(cable_total, Ordering::Relaxed);
+    }
 
     // Leftover for frames for resampling
     let mut leftover: Vec<f32> = Vec::new();
@@ -378,12 +401,14 @@ fn spawn_output_stream(
     state: Arc<AtomicU8>,
     volume: Arc<AtomicU32>,
     ready_tx: Option<mpsc::SyncSender<Result<(), String>>>,
+    frames_progress: Option<Arc<AtomicU64>>,
 ) {
     // Create output stream in a separate thread.
     // Spawn everything in a thread because Stream is !Send.
     let leftover = Arc::new(Mutex::new(Vec::<f32>::new()));
     let state_cb = state.clone();
     let state_kt = state.clone();
+    let channels = config.channels() as usize;
     std::thread::spawn(move || {
         let leftover_cb = leftover.clone();
         let stream = match device.build_output_stream(
@@ -411,13 +436,13 @@ fn spawn_output_stream(
                             // Fill with silence if no chunks are produced
                             Err(mpsc::TryRecvError::Empty) => {
                                 data[written..].fill(0.0);
-                                return;
+                                break;
                             }
                             // Flag as stopped if the channel is closed
                             Err(mpsc::TryRecvError::Disconnected) => {
                                 data[written..].fill(0.0);
                                 state_cb.store(PlaybackState::Stopped as u8, Ordering::Relaxed);
-                                return;
+                                break;
                             }
                         }
                     }
@@ -431,11 +456,19 @@ fn spawn_output_stream(
                     // Remove what was consumed from the buffer
                     buf.drain(..take);
 
+                    // Keep track of written data
                     written += take;
+                }
+
+                // Update progress
+                if let Some(progress) = &frames_progress {
+                    let frames_written = (written / channels) as u64;
+                    progress.fetch_add(frames_written, Ordering::Relaxed);
                 }
             },
             |e| {
                 let msg = e.to_string();
+                // Ignore 'Device disconnected' messages on linux
                 if !msg.contains("Device disconnected") {
                     eprintln!("{e}");
                 }
@@ -503,15 +536,18 @@ pub fn play_sound(
         .map_err(|e| format!("Failed to get local device config: {e}"))?;
     let local_channels = local_config.channels() as usize;
 
-    // Initialize channels and state
+    // Initialize channels, state and handle fields
     let (tx, rx) = mpsc::sync_channel::<Vec<f32>>(8);
     let (tx_local, rx_local) = mpsc::sync_channel::<Vec<f32>>(8);
     let state = Arc::new(AtomicU8::new(PlaybackState::Playing as u8));
     let (ready_tx, ready_rx) = mpsc::sync_channel::<Result<(), String>>(1);
+    let frames_progress = Arc::new(AtomicU64::new(0));
+    let frames_total = Arc::new(AtomicU64::new(0));
 
     // Spawn audio processing thread
     let path = path.to_owned();
     let state_process = state.clone();
+    let frames_total_process = frames_total.clone();
     std::thread::spawn(move || {
         if let Err(e) = process_audio_loop(
             &path,
@@ -521,6 +557,7 @@ pub fn play_sound(
             tx,
             tx_local,
             state_process,
+            frames_total_process,
         ) {
             eprintln!("Error while processing audio file: {e}");
         }
@@ -534,6 +571,7 @@ pub fn play_sound(
         state.clone(),
         volume.clone(),
         Some(ready_tx),
+        Some(frames_progress.clone()),
     );
 
     // Local stream playback
@@ -544,6 +582,7 @@ pub fn play_sound(
         state.clone(),
         volume.clone(),
         None,
+        None,
     );
 
     // Wait until the output stream is fully ready
@@ -552,5 +591,11 @@ pub fn play_sound(
         .map_err(|_| "Audio thread died unexpectedly")?
         .map_err(|e| e)?;
 
-    Ok(PlaybackHandle { state, volume })
+    Ok(PlaybackHandle {
+        state,
+        volume,
+        frames_progress,
+        frames_total,
+        sample_rate: cable_rate,
+    })
 }

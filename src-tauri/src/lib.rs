@@ -12,6 +12,12 @@ struct AppState {
     next_id: AtomicU32,
 }
 
+#[derive(serde::Serialize)]
+struct Progress {
+    current: f64,
+    total: f64,
+}
+
 #[tauri::command]
 fn play_sound(path: String, volume: Option<f32>, state: State<AppState>) -> Result<u32, String> {
     let device = state.cable_device.clone();
@@ -64,6 +70,16 @@ fn stop_all_sounds(state: State<AppState>) {
     }
 }
 
+#[tauri::command]
+fn get_progress(id: u32, state: tauri::State<AppState>) -> Option<Progress> {
+    let sounds = state.playing_sounds.lock();
+    let h = sounds.get(&id)?;
+    Some(Progress {
+        current: h.progress_secs(),
+        total: h.total_secs(),
+    })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let playing_sounds = Arc::new(Mutex::new(HashMap::<u32, audio::PlaybackHandle>::new()));
@@ -89,7 +105,8 @@ pub fn run() {
             stop_sound,
             set_general_volume,
             set_volume,
-            stop_all_sounds
+            stop_all_sounds,
+            get_progress
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

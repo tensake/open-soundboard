@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { createSignal } from "solid-js";
+import { createSignal, onCleanup } from "solid-js";
 import "./App.css";
 
 const playSound = (path: string, volume: number) =>
@@ -9,11 +9,13 @@ const resumeSound = (id: number) => invoke("resume_sound", { id });
 const stopSound = (id: number) => invoke("stop_sound", { id });
 const setVolume = (volume: number) => invoke("set_general_volume", { volume });
 const stopAllSounds = () => invoke("stop_all_sounds");
+const getProgress = (id: number) =>
+  invoke<{ current: number; total: number } | null>("get_progress", { id });
 
 const SOUNDS = [
   {
     label: "Sound 1",
-    path: "/home/kitfc/Dev/open-soundboard/src/test_assets/sound1.mp3",
+    path: "C:\\Users\\kitfc\\dev\\open-soundboard\\src\\test_assets\\sound1.mp3",
   },
   {
     label: "Sound 2 MP3",
@@ -29,9 +31,19 @@ const SOUNDS = [
   },
 ];
 
+function formatTime(secs: number): string {
+  if (!isFinite(secs) || secs < 0) return "0:00";
+  return `${Math.floor(secs / 60)}:${Math.floor(secs % 60)
+    .toString()
+    .padStart(2, "0")}`;
+}
+
 export default function App() {
   const [volumePct, setVolumePct] = createSignal(100);
   const [activeId, setActiveId] = createSignal<number | null>(null);
+
+  const [current, setCurrent] = createSignal(0);
+  const [total, setTotal] = createSignal(0);
 
   const handlePlay = async (path: string) => {
     const id = await playSound(path, volumePct() / 100);
@@ -56,6 +68,23 @@ export default function App() {
     setVolumePct(value);
     setVolume(value / 100);
   };
+
+  const interval = setInterval(async () => {
+    const id = activeId();
+    if (id == null) return;
+
+    const progress = await getProgress(id);
+    if (progress) {
+      setCurrent(progress.current);
+      setTotal(progress.total);
+    } else {
+      setCurrent(0);
+      setTotal(0);
+      setActiveId(null);
+    }
+  }, 100);
+
+  onCleanup(() => clearInterval(interval));
 
   return (
     <main class="container">
@@ -83,6 +112,12 @@ export default function App() {
           onInput={handleVolume}
         />
         <span>{volumePct()}%</span>
+
+        <h2>Progress</h2>
+        <progress value={current()} max={total() || 1}></progress>
+        <span>
+          {formatTime(current())} / {formatTime(total())}
+        </span>
       </div>
     </main>
   );
