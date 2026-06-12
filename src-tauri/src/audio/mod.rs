@@ -121,13 +121,21 @@ fn create_virtual_sink() {
     let sink_exists = std::process::Command::new("pactl")
         .args(["list", "sinks", "short"])
         .output()
-        .map(|o| String::from_utf8_lossy(&o.stdout).lines().any(|l| l.contains("OpenSoundBoard")))
+        .map(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .any(|l| l.contains("OpenSoundBoard"))
+        })
         .unwrap_or(false);
 
     let source_exists = std::process::Command::new("pactl")
         .args(["list", "sources", "short"])
         .output()
-        .map(|o| String::from_utf8_lossy(&o.stdout).lines().any(|l| l.contains("OpenSoundBoard_Input")))
+        .map(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .any(|l| l.contains("OpenSoundBoard_Input"))
+        })
         .unwrap_or(false);
 
     // Skip creation if sink already exist
