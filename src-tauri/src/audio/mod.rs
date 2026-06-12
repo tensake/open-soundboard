@@ -117,21 +117,33 @@ pub fn get_cable_device() -> cpal::Device {
 }
 
 #[cfg(target_os = "linux")]
-fn ensure_virtual_sink() {
-    // Unload any existing OpenSoundBoard modules first
+fn create_virtual_sink() {
+    let sink_exists = std::process::Command::new("pactl")
+        .args(["list", "sinks", "short"])
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).lines().any(|l| l.contains("OpenSoundBoard")))
+        .unwrap_or(false);
+
+    let source_exists = std::process::Command::new("pactl")
+        .args(["list", "sources", "short"])
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).lines().any(|l| l.contains("OpenSoundBoard_Input")))
+        .unwrap_or(false);
+
+    // Skip creation if sink already exist
+    if sink_exists && source_exists {
+        return;
+    }
+
+    // Clean up previous sinks
     let _ = std::process::Command::new("pactl")
         .args(["unload-module", "module-remap-source"])
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .status();
-    
-    // Check if sink already exists
-    let check = std::process::Command::new("pactl")
-        .args(["get-sink-info", "OpenSoundBoard"])
-        .output();
 
-    if check.map(|o| !o.status.success()).unwrap_or(true) {
-        // Create null sink
+    // Create null sink
+    if !sink_exists {
         let _ = std::process::Command::new("pactl")
             .args([
                 "load-module",
@@ -141,25 +153,25 @@ fn ensure_virtual_sink() {
             ])
             .stdout(std::process::Stdio::null())
             .status();
-        
-        // Create virtual microphone
-        let _ = std::process::Command::new("pactl")
-            .args([
-                "load-module",
-                "module-remap-source",
-                "master=OpenSoundBoard.monitor",
-                "source_name=OpenSoundBoard_Input",
-                "source_properties=device.description=OpenSoundBoard_Input device.class=abstract device.type=virtual",
-            ])
-            .stdout(std::process::Stdio::null())
-            .status();
     }
+
+    // Create virtual microphone
+    let _ = std::process::Command::new("pactl")
+        .args([
+            "load-module",
+            "module-remap-source",
+            "master=OpenSoundBoard.monitor",
+            "source_name=OpenSoundBoard_Input",
+            "source_properties=device.description=OpenSoundBoard_Input device.class=abstract device.type=virtual",
+        ])
+        .stdout(std::process::Stdio::null())
+        .status();
 }
 
 /// On Linux, get virtual sink.
 #[cfg(target_os = "linux")]
 pub fn get_cable_device() -> cpal::Device {
-    ensure_virtual_sink();
+    create_virtual_sink();
 
     let host = cpal::default_host();
     host.output_devices()
