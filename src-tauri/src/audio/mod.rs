@@ -400,7 +400,12 @@ fn spawn_output_stream(
                     written += take;
                 }
             },
-            |e| eprintln!("{e}"),
+            |e| {
+                let msg = e.to_string();
+                if !msg.contains("Device disconnected") {
+                    eprintln!("{e}");
+                }
+            },
             None,
         ) {
             Ok(s) => s,
