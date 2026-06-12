@@ -71,33 +71,46 @@ impl PlaybackHandle {
 }
 
 fn resample_chunk(
+    leftover: &mut Vec<f32>,
     chunk: &[f32],
     resampler: &mut Async<f32>,
     channels: usize,
 ) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
-    let frames = chunk.len() / channels;
-    // Create output buffer
-    // + 10% for safety and 256 if the chunk is too small
-    let ratio = resampler.output_frames_max() as f64 / resampler.input_frames_max() as f64;
-    let capacity = (frames as f64 * ratio * 1.1) as usize + 256;
-    let mut out = vec![0.0f32; capacity * channels];
+    leftover.extend_from_slice(chunk);
 
-    let input = InterleavedSlice::new(chunk, channels, frames)
-        .map_err(|e| format!("Failed to create interleaved input slice: {e:?}"))?;
-    let mut output = InterleavedSlice::new_mut(&mut out, channels, capacity)
-        .map_err(|e| format!("Failed to create interleaved output slice: {e:?}"))?;
-    let idx = Indexing {
-        input_offset: 0,
-        output_offset: 0,
-        active_channels_mask: None,
-        partial_len: None,
-    };
+    // Get required samples for each iteration
+    let needed_frames = resampler.input_frames_next();
+    let needed_samples = needed_frames * channels;
 
-    // Resample
-    let (_, produced_frames) = resampler
-        .process_into_buffer(&input, &mut output, Some(&idx))
-        .map_err(|e| format!("Resample failed: {e}"))?;
-    out.truncate(produced_frames * channels);
+    let mut out = Vec::new();
+
+    // Process all full samples
+    while leftover.len() >= needed_samples {
+        let input: Vec<f32> = leftover.drain(..needed_samples).collect();
+        let capacity = resampler.output_frames_max();
+        let mut buf_out = vec![0.0f32; capacity * channels];
+
+        let input_slice = InterleavedSlice::new(&input, channels, needed_frames)
+            .map_err(|e| format!("Failed to create interleaved input slice: {e:?}"))?;
+        let mut output_slice = InterleavedSlice::new_mut(&mut buf_out, channels, capacity)
+            .map_err(|e| format!("Failed to create interleaved output slice: {e:?}"))?;
+        let idx = Indexing {
+            input_offset: 0,
+            output_offset: 0,
+            active_channels_mask: None,
+            partial_len: None,
+        };
+
+        // Resample
+        let (_, produced_frames) = resampler
+            .process_into_buffer(&input_slice, &mut output_slice, Some(&idx))
+            .map_err(|e| format!("Resample failed: {e}"))?;
+
+        buf_out.truncate(produced_frames * channels);
+
+        // Add resampled chunk to output
+        out.extend(buf_out);
+    }
 
     Ok(out)
 }
@@ -223,15 +236,22 @@ fn process_audio_loop(
     tx_local: mpsc::SyncSender<Vec<f32>>,
     state: Arc<AtomicU8>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // Decode MP3
+    // Decode audio file
     let file =
         std::fs::File::open(path).map_err(|e| format!("Cannot open audio file: {path}: {e}"))?;
     let mss = MediaSourceStream::new(Box::new(file), Default::default());
 
     // Probe the media source
+    let mut hint = Hint::new();
+    if let Some(ext) = std::path::Path::new(path)
+        .extension()
+        .and_then(|e| e.to_str())
+    {
+        hint.with_extension(ext);
+    }
     let probed = symphonia::default::get_probe()
         .format(
-            &Hint::new(),
+            &hint,
             mss,
             &FormatOptions::default(),
             &MetadataOptions::default(),
@@ -239,11 +259,11 @@ fn process_audio_loop(
         .map_err(|e| format!("Unsupported audio format: {path}: {e}"))?;
     let mut format = probed.format;
     let track = format.default_track().ok_or("No default track found")?;
-    let mp3_rate = track
+    let audio_rate = track
         .codec_params
         .sample_rate
         .ok_or("Sample rate not found in audio file")?;
-    let mp3_channels = track
+    let audio_channels = track
         .codec_params
         .channels
         .ok_or("Channel count not found in audio file")?
@@ -254,7 +274,7 @@ fn process_audio_loop(
     let track_id = track.id;
 
     // Build resampler if needed
-    let need_resample = mp3_rate != cable_rate;
+    let need_resample = audio_rate != cable_rate;
     let params = SincInterpolationParameters {
         sinc_len: 64,
         f_cutoff: calculate_cutoff(64, WindowFunction::Blackman2),
@@ -262,11 +282,11 @@ fn process_audio_loop(
         oversampling_factor: 128,
         window: WindowFunction::Blackman2,
     };
-    let ratio = cable_rate as f64 / mp3_rate as f64;
-    let resample_channels = if mp3_channels == 2 && cable_channels == 1 {
+    let ratio = cable_rate as f64 / audio_rate as f64;
+    let resample_channels = if audio_channels == 2 && cable_channels == 1 {
         1
     } else {
-        mp3_channels
+        audio_channels
     };
     let mut resampler = need_resample
         .then(|| {
@@ -281,6 +301,9 @@ fn process_audio_loop(
             .map_err(|e| format!("Failed to create resampler: {e}"))
         })
         .transpose()?;
+
+    // Leftover for frames for resampling
+    let mut leftover: Vec<f32> = Vec::new();
 
     // Process audio chunks
     loop {
@@ -317,7 +340,7 @@ fn process_audio_loop(
         let mut chunk = buf.samples().to_vec();
 
         // Downmix for cable if needed
-        if mp3_channels == 2 && cable_channels == 1 {
+        if audio_channels == 2 && cable_channels == 1 {
             chunk = chunk
                 .chunks_exact(2)
                 .map(|c| (c[0] + c[1]) * 0.707)
@@ -326,7 +349,10 @@ fn process_audio_loop(
 
         // Resample to match cable sample rate if needed
         if let Some(r) = &mut resampler {
-            chunk = resample_chunk(&chunk, r, resample_channels)?;
+            chunk = resample_chunk(&mut leftover, &chunk, r, resample_channels)?;
+            if chunk.is_empty() {
+                continue;
+            }
         }
 
         // Upmix for local output if needed
@@ -449,10 +475,10 @@ fn spawn_output_stream(
     });
 }
 
-/// Play an MP3 file.
+/// Play an audio file to the default output device and virtual cable.
 ///
 /// Returns a handle to control playback.
-pub fn play_mp3(
+pub fn play_sound(
     path: &str,
     device: Arc<cpal::Device>,
     volume: f32,

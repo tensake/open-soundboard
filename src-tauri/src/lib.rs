@@ -16,7 +16,7 @@ struct AppState {
 fn play_sound(path: String, volume: Option<f32>, state: State<AppState>) -> Result<u32, String> {
     let device = state.cable_device.clone();
     let handle =
-        audio::play_mp3(&path, device, volume.unwrap_or(1.0)).map_err(|e| e.to_string())?;
+        audio::play_sound(&path, device, volume.unwrap_or(1.0)).map_err(|e| e.to_string())?;
     let id = state.next_id.fetch_add(1, Ordering::Relaxed);
     state.playing_sounds.lock().insert(id, handle);
     Ok(id)

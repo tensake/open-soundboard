@@ -16,8 +16,16 @@ const SOUNDS = [
     path: "/home/kitfc/Dev/open-soundboard/src/test_assets/sound1.mp3",
   },
   {
-    label: "Sound 2",
+    label: "Sound 2 MP3",
     path: "C:\\Users\\kitfc\\dev\\open-soundboard\\src\\test_assets\\sound2.mp3",
+  },
+  {
+    label: "Sound 3 WAV",
+    path: "C:\\Users\\kitfc\\dev\\open-soundboard\\src\\test_assets\\sound3.wav",
+  },
+  {
+    label: "Sound 4 FLAC",
+    path: "C:\\Users\\kitfc\\dev\\open-soundboard\\src\\test_assets\\sound4.flac",
   },
 ];
 
