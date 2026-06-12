@@ -93,7 +93,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .manage(AppState {
-            cable_device: Arc::new(audio::get_cable_device()),
+            cable_device: Arc::new(audio::device::get_cable()),
             playing_sounds,
             next_id: AtomicU32::new(0),
         })
