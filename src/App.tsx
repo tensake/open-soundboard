@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { createSignal, onCleanup } from "solid-js";
+import { createSignal, onCleanup, onMount } from "solid-js";
 import "./App.css";
 
 const playSound = (path: string, volume: number) =>
@@ -13,6 +13,8 @@ const setVolume = (volume: number) => invoke("set_general_volume", { volume });
 const stopAllSounds = () => invoke("stop_all_sounds");
 const getProgress = (id: number) =>
   invoke<{ current: number; total: number } | null>("get_progress", { id });
+const getMicVolume = () => invoke<number>("get_mic_volume");
+const setMicVolume = (volume: number) => invoke("set_mic_volume", { volume });
 
 const SOUNDS = [
   {
@@ -46,6 +48,9 @@ export default function App() {
 
   const [current, setCurrent] = createSignal(0);
   const [total, setTotal] = createSignal(0);
+  const [seeking, setSeeking] = createSignal(false);
+
+  const [micVolumePct, setMicVolumePct] = createSignal(100);
 
   const handlePlay = async (path: string) => {
     const id = await playSound(path, volumePct() / 100);
@@ -64,10 +69,18 @@ export default function App() {
     const id = activeId();
     if (id != null) stopSound(id);
   };
+
+  const handleSeekInput = (e: Event) => {
+    const value = parseFloat((e.currentTarget as HTMLInputElement).value);
+    setCurrent(value);
+  };
+
   const handleSeek = (e: Event) => {
     const value = parseFloat((e.currentTarget as HTMLInputElement).value);
     const id = activeId();
+    setCurrent(value);
     if (id != null) seekSound(id, value);
+    setSeeking(false);
   };
 
   const handleVolume = (e: Event) => {
@@ -76,9 +89,21 @@ export default function App() {
     setVolume(value / 100);
   };
 
+  const handleMicVolume = (e: Event) => {
+    const value = parseFloat((e.currentTarget as HTMLInputElement).value);
+    setMicVolumePct(value);
+    setMicVolume(value / 100);
+  };
+
+  onMount(async () => {
+    const vol = await getMicVolume();
+    setMicVolumePct(Math.round(vol * 100));
+  });
+
   const interval = setInterval(async () => {
     const id = activeId();
     if (id == null) return;
+    if (seeking()) return;
 
     const progress = await getProgress(id);
     if (progress) {
@@ -94,8 +119,7 @@ export default function App() {
   onCleanup(() => clearInterval(interval));
 
   return (
-    <main class="container">
-      <h1>SoundBoard</h1>
+    <main class="container flex flex-row justify-between">
       <div class="buttons">
         <h2>Sounds</h2>
 
@@ -114,10 +138,12 @@ export default function App() {
         <input
           type="range"
           min="0"
-          max={total()}
+          max={total() || 1}
           step="1"
           value={current()}
-          onInput={handleSeek}
+          onPointerDown={() => setSeeking(true)}
+          onInput={handleSeekInput}
+          onChange={handleSeek}
         />
         <span>{formatTime(current())}</span>
 
@@ -131,12 +157,18 @@ export default function App() {
           onInput={handleVolume}
         />
         <span>{volumePct()}%</span>
-
-        <h2>Progress</h2>
-        <progress value={current()} max={total() || 1}></progress>
-        <span>
-          {formatTime(current())} / {formatTime(total())}
-        </span>
+      </div>
+      <div class="microphone">
+        <h2>Microphone</h2>
+        <input
+          type="range"
+          min="0"
+          max="300"
+          step="1"
+          value={micVolumePct()}
+          onInput={handleMicVolume}
+        />
+        <span>{micVolumePct()}%</span>
       </div>
     </main>
   );

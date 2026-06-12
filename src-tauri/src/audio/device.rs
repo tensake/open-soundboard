@@ -111,3 +111,10 @@ pub fn get_cable() -> cpal::Device {
 pub fn get_cable() -> cpal::Device {
     panic!("Your OS is not supported.")
 }
+
+/// Get the default microphone device.
+pub fn get_input_device() -> cpal::Device {
+    cpal::default_host()
+        .default_input_device()
+        .expect("No default input device found")
+}

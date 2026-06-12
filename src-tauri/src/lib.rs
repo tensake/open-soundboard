@@ -10,6 +10,7 @@ struct AppState {
     cable_device: Arc<cpal::Device>,
     playing_sounds: Arc<Mutex<HashMap<u32, audio::PlaybackHandle>>>,
     next_id: AtomicU32,
+    mic_handle: audio::mic::MicrophoneHandle,
 }
 
 #[derive(serde::Serialize)]
@@ -87,9 +88,26 @@ fn get_progress(id: u32, state: tauri::State<AppState>) -> Option<Progress> {
     })
 }
 
+#[tauri::command]
+fn get_mic_volume(state: tauri::State<AppState>) -> f32 {
+    state.mic_handle.volume()
+}
+
+#[tauri::command]
+fn set_mic_volume(volume: f32, state: tauri::State<AppState>) {
+    state.mic_handle.set_volume(volume);
+}
+
+#[tauri::command]
+fn stop_mic(state: tauri::State<AppState>) {
+    state.mic_handle.stop();
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let playing_sounds = Arc::new(Mutex::new(HashMap::<u32, audio::PlaybackHandle>::new()));
+    let input_device = Arc::new(audio::device::get_input_device());
+    let cable_device = Arc::new(audio::device::get_cable());
 
     // Sound cleanup thread
     let playing_sounds_cleanup = playing_sounds.clone();
@@ -98,14 +116,20 @@ pub fn run() {
         playing_sounds_cleanup.lock().retain(|_, h| !h.is_done());
     });
 
+    // Start microphone forwarding
+    let mic_handle = audio::mic::start_forwarding(input_device, cable_device.clone())
+        .expect("Failed to start microphone forwarding");
+
     tauri::Builder::default()
         .manage(AppState {
-            cable_device: Arc::new(audio::device::get_cable()),
+            cable_device,
             playing_sounds,
             next_id: AtomicU32::new(0),
+            mic_handle,
         })
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
+            // Sound
             play_sound,
             pause_sound,
             resume_sound,
@@ -114,7 +138,11 @@ pub fn run() {
             set_general_volume,
             set_volume,
             stop_all_sounds,
-            get_progress
+            get_progress,
+            // Microphone
+            get_mic_volume,
+            set_mic_volume,
+            stop_mic
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 mod decode;
 pub mod device;
+pub mod mic;
 mod output;
 
 /// State of the sound playback.
