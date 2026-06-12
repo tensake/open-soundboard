@@ -32,6 +32,7 @@ pub struct PlaybackHandle {
     frames_progress: Arc<AtomicU64>,
     frames_total: Arc<AtomicU64>,
     sample_rate: u32,
+    seek_tx: mpsc::Sender<f32>,
 }
 
 impl PlaybackHandle {
@@ -53,6 +54,11 @@ impl PlaybackHandle {
             .store(PlaybackState::Stopped as u8, Ordering::Relaxed);
     }
 
+    /// Seek to a specific time in seconds.
+    pub fn seek(&self, secs: f32) {
+        let _ = self.seek_tx.send(secs);
+    }
+
     /// Set the volume level for the playback.
     pub fn set_volume(&self, volume: f32) {
         let clamped = volume.clamp(0.0, 1.0);
@@ -67,10 +73,12 @@ impl PlaybackHandle {
         )
     }
 
+    /// Get the current playback progress in seconds.
     pub fn progress_secs(&self) -> f64 {
         self.frames_progress.load(Ordering::Relaxed) as f64 / self.sample_rate as f64
     }
 
+    /// Get the total duration of the audio file in seconds.
     pub fn total_secs(&self) -> f64 {
         let total = self.frames_total.load(Ordering::Relaxed);
         if total == 0 {
@@ -116,11 +124,13 @@ pub fn play_sound(
     let (ready_tx, ready_rx) = mpsc::sync_channel::<Result<(), String>>(1);
     let frames_progress = Arc::new(AtomicU64::new(0));
     let frames_total = Arc::new(AtomicU64::new(0));
+    let (seek_tx, seek_rx) = mpsc::channel::<f32>();
 
     // Spawn audio processing thread
     let path = path.to_owned();
     let state_process = state.clone();
     let frames_total_process = frames_total.clone();
+    let frames_progress_process = frames_progress.clone();
     std::thread::spawn(move || {
         if let Err(e) = decode::decode_loop(
             &path,
@@ -129,8 +139,10 @@ pub fn play_sound(
             local_channels,
             tx,
             tx_local,
+            seek_rx,
             state_process,
             frames_total_process,
+            frames_progress_process,
         ) {
             eprintln!("Error while processing audio file: {e}");
         }
@@ -170,5 +182,6 @@ pub fn play_sound(
         frames_progress,
         frames_total,
         sample_rate: cable_rate,
+        seek_tx,
     })
 }

@@ -50,6 +50,13 @@ fn stop_sound(id: u32, state: State<AppState>) {
 }
 
 #[tauri::command]
+fn seek_sound(id: u32, secs: f32, state: State<AppState>) {
+    if let Some(h) = state.playing_sounds.lock().get(&id) {
+        h.seek(secs);
+    }
+}
+
+#[tauri::command]
 fn set_general_volume(volume: f32, state: State<AppState>) {
     for (_, h) in state.playing_sounds.lock().iter() {
         h.set_volume(volume);
@@ -103,6 +110,7 @@ pub fn run() {
             pause_sound,
             resume_sound,
             stop_sound,
+            seek_sound,
             set_general_volume,
             set_volume,
             stop_all_sounds,

@@ -6,6 +6,8 @@ use rubato::{
 use std::sync::atomic::{AtomicU64, AtomicU8, Ordering};
 use std::sync::mpsc;
 use std::sync::Arc;
+use symphonia::core::formats::{SeekMode, SeekTo};
+use symphonia::core::units::Time;
 use symphonia::core::{
     audio::SampleBuffer, codecs::DecoderOptions, formats::FormatOptions, io::MediaSourceStream,
     meta::MetadataOptions, probe::Hint,
@@ -65,8 +67,10 @@ pub fn decode_loop(
     local_channels: usize,
     tx: mpsc::SyncSender<Vec<f32>>,
     tx_local: mpsc::SyncSender<Vec<f32>>,
+    rx_seek: mpsc::Receiver<f32>,
     state: Arc<AtomicU8>,
     frames_total: Arc<AtomicU64>,
+    frames_progress: Arc<AtomicU64>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Decode audio file
     let file =
@@ -151,6 +155,31 @@ pub fn decode_loop(
             PlaybackState::Stopped
         ) {
             break;
+        }
+
+        // Check for seek
+        if let Ok(secs) = rx_seek.try_recv() {
+            match format.seek(
+                SeekMode::Accurate,
+                SeekTo::Time {
+                    time: Time::from(secs),
+                    track_id: Some(track_id),
+                },
+            ) {
+                Ok(_) => {
+                    // Reset decoder
+                    decoder.reset();
+                    if let Some(r) = &mut resampler {
+                        r.reset();
+                    }
+                    leftover.clear();
+
+                    // Update progress
+                    let current_frames = (secs as f64 * cable_rate as f64) as u64;
+                    frames_progress.store(current_frames, Ordering::Relaxed);
+                }
+                Err(e) => eprintln!("Seek failed: {e}"),
+            }
         }
 
         // Read the next packet and verify track id

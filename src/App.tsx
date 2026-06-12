@@ -7,6 +7,8 @@ const playSound = (path: string, volume: number) =>
 const pauseSound = (id: number) => invoke("pause_sound", { id });
 const resumeSound = (id: number) => invoke("resume_sound", { id });
 const stopSound = (id: number) => invoke("stop_sound", { id });
+const seekSound = (id: number, secs: number) =>
+  invoke("seek_sound", { id, secs });
 const setVolume = (volume: number) => invoke("set_general_volume", { volume });
 const stopAllSounds = () => invoke("stop_all_sounds");
 const getProgress = (id: number) =>
@@ -62,6 +64,11 @@ export default function App() {
     const id = activeId();
     if (id != null) stopSound(id);
   };
+  const handleSeek = (e: Event) => {
+    const value = parseFloat((e.currentTarget as HTMLInputElement).value);
+    const id = activeId();
+    if (id != null) seekSound(id, value);
+  };
 
   const handleVolume = (e: Event) => {
     const value = parseFloat((e.currentTarget as HTMLInputElement).value);
@@ -97,10 +104,22 @@ export default function App() {
         ))}
 
         <h2>Controls</h2>
+        <h3>Buttons</h3>
         <button onClick={handlePause}>Pause</button>
         <button onClick={handleResume}>Resume</button>
         <button onClick={handleStop}>Stop</button>
         <button onClick={() => stopAllSounds()}>Stop All</button>
+
+        <h3>Seek</h3>
+        <input
+          type="range"
+          min="0"
+          max={total()}
+          step="1"
+          value={current()}
+          onInput={handleSeek}
+        />
+        <span>{formatTime(current())}</span>
 
         <h2>Volume</h2>
         <input
