@@ -124,7 +124,7 @@ fn ensure_virtual_sink() {
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .status();
-    
+
     // Check if sink already exists
     let check = std::process::Command::new("pactl")
         .args(["get-sink-info", "OpenSoundBoard"])
@@ -141,7 +141,7 @@ fn ensure_virtual_sink() {
             ])
             .stdout(std::process::Stdio::null())
             .status();
-        
+
         // Create virtual microphone
         let _ = std::process::Command::new("pactl")
             .args([
