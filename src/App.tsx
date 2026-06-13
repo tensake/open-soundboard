@@ -1,10 +1,11 @@
 import { createSignal, onCleanup, For, Switch, Match } from "solid-js";
 import { LayoutDashboard, Settings as SettingsIcon } from "lucide-solid";
-import { getProgress, seekSound, formatTime } from "./lib";
+import { getProgress } from "./lib";
 import { Tab } from "./types";
 import Dashboard from "./tabs/dashboard";
 import Settings from "./tabs/settings";
 import "./App.css";
+import PlayerBar from "./components/playerBar";
 
 const TABS = {
   [Tab.Dashboard]: { icon: LayoutDashboard },
@@ -22,18 +23,6 @@ export default function App() {
 
   const [volumePct, setVolumePct] = createSignal(100);
   const [micVolumePct, setMicVolumePct] = createSignal(100);
-
-  const handleSeekInput = (e: Event) => {
-    setCurrent(parseFloat((e.currentTarget as HTMLInputElement).value));
-  };
-
-  const handleSeekCommit = (e: Event) => {
-    const value = parseFloat((e.currentTarget as HTMLInputElement).value);
-    const id = activeId();
-    setCurrent(value);
-    if (id != null) seekSound(id, value);
-    setSeeking(false);
-  };
 
   const interval = setInterval(async () => {
     const id = activeId();
@@ -63,7 +52,7 @@ export default function App() {
               <div
                 onClick={() => setActiveTab(tabValue)}
                 class={`flex items-center gap-3 p-2 transition-colors cursor-pointer ${
-                  activeTab() === tabValue ? "text-primary-600" : ""
+                  activeTab() === tabValue ? "text-primary-400" : ""
                 }`}
               >
                 <meta.icon class="w-5 h-5 shrink-0" />
@@ -97,23 +86,20 @@ export default function App() {
           </Switch>
         </div>
 
-        <div class="flex flex-col gap-1 items-center border-t border-surface-1 pt-4 mt-4">
-          <span class="text-sm font-mono">
-            {formatTime(current())} / {formatTime(total())}
-          </span>
-          <input
-            type="range"
-            min="0"
-            max={total() > 0 ? total() : 1}
-            step="0.1"
-            value={current()}
-            onPointerDown={() => setSeeking(true)}
-            onInput={handleSeekInput}
-            onChange={handleSeekCommit}
-            class="w-full max-w-xl cursor-pointer"
-            disabled={activeId() == null}
-          />
-        </div>
+        <PlayerBar
+          activeId={activeId}
+          setActiveId={setActiveId}
+          paused={paused}
+          setPaused={setPaused}
+          current={current}
+          setCurrent={setCurrent}
+          total={total}
+          setTotal={setTotal}
+          seeking={seeking}
+          setSeeking={setSeeking}
+          volumePct={volumePct}
+          setVolumePct={setVolumePct}
+        />
       </div>
     </main>
   );
