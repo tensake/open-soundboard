@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { createSignal, onCleanup, onMount } from "solid-js";
+import { createSignal, onCleanup, onMount, Show } from "solid-js";
+import { Play, Square, Pause } from "lucide-solid";
 import "./App.css";
 
 const playSound = (path: string, volume: number) =>
@@ -22,15 +23,15 @@ const SOUNDS = [
     path: "C:\\Users\\kitfc\\dev\\open-soundboard\\src\\test_assets\\sound1.mp3",
   },
   {
-    label: "Sound 2 MP3",
+    label: "Sound 2",
     path: "C:\\Users\\kitfc\\dev\\open-soundboard\\src\\test_assets\\sound2.mp3",
   },
   {
-    label: "Sound 3 WAV",
+    label: "Sound 3",
     path: "C:\\Users\\kitfc\\dev\\open-soundboard\\src\\test_assets\\sound3.wav",
   },
   {
-    label: "Sound 4 FLAC",
+    label: "Sound 4",
     path: "C:\\Users\\kitfc\\dev\\open-soundboard\\src\\test_assets\\sound4.flac",
   },
 ];
@@ -49,6 +50,7 @@ export default function App() {
   const [current, setCurrent] = createSignal(0);
   const [total, setTotal] = createSignal(0);
   const [seeking, setSeeking] = createSignal(false);
+  const [paused, setPaused] = createSignal(false);
 
   const [micVolumePct, setMicVolumePct] = createSignal(100);
 
@@ -59,15 +61,14 @@ export default function App() {
 
   const handlePause = () => {
     const id = activeId();
-    if (id != null) pauseSound(id);
-  };
-  const handleResume = () => {
-    const id = activeId();
-    if (id != null) resumeSound(id);
-  };
-  const handleStop = () => {
-    const id = activeId();
-    if (id != null) stopSound(id);
+    if (id === null) return;
+    if (!paused()) {
+      pauseSound(id);
+      setPaused(true);
+    } else {
+      resumeSound(id);
+      setPaused(false);
+    }
   };
 
   const handleSeekInput = (e: Event) => {
@@ -96,8 +97,8 @@ export default function App() {
   };
 
   onMount(async () => {
-    const vol = await getMicVolume();
-    setMicVolumePct(Math.round(vol * 100));
+    const micVol = await getMicVolume();
+    setMicVolumePct(Math.round(micVol * 100));
   });
 
   const interval = setInterval(async () => {
@@ -119,22 +120,57 @@ export default function App() {
   onCleanup(() => clearInterval(interval));
 
   return (
-    <main class="container flex flex-row justify-between">
-      <div class="buttons">
-        <h2>Sounds</h2>
-
-        {SOUNDS.map((s) => (
-          <button onClick={() => handlePlay(s.path)}>{s.label}</button>
-        ))}
-
-        <h2>Controls</h2>
-        <h3>Buttons</h3>
-        <button onClick={handlePause}>Pause</button>
-        <button onClick={handleResume}>Resume</button>
-        <button onClick={handleStop}>Stop</button>
-        <button onClick={() => stopAllSounds()}>Stop All</button>
-
-        <h3>Seek</h3>
+    <main class="flex flex-col justify-between gap-4 p-4 h-screen">
+      <div class="grid grid-cols-[1fr_0.5fr] gap-4">
+        <div class="flex flex-col">
+          <div class="flex gap-1">
+            <button onClick={handlePause}>
+              <Show when={paused()} fallback={<Pause />}>
+                <Play />
+              </Show>
+            </button>
+            <button onClick={() => stopAllSounds()}>
+              <Square />
+            </button>
+          </div>
+          <hr />
+          <h2>Sounds</h2>
+          <div class="flex gap-1">
+            {SOUNDS.map((s) => (
+              <button onClick={() => handlePlay(s.path)}>
+                <Play />
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div class="flex flex-col">
+          <h2>General Volume</h2>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value={volumePct()}
+            onInput={handleVolume}
+          />
+          <span>{volumePct()}%</span>
+          <h2>Microphone Volume</h2>
+          <input
+            type="range"
+            min="0"
+            max="300"
+            step="1"
+            value={micVolumePct()}
+            onInput={handleMicVolume}
+          />
+          <span>{micVolumePct()}%</span>
+        </div>
+      </div>
+      <div class="progress flex flex-col gap-1 items-center">
+        <span>
+          {formatTime(current())} / {formatTime(total())}
+        </span>
         <input
           type="range"
           min="0"
@@ -145,30 +181,6 @@ export default function App() {
           onInput={handleSeekInput}
           onChange={handleSeek}
         />
-        <span>{formatTime(current())}</span>
-
-        <h2>Volume</h2>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          step="1"
-          value={volumePct()}
-          onInput={handleVolume}
-        />
-        <span>{volumePct()}%</span>
-      </div>
-      <div class="microphone">
-        <h2>Microphone</h2>
-        <input
-          type="range"
-          min="0"
-          max="300"
-          step="1"
-          value={micVolumePct()}
-          onInput={handleMicVolume}
-        />
-        <span>{micVolumePct()}%</span>
       </div>
     </main>
   );
