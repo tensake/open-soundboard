@@ -199,6 +199,17 @@ input[type="range"]:disabled {
   cursor: not-allowed;
 }
 
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-1);
+  border-radius: 3px;
+}
+
 hr {
   border: none;
   height: 2px;

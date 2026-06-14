@@ -9,7 +9,7 @@ import type { Accessor, Setter } from "solid-js";
 import { Play, Plus, Trash2 } from "lucide-solid";
 import { open } from "@tauri-apps/plugin-dialog";
 import { playSound, getTabs, addTab, removeTab } from "../../lib";
-import type { SoundTab } from "../../lib";
+import { SoundTab } from "../../types";
 
 interface DashboardProps {
   activeId: Accessor<number | null>;

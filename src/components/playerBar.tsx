@@ -108,7 +108,7 @@ export default function PlayerBar(props: PlayerBarProps) {
         </div>
       </div>
 
-      <div class="flex flex-col gap-2">
+      <div class="flex flex-col gap-2 mx-4 max-w-xs">
         <input
           type="range"
           min="0"
@@ -118,7 +118,6 @@ export default function PlayerBar(props: PlayerBarProps) {
           onInput={handleVolume}
           class="w-full cursor-pointer"
         />
-        <span class="text-sm font-mono text-center">{props.volumePct()}%</span>
       </div>
     </div>
   );

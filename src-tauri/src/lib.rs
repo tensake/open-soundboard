@@ -91,6 +91,11 @@ fn get_progress(id: u32, state: tauri::State<AppState>) -> Option<Progress> {
 }
 
 #[tauri::command]
+fn get_active_sounds(state: State<AppState>) -> Vec<u32> {
+    state.playing_sounds.lock().keys().copied().collect()
+}
+
+#[tauri::command]
 fn get_mic_volume(state: tauri::State<AppState>) -> f32 {
     state.mic_handle.volume()
 }
@@ -177,6 +182,7 @@ pub fn run() {
             set_volume,
             stop_all_sounds,
             get_progress,
+            get_active_sounds,
             // Microphone
             get_mic_volume,
             set_mic_volume,

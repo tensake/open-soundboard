@@ -8,6 +8,12 @@ export interface Progress {
   total: number;
 }
 
+export type SoundTab = {
+  id: string;
+  name: string;
+  path: string;
+}
+
 export const SOUNDS = [
   {
     label: "Sound 1",

@@ -20,7 +20,7 @@ export default function Settings(props: SettingsProps) {
   };
 
   return (
-    <div class="flex flex-col gap-4 max-w-md">
+    <div class="flex flex-col gap-4 max-w-md m-4">
       <h1 class="text-2xl font-bold">Settings</h1>
       <div>
         <h2 class="text-lg font-medium mb-1">Microphone Volume</h2>

@@ -1,6 +1,14 @@
-import { createSignal, onCleanup, For, Switch, Match } from "solid-js";
+import {
+  createSignal,
+  createEffect,
+  onCleanup,
+  For,
+  Switch,
+  Match,
+  onMount,
+} from "solid-js";
 import { LayoutDashboard, Settings as SettingsIcon } from "lucide-solid";
-import { getProgress } from "./lib";
+import { getProgress, getActiveSounds } from "./lib";
 import { Tab } from "./types";
 import Dashboard from "./components/tabs/dashboard";
 import Settings from "./components/tabs/settings";
@@ -21,8 +29,12 @@ export default function App() {
   const [seeking, setSeeking] = createSignal(false);
   const [paused, setPaused] = createSignal(false);
 
-  const [volumePct, setVolumePct] = createSignal(100);
-  const [micVolumePct, setMicVolumePct] = createSignal(100);
+  const [volumePct, setVolumePct] = createSignal(
+    Number(localStorage.getItem("volumePct") ?? 100),
+  );
+  const [micVolumePct, setMicVolumePct] = createSignal(
+    Number(localStorage.getItem("micVolumePct") ?? 100),
+  );
 
   const interval = setInterval(async () => {
     const id = activeId();
@@ -39,6 +51,19 @@ export default function App() {
       setPaused(false);
     }
   }, 100);
+
+  onMount(async () => {
+    const ids = await getActiveSounds();
+    if (ids.length > 0) {
+      setActiveId(ids[ids.length - 1]);
+      setPaused(false);
+    }
+  });
+
+  createEffect(() => {
+    localStorage.setItem("volumePct", String(volumePct()));
+    localStorage.setItem("micVolumePct", String(micVolumePct()));
+  });
 
   onCleanup(() => clearInterval(interval));
 
