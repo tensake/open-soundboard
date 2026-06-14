@@ -2,15 +2,17 @@ use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
-use tauri::State;
+use tauri::{Manager, State};
 
 mod audio;
+mod config;
 
 struct AppState {
     cable_device: Arc<cpal::Device>,
     playing_sounds: Arc<Mutex<HashMap<u32, audio::PlaybackHandle>>>,
     next_id: AtomicU32,
     mic_handle: audio::mic::MicrophoneHandle,
+    cfg: Mutex<config::Config>,
 }
 
 #[derive(serde::Serialize)]
@@ -103,6 +105,32 @@ fn stop_mic(state: tauri::State<AppState>) {
     state.mic_handle.stop();
 }
 
+#[tauri::command]
+fn get_tabs(state: tauri::State<AppState>) -> Vec<(config::Tab, Vec<String>)> {
+    let tabs = state.cfg.lock().get_tabs();
+    tabs.iter()
+        .map(|t| {
+            (
+                t.clone(),
+                t.list_sounds()
+                    .into_iter()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .collect::<Vec<_>>(),
+            )
+        })
+        .collect()
+}
+
+#[tauri::command]
+fn add_tab(state: tauri::State<AppState>, name: String, path: String) {
+    state.cfg.lock().add_tab(name, path);
+}
+
+#[tauri::command]
+fn remove_tab(state: tauri::State<AppState>, id: String) {
+    state.cfg.lock().remove_tab(id);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let playing_sounds = Arc::new(Mutex::new(HashMap::<u32, audio::PlaybackHandle>::new()));
@@ -121,13 +149,23 @@ pub fn run() {
         .expect("Failed to start microphone forwarding");
 
     tauri::Builder::default()
-        .manage(AppState {
-            cable_device,
-            playing_sounds,
-            next_id: AtomicU32::new(0),
-            mic_handle,
+        .setup(|app| {
+            let cfg = config::Config::new(
+                app.path()
+                    .app_data_dir()
+                    .expect("Failed to get app data directory"),
+            );
+            app.manage(AppState {
+                cable_device,
+                playing_sounds,
+                next_id: AtomicU32::new(0),
+                mic_handle,
+                cfg: Mutex::new(cfg),
+            });
+            Ok(())
         })
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             // Sound
             play_sound,
@@ -142,7 +180,11 @@ pub fn run() {
             // Microphone
             get_mic_volume,
             set_mic_volume,
-            stop_mic
+            stop_mic,
+            // Config
+            get_tabs,
+            add_tab,
+            remove_tab
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
