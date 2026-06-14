@@ -174,8 +174,7 @@ pub fn play_sound(
     // Wait until the output stream is fully ready
     ready_rx
         .recv()
-        .map_err(|_| "Audio thread died unexpectedly")?
-        .map_err(|e| e)?;
+        .map_err(|_| "Audio thread died unexpectedly")??;
 
     Ok(PlaybackHandle {
         state,

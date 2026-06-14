@@ -12,9 +12,9 @@
   "app": {
     "windows": [
       {
-        "title": "open-soundboard",
-        "width": 800,
-        "height": 600
+        "title": "Open SoundBoard",
+        "width": 1000,
+        "height": 800
       }
     ],
     "security": {
