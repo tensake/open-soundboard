@@ -1,6 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { Progress } from "./types";
 
+export interface SoundTab {
+  id: string;
+  name: string;
+  path: string;
+}
+
+export const getTabs = () => invoke<[SoundTab, string[]][]>("get_tabs");
+export const addTab = (name: string, path: string) => invoke("add_tab", { name, path });
+export const removeTab = (id: string) => invoke("remove_tab", { id });
+
 export const playSound = (path: string, volume: number) =>
   invoke<number>("play_sound", { path, volume });
 

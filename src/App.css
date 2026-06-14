@@ -43,6 +43,7 @@
   --color-surface-2: #acb0be;
   --color-subtext-1: #5c5f77;
   --color-subtext-0: #6c6f85;
+  --color-innertext: #eff1f5;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -66,6 +67,7 @@
     --color-surface-2: #585b70;
     --color-subtext-1: #bac2de;
     --color-subtext-0: #a6adc8;
+    --color-innertext: #1e1e2e;
   }
 }
 
@@ -76,7 +78,7 @@ button {
   height: 34px;
   padding: 0 12px;
   background: var(--color-primary-400);
-  color: #fff;
+  color: var(--color-innertext);
   border: 2px solid var(--color-primary-500);
   border-radius: 6px;
   font-size: 13px;

@@ -2,8 +2,8 @@ import { createSignal, onCleanup, For, Switch, Match } from "solid-js";
 import { LayoutDashboard, Settings as SettingsIcon } from "lucide-solid";
 import { getProgress } from "./lib";
 import { Tab } from "./types";
-import Dashboard from "./tabs/dashboard";
-import Settings from "./tabs/settings";
+import Dashboard from "./components/tabs/dashboard";
+import Settings from "./components/tabs/settings";
 import "./App.css";
 import PlayerBar from "./components/playerBar";
 
@@ -62,7 +62,7 @@ export default function App() {
         </For>
       </nav>
 
-      <div class="flex flex-col flex-1 justify-between p-4 min-w-0">
+      <div class="flex flex-col flex-1 justify-between min-w-0">
         <div class="flex-1 overflow-y-auto">
           <Switch>
             <Match when={activeTab() === Tab.Dashboard}>

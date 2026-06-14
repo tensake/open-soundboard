@@ -1,5 +1,5 @@
 import type { Accessor, Setter } from "solid-js";
-import { getMicVolume, setMicVolume } from "../lib";
+import { getMicVolume, setMicVolume } from "../../lib";
 import { onMount } from "solid-js";
 
 interface SettingsProps {
