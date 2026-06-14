@@ -68,7 +68,7 @@ export default function PlayerBar(props: PlayerBarProps) {
   };
 
   return (
-    <div class="grid grid-cols-[0.3fr_1fr_0.3fr] gap-8 items-center border-t border-surface-1 pt-4 mt-4 min-h-24">
+    <div class="grid grid-cols-[0.3fr_1fr_0.3fr] gap-8 items-center min-h-20 px-4 border-t-2 border-surface-0 bg-mantle">
       <div />
 
       <div class="flex flex-col gap-2 items-center">
@@ -108,7 +108,7 @@ export default function PlayerBar(props: PlayerBarProps) {
         </div>
       </div>
 
-      <div class="flex flex-col gap-2 mx-4 max-w-xs">
+      <div class="flex items-center gap-3 px-4">
         <input
           type="range"
           min="0"
@@ -116,7 +116,7 @@ export default function PlayerBar(props: PlayerBarProps) {
           step="1"
           value={props.volumePct()}
           onInput={handleVolume}
-          class="w-full cursor-pointer"
+          class="flex-1 cursor-pointer"
         />
       </div>
     </div>
