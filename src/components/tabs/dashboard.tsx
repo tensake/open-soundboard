@@ -12,14 +12,9 @@ import { playSound, getTabs, addTab, removeTab } from "../../lib";
 import { SoundTab } from "../../types";
 
 interface DashboardProps {
-  activeId: Accessor<number | null>;
-  setActiveId: Setter<number | null>;
+  onSoundPlayed: (id: number, path: string) => void;
   volumePct: Accessor<number>;
   setVolumePct: Setter<number>;
-  paused: Accessor<boolean>;
-  setPaused: Setter<boolean>;
-  current: Accessor<number>;
-  total: Accessor<number>;
 }
 
 export default function Dashboard(props: DashboardProps) {
@@ -37,8 +32,7 @@ export default function Dashboard(props: DashboardProps) {
 
   const handlePlay = async (path: string) => {
     const id = await playSound(path, props.volumePct() / 100);
-    props.setActiveId(id);
-    props.setPaused(false);
+    props.onSoundPlayed(id, path);
   };
 
   const handleAddTab = async () => {
@@ -58,6 +52,7 @@ export default function Dashboard(props: DashboardProps) {
 
   return (
     <div class="flex flex-col h-full overflow-hidden">
+      {/* Tabs */}
       <div class="flex items-center gap-px bg-crust px-2 pt-2 shrink-0">
         <Show when={tabs()}>
           <For each={tabs()}>
@@ -93,13 +88,14 @@ export default function Dashboard(props: DashboardProps) {
         </div>
       </div>
 
+      {/* Sounds list */}
       <div class="flex-1 overflow-y-auto bg-base">
         <Show
           when={currentTab()}
           fallback={
             <p class="text-sm text-subtext-0 p-4">
               {tabs()?.length === 0
-                ? "No tabs yet — add a folder above."
+                ? "No tabs are created yet. Use a button above to add one."
                 : "Loading..."}
             </p>
           }
@@ -108,7 +104,7 @@ export default function Dashboard(props: DashboardProps) {
             each={currentTab()?.[1]}
             fallback={
               <p class="text-sm text-subtext-0 p-4">
-                No sounds in this folder.
+                No sound files are found in this folder.
               </p>
             }
           >
@@ -116,7 +112,7 @@ export default function Dashboard(props: DashboardProps) {
               <div
                 class={`group flex items-center gap-2 px-3 py-1 cursor-pointer transition-colors ${
                   i() % 2 === 0 ? "bg-base" : "bg-mantle"
-                } hover:bg-blue hover:text-base`}
+                } hover:bg-surface-0 hover:text-primary-400`}
                 onClick={() => handlePlay(sound)}
               >
                 <Play class="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />

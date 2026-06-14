@@ -1,33 +1,28 @@
 import {
   createSignal,
   createEffect,
-  onCleanup,
   For,
   Switch,
   Match,
   onMount,
 } from "solid-js";
 import { LayoutDashboard, Settings as SettingsIcon } from "lucide-solid";
-import { getProgress, getActiveSounds } from "./lib";
+import { getActiveSounds } from "./lib";
 import { Tab } from "./types";
 import Dashboard from "./components/tabs/dashboard";
 import Settings from "./components/tabs/settings";
+import SoundsList from "./components/soundsList";
 import "./App.css";
-import PlayerBar from "./components/playerBar";
 
 const TABS = {
   [Tab.Dashboard]: { icon: LayoutDashboard },
   [Tab.Settings]: { icon: SettingsIcon },
 };
 
+let registerSound: (id: number, path: string) => void = () => {};
+
 export default function App() {
   const [activeTab, setActiveTab] = createSignal<Tab>(Tab.Dashboard);
-
-  const [activeId, setActiveId] = createSignal<number | null>(null);
-  const [current, setCurrent] = createSignal(0);
-  const [total, setTotal] = createSignal(0);
-  const [seeking, setSeeking] = createSignal(false);
-  const [paused, setPaused] = createSignal(false);
 
   const [volumePct, setVolumePct] = createSignal(
     Number(localStorage.getItem("volumePct") ?? 100),
@@ -36,28 +31,9 @@ export default function App() {
     Number(localStorage.getItem("micVolumePct") ?? 100),
   );
 
-  const interval = setInterval(async () => {
-    const id = activeId();
-    if (id == null || seeking()) return;
-
-    const progress = await getProgress(id);
-    if (progress) {
-      setCurrent(progress.current);
-      setTotal(progress.total);
-    } else {
-      setActiveId(null);
-      setCurrent(0);
-      setTotal(0);
-      setPaused(false);
-    }
-  }, 100);
-
   onMount(async () => {
     const ids = await getActiveSounds();
-    if (ids.length > 0) {
-      setActiveId(ids[ids.length - 1]);
-      setPaused(false);
-    }
+    ids.forEach((id) => registerSound(id, ""));
   });
 
   createEffect(() => {
@@ -65,7 +41,9 @@ export default function App() {
     localStorage.setItem("micVolumePct", String(micVolumePct()));
   });
 
-  onCleanup(() => clearInterval(interval));
+  const handleSoundPlayed = (id: number, path: string) => {
+    registerSound(id, path);
+  };
 
   return (
     <main class="flex h-screen w-screen overflow-hidden">
@@ -87,44 +65,28 @@ export default function App() {
         </For>
       </nav>
 
-      <div class="flex flex-col flex-1 justify-between min-w-0">
+      <div class="flex flex-col flex-1 min-w-0">
         <div class="flex-1 overflow-y-auto">
           <Switch>
             <Match when={activeTab() === Tab.Dashboard}>
               <Dashboard
-                activeId={activeId}
-                setActiveId={setActiveId}
+                onSoundPlayed={handleSoundPlayed}
                 volumePct={volumePct}
                 setVolumePct={setVolumePct}
-                paused={paused}
-                setPaused={setPaused}
-                current={current}
-                total={total}
               />
             </Match>
             <Match when={activeTab() === Tab.Settings}>
               <Settings
                 micVolumePct={micVolumePct}
                 setMicVolumePct={setMicVolumePct}
+                volumePct={volumePct}
+                setVolumePct={setVolumePct}
               />
             </Match>
           </Switch>
         </div>
 
-        <PlayerBar
-          activeId={activeId}
-          setActiveId={setActiveId}
-          paused={paused}
-          setPaused={setPaused}
-          current={current}
-          setCurrent={setCurrent}
-          total={total}
-          setTotal={setTotal}
-          seeking={seeking}
-          setSeeking={setSeeking}
-          volumePct={volumePct}
-          setVolumePct={setVolumePct}
-        />
+        <SoundsList onSoundAdded={(fn) => (registerSound = fn)} />
       </div>
     </main>
   );
