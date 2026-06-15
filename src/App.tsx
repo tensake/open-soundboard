@@ -6,7 +6,7 @@ import {
   Match,
   onMount,
 } from "solid-js";
-import { LayoutDashboard, Settings as SettingsIcon } from "lucide-solid";
+import { Cherry, Settings as SettingsIcon } from "lucide-solid";
 import { getActiveSounds } from "./lib";
 import { Tab } from "./types";
 import Dashboard from "./components/tabs/dashboard";
@@ -15,7 +15,7 @@ import SoundsList from "./components/soundsList";
 import "./App.css";
 
 const TABS = {
-  [Tab.Dashboard]: { icon: LayoutDashboard },
+  [Tab.Dashboard]: { icon: Cherry },
   [Tab.Settings]: { icon: SettingsIcon },
 };
 
