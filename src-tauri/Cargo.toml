@@ -25,12 +25,13 @@ serde_json = "1"
 cpal = "0.18"
 rodio = "0.22.2"
 rubato = "3.0"
+global-hotkey = "0.8"
 ringbuf = "0.4"
 symphonia = { version = "0.5", features = ["mp3", "wav", "flac", "vorbis", "ogg", "isomp4", "aac", "pcm"] }
 audioadapter-buffers = "3.0"
 parking_lot = "0.12.5"
 tauri-plugin-dialog = "2"
-uuid = { version = "1.23.3", features = ["v4"] }
+uuid = { version = "1.23.3", features = ["v4", "serde"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 cpal = { version = "0.18", features = ["pipewire"] }
