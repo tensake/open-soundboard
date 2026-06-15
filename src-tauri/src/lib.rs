@@ -1,8 +1,10 @@
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::mpsc;
 use std::sync::Arc;
 use tauri::{Manager, State};
+use uuid::Uuid;
 
 mod audio;
 mod config;
@@ -13,6 +15,7 @@ struct AppState {
     next_id: AtomicU32,
     mic_handle: audio::mic::MicrophoneHandle,
     cfg: Mutex<config::Config>,
+    hotkey_tx: mpsc::Sender<config::hotkey::HotKeyCmd>,
 }
 
 #[derive(serde::Serialize)]
@@ -111,7 +114,7 @@ fn stop_mic(state: tauri::State<AppState>) {
 }
 
 #[tauri::command]
-fn get_tabs(state: tauri::State<AppState>) -> Vec<(config::Tab, Vec<String>)> {
+fn get_tabs(state: tauri::State<AppState>) -> Vec<(config::tab::Tab, Vec<String>)> {
     let tabs = state.cfg.lock().get_tabs();
     tabs.iter()
         .map(|t| {
@@ -136,6 +139,64 @@ fn remove_tab(state: tauri::State<AppState>, id: String) {
     state.cfg.lock().remove_tab(id);
 }
 
+#[tauri::command]
+fn get_hotkeys(state: State<AppState>) -> Vec<config::hotkey::HotKeyEntry> {
+    state.cfg.lock().get_hotkeys()
+}
+
+#[tauri::command]
+fn register_hotkey(
+    hk: config::hotkey::HotKeyEntry,
+    state: State<AppState>,
+) -> Result<String, String> {
+    // Send register command
+    let (tx, rx) = mpsc::channel();
+    state
+        .hotkey_tx
+        .send(config::hotkey::HotKeyCmd::Register(hk.clone(), tx))
+        .map_err(|e| e.to_string())?;
+
+    // Receive result
+    let result = rx.recv().map_err(|e| e.to_string())?;
+    match result {
+        Ok(returned_id) => {
+            state.cfg.lock().insert_hotkey(hk);
+            Ok(returned_id.to_string())
+        }
+        Err(e) => Err(e),
+    }
+}
+
+#[tauri::command]
+fn update_hotkey(hk: config::hotkey::HotKeyEntry, state: State<AppState>) -> Result<(), String> {
+    // Send update command
+    let (tx, rx) = mpsc::channel();
+    state
+        .hotkey_tx
+        .send(config::hotkey::HotKeyCmd::Update(hk.clone(), tx))
+        .map_err(|e| e.to_string())?;
+
+    // Receive result
+    rx.recv().map_err(|e| e.to_string())??;
+    state.cfg.lock().update_hotkey(hk)
+}
+
+#[tauri::command]
+fn unregister_hotkey(id: String, state: State<AppState>) -> Result<(), String> {
+    // Send unregister command
+    let parsed = Uuid::parse_str(&id).map_err(|e| e.to_string())?;
+    let (tx, rx) = mpsc::channel();
+    state
+        .hotkey_tx
+        .send(config::hotkey::HotKeyCmd::Unregister(parsed, tx))
+        .map_err(|e| e.to_string())?;
+
+    // Receive result
+    rx.recv().map_err(|e| e.to_string())??;
+    state.cfg.lock().remove_hotkey(parsed);
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let playing_sounds = Arc::new(Mutex::new(HashMap::<u32, audio::PlaybackHandle>::new()));
@@ -154,19 +215,35 @@ pub fn run() {
         .expect("Failed to start microphone forwarding");
 
     tauri::Builder::default()
-        .setup(|app| {
+        .setup(move |app| {
             let cfg = config::Config::new(
                 app.path()
                     .app_data_dir()
                     .expect("Failed to get app data directory"),
             );
-            app.manage(AppState {
-                cable_device,
-                playing_sounds,
+
+            // Spawn thread for processing hotkey commands
+            let (hotkey_tx, hotkey_rx) = mpsc::channel::<config::hotkey::HotKeyCmd>();
+            let app_handle = app.handle().clone();
+            std::thread::spawn(move || config::hotkey::hotkey_loop(app_handle, hotkey_rx));
+
+            // Create app state
+            let app_state = AppState {
+                cable_device: cable_device.clone(),
+                playing_sounds: playing_sounds.clone(),
                 next_id: AtomicU32::new(0),
                 mic_handle,
                 cfg: Mutex::new(cfg),
-            });
+                hotkey_tx,
+            };
+            let hotkeys = app_state.cfg.lock().get_hotkeys();
+            app.manage(app_state);
+
+            // Register saved hotkeys on startup
+            for hk in hotkeys {
+                register_hotkey(hk.clone(), app.state()).unwrap();
+            }
+
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
@@ -190,7 +267,12 @@ pub fn run() {
             // Config
             get_tabs,
             add_tab,
-            remove_tab
+            remove_tab,
+            // Hotkeys
+            get_hotkeys,
+            register_hotkey,
+            update_hotkey,
+            unregister_hotkey,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
