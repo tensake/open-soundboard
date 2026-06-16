@@ -19,7 +19,7 @@ pub enum HotKeyKind {
 pub enum HotKeyCmd {
     Register(HotKeyEntry, Sender<Result<(Uuid, String), String>>),
     Unregister(Uuid, Sender<Result<(), String>>),
-    Update(HotKeyEntry, Sender<Result<(), String>>),
+    Update(HotKeyEntry, Sender<Result<String, String>>),
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -104,9 +104,11 @@ pub fn listen_hotkeys(app_handle: tauri::AppHandle, hotkey_rx: Receiver<HotKeyCm
                             match Shortcut::from_str(&new_binding) {
                                 // Register new hotkey
                                 Ok(new_shortcut) => {
+                                    let normalized = new_shortcut.to_string();
                                     let res = app
                                         .global_shortcut()
                                         .register(new_shortcut)
+                                        .map(|_| normalized)
                                         .map_err(|e| format!("Hotkey update failed: {e}"));
 
                                     let _ = tx.send(res);

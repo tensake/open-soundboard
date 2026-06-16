@@ -179,8 +179,10 @@ fn update_hotkey(hk: config::hotkey::HotKeyEntry, state: State<AppState>) -> Res
         .map_err(|e| e.to_string())?;
 
     // Receive result
-    rx.recv().map_err(|e| e.to_string())??;
-    state.cfg.lock().update_hotkey(hk)
+    let normalized_binding = rx.recv().map_err(|e| e.to_string())??;
+    let mut normalized_hk = hk.clone();
+    normalized_hk.binding = normalized_binding;
+    state.cfg.lock().update_hotkey(normalized_hk)
 }
 
 #[tauri::command]
