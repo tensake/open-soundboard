@@ -1619,6 +1619,7 @@ dependencies = [
  "objc2",
  "objc2-app-kit",
  "once_cell",
+ "serde",
  "thiserror 2.0.18",
  "windows-sys 0.59.0",
  "x11rb",
@@ -2836,7 +2837,6 @@ version = "0.1.0"
 dependencies = [
  "audioadapter-buffers",
  "cpal 0.18.1",
- "global-hotkey",
  "parking_lot",
  "ringbuf",
  "rodio",
@@ -2847,6 +2847,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
+ "tauri-plugin-global-shortcut",
  "tauri-plugin-opener",
  "uuid",
 ]
@@ -4408,6 +4409,21 @@ dependencies = [
  "thiserror 2.0.18",
  "toml 1.1.2+spec-1.1.0",
  "url",
+]
+
+[[package]]
+name = "tauri-plugin-global-shortcut"
+version = "2.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4dd9f4c5136c09cd962da0c86dc4accd4666db2ea591cf16e6597435843bd2b"
+dependencies = [
+ "global-hotkey",
+ "log",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-plugin",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

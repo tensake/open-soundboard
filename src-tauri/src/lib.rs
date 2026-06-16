@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::mpsc;
 use std::sync::Arc;
-use tauri::{Manager, State};
+use tauri::{Emitter, Manager, State};
 use uuid::Uuid;
 
 mod audio;
@@ -225,7 +225,7 @@ pub fn run() {
             // Spawn thread for processing hotkey commands
             let (hotkey_tx, hotkey_rx) = mpsc::channel::<config::hotkey::HotKeyCmd>();
             let app_handle = app.handle().clone();
-            std::thread::spawn(move || config::hotkey::hotkey_loop(app_handle, hotkey_rx));
+            std::thread::spawn(move || config::hotkey::listen_hotkeys(app_handle, hotkey_rx));
 
             // Create app state
             let app_state = AppState {
@@ -241,13 +241,33 @@ pub fn run() {
 
             // Register saved hotkeys on startup
             for hk in hotkeys {
-                register_hotkey(hk.clone(), app.state()).unwrap();
+                let _ = register_hotkey(hk.clone(), app.state());
             }
 
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(
+            // https://v2.tauri.app/plugin/global-shortcut/
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(move |app, shortcut, event| {
+                    if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        if let Some(state) = app.try_state::<AppState>() {
+                            if let Some(hk) = state
+                                .cfg
+                                .lock()
+                                .get_hotkeys()
+                                .iter()
+                                .find(|h| h.binding == shortcut.to_string())
+                            {
+                                let _ = app.emit("hotkey-pressed", hk.clone());
+                            }
+                        }
+                    }
+                })
+                .build(),
+        )
         .invoke_handler(tauri::generate_handler![
             // Sound
             play_sound,

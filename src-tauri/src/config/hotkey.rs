@@ -1,10 +1,10 @@
 use crate::config;
-use global_hotkey::{hotkey::HotKey, GlobalHotKeyEvent, GlobalHotKeyManager};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
 use std::time::Duration;
-use tauri::{AppHandle, Emitter};
+use tauri::Manager;
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
 use uuid::Uuid;
 
 /// Hotkey kind
@@ -30,30 +30,98 @@ pub struct HotKeyEntry {
     pub context: String,
 }
 
-pub struct HotKeyState {
-    manager: GlobalHotKeyManager,
-}
+pub fn listen_hotkeys(app_handle: tauri::AppHandle, hotkey_rx: Receiver<HotKeyCmd>) {
+    loop {
+        match hotkey_rx.try_recv() {
+            Ok(cmd) => match cmd {
+                HotKeyCmd::Register(hk, tx) => {
+                    let app = app_handle.clone();
+                    let binding = hk.binding;
 
-impl HotKeyState {
-    pub fn new() -> HotKeyState {
-        HotKeyState {
-            manager: GlobalHotKeyManager::new().unwrap(),
+                    let _ =
+                        app_handle.run_on_main_thread(move || match Shortcut::from_str(&binding) {
+                            Ok(shortcut) => {
+                                let res = app
+                                    .global_shortcut()
+                                    .register(shortcut)
+                                    .map(|_| hk.id)
+                                    .map_err(|e| format!("Hotkey registration failed: {e}"));
+
+                                let _ = tx.send(res);
+                            }
+                            Err(e) => {
+                                let _ = tx.send(Err(format!("Invalid hotkey string: {e}")));
+                            }
+                        });
+                }
+
+                HotKeyCmd::Unregister(id, tx) => {
+                    let app = app_handle.clone();
+                    let state = app.state::<crate::AppState>();
+
+                    // Find registered hotkey by id
+                    let active_hotkeys = state.cfg.lock().get_hotkeys();
+                    if let Some(hk) = active_hotkeys.iter().find(|h| h.id == id) {
+                        let binding = hk.binding.clone();
+
+                        let _ = app_handle.run_on_main_thread(move || {
+                            if let Ok(shortcut) = Shortcut::from_str(&binding) {
+                                let res = app
+                                    .global_shortcut()
+                                    .unregister(shortcut)
+                                    .map_err(|e| format!("Hotkey unregistration failed: {e}"));
+
+                                let _ = tx.send(res);
+                            } else {
+                                let _ =
+                                    tx.send(Err("Stored shortcut syntax is invalid".to_string()));
+                            }
+                        });
+                    } else {
+                        let _ = tx.send(Err(format!("Hotkey with id {id} not found")));
+                    }
+                }
+
+                HotKeyCmd::Update(hk, tx) => {
+                    let app = app_handle.clone();
+                    let state = app.state::<crate::AppState>();
+                    let new_binding = hk.binding.clone();
+
+                    let active_hotkeys = state.cfg.lock().get_hotkeys();
+                    if let Some(old_hk) = active_hotkeys.iter().find(|h| h.id == hk.id) {
+                        let old_binding = old_hk.binding.clone();
+
+                        let _ = app_handle.run_on_main_thread(move || {
+                            // Unregister old hotkey
+                            if let Ok(old_hk) = Shortcut::from_str(&old_binding) {
+                                let _ = app.global_shortcut().unregister(old_hk);
+                            }
+
+                            match Shortcut::from_str(&new_binding) {
+                                // Register new hotkey
+                                Ok(new_shortcut) => {
+                                    let res = app
+                                        .global_shortcut()
+                                        .register(new_shortcut)
+                                        .map_err(|e| format!("Hotkey update failed: {e}"));
+
+                                    let _ = tx.send(res);
+                                }
+                                Err(e) => {
+                                    let _ = tx.send(Err(format!("Invalid new hotkey string: {e}")));
+                                }
+                            }
+                        });
+                    } else {
+                        let _ = tx.send(Err(format!("Hotkey with id {} not found", hk.id)));
+                    }
+                }
+            },
+            Err(TryRecvError::Empty) => {
+                std::thread::sleep(Duration::from_millis(50));
+            }
+            Err(TryRecvError::Disconnected) => break,
         }
-    }
-
-    pub fn register(&self, hk: HotKeyEntry) -> Result<HotKey, String> {
-        let hotkey = HotKey::from_str(&hk.binding).map_err(|e| format!("Invalid hotkey {e}"))?;
-        self.manager
-            .register(hotkey.clone())
-            .map_err(|e| format!("Failed to register hotkey: {e}"))?;
-        Ok(hotkey)
-    }
-
-    pub fn unregister(&self, hotkey: HotKey) -> Result<(), String> {
-        self.manager
-            .unregister(hotkey)
-            .map_err(|e| format!("Failed to unregister hotkey: {e}"))?;
-        Ok(())
     }
 }
 
@@ -82,78 +150,6 @@ impl config::Config {
             Ok(())
         } else {
             Err(format!("Hotkey id {} not found", hk.id))
-        }
-    }
-}
-
-pub fn hotkey_loop(app_handle: AppHandle, hotkey_rx: Receiver<HotKeyCmd>) {
-    // Initialize state
-    let hk_state = HotKeyState::new();
-    let receiver = GlobalHotKeyEvent::receiver().clone();
-    let mut registered: Vec<(HotKey, HotKeyEntry)> = Vec::new();
-
-    loop {
-        // Process commands
-        match hotkey_rx.try_recv() {
-            Ok(cmd) => match cmd {
-                // Handle register command
-                HotKeyCmd::Register(hk, tx) => match hk_state.register(hk.clone()) {
-                    Ok(hkobj) => {
-                        registered.push((hkobj, hk.clone()));
-                        let _ = tx.send(Ok(hk.id));
-                    }
-                    Err(e) => {
-                        let _ = tx.send(Err(e));
-                    }
-                },
-                // Handle unregister command
-                HotKeyCmd::Unregister(id, tx) => {
-                    if let Some(pos) = registered.iter().position(|(_, entry)| entry.id == id) {
-                        let (hkobj, _) = registered.remove(pos);
-                        let res = hk_state.unregister(hkobj);
-                        let _ = tx.send(res);
-                    } else {
-                        let _ = tx.send(Err(format!("Hotkey id {} not found", id)));
-                    }
-                }
-                // Handle update command
-                HotKeyCmd::Update(hk, tx) => {
-                    if let Some(pos) = registered.iter().position(|(_, entry)| entry.id == hk.id) {
-                        // Remove old hotkey
-                        let (hkobj, _) = registered.remove(pos);
-                        let unregister_res = hk_state.unregister(hkobj);
-                        if let Err(e) = unregister_res {
-                            let _ = tx.send(Err(e));
-                            continue;
-                        }
-
-                        // Register new hotkey
-                        match hk_state.register(hk.clone()) {
-                            Ok(newhkobj) => {
-                                registered.push((newhkobj, hk.clone()));
-                                let _ = tx.send(Ok(()));
-                            }
-                            Err(e) => {
-                                let _ = tx.send(Err(e));
-                            }
-                        }
-                    } else {
-                        let _ = tx.send(Err(format!("Hotkey id {} not found", hk.id)));
-                    }
-                }
-            },
-            Err(TryRecvError::Empty) => {}
-            Err(TryRecvError::Disconnected) => break,
-        }
-
-        // Process hotkey events
-        match receiver.recv_timeout(Duration::from_millis(100)) {
-            Ok(event) => {
-                if let Some((_, hk)) = registered.iter().find(|(h, _)| h.id() == event.id) {
-                    let _ = app_handle.emit("hotkey-pressed", hk.clone());
-                }
-            }
-            Err(_) => {}
         }
     }
 }
