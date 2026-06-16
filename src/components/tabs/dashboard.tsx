@@ -8,11 +8,11 @@ import {
 import type { Accessor, Setter } from "solid-js";
 import { Play, Plus, Trash2 } from "lucide-solid";
 import { open } from "@tauri-apps/plugin-dialog";
-import { playSound, getTabs, addTab, removeTab } from "../../lib";
+import { getTabs, addTab, removeTab } from "../../lib";
 import { SoundTab } from "../../types";
 
 interface DashboardProps {
-  onSoundPlayed: (id: number, path: string) => void;
+  handlePlaySound: (path: string) => void | Promise<void>;
   volumePct: Accessor<number>;
   setVolumePct: Setter<number>;
 }
@@ -29,11 +29,6 @@ export default function Dashboard(props: DashboardProps) {
       setCurrentTab(loadedTabs[0]);
     }
   });
-
-  const handlePlay = async (path: string) => {
-    const id = await playSound(path, props.volumePct() / 100);
-    props.onSoundPlayed(id, path);
-  };
 
   const handleAddTab = async () => {
     const selected = await open({ directory: true, multiple: false });
@@ -113,7 +108,7 @@ export default function Dashboard(props: DashboardProps) {
                 class={`group flex items-center gap-2 px-3 py-1 cursor-pointer transition-colors ${
                   i() % 2 === 0 ? "bg-base" : "bg-mantle"
                 } hover:bg-surface-0 hover:text-primary-400`}
-                onClick={() => handlePlay(sound)}
+                onClick={() => props.handlePlaySound(sound)}
               >
                 <Play class="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                 <span class="text-sm truncate">

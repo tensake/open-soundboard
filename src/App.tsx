@@ -14,6 +14,7 @@ import {
   HotKeyEntry,
   registerHotkey,
   getHotkeys,
+  playSound,
 } from "./lib";
 import { Tab } from "./types";
 import Dashboard from "./components/tabs/dashboard";
@@ -53,7 +54,9 @@ export default function App() {
     // Listen for hotkeys
     unlisten = await listen("hotkey-pressed", (event) => {
       const hotkey = event.payload as HotKeyEntry;
-      // TODO: handle hotkeys
+      if (hotkey.kind === "Sound") {
+        handlePlaySound(hotkey.context);
+      }
     });
   });
 
@@ -62,7 +65,8 @@ export default function App() {
     localStorage.setItem("micVolumePct", String(micVolumePct()));
   });
 
-  const handleSoundPlayed = (id: number, path: string) => {
+  const handlePlaySound = async (path: string) => {
+    const id = await playSound(path, volumePct() / 100);
     registerSound(id, path);
   };
 
@@ -93,7 +97,7 @@ export default function App() {
           <Switch>
             <Match when={activeTab() === Tab.Dashboard}>
               <Dashboard
-                onSoundPlayed={handleSoundPlayed}
+                handlePlaySound={handlePlaySound}
                 volumePct={volumePct}
                 setVolumePct={setVolumePct}
               />
