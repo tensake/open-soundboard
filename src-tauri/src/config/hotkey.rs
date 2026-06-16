@@ -35,7 +35,6 @@ pub fn listen_hotkeys(app_handle: tauri::AppHandle, hotkey_rx: Receiver<HotKeyCm
         match hotkey_rx.try_recv() {
             Ok(cmd) => match cmd {
                 HotKeyCmd::Register(hk, tx) => {
-                    println!("Registering hotkey: {hk:?}");
                     let app = app_handle.clone();
                     let binding = hk.binding;
 
@@ -58,7 +57,6 @@ pub fn listen_hotkeys(app_handle: tauri::AppHandle, hotkey_rx: Receiver<HotKeyCm
                 }
 
                 HotKeyCmd::Unregister(id, tx) => {
-                    println!("Unregistering hotkey: {id}");
                     let app = app_handle.clone();
                     let state = app.state::<crate::AppState>();
 
@@ -86,7 +84,6 @@ pub fn listen_hotkeys(app_handle: tauri::AppHandle, hotkey_rx: Receiver<HotKeyCm
                 }
 
                 HotKeyCmd::Update(hk, tx) => {
-                    println!("Updating hotkey: {hk:?}");
                     let app = app_handle.clone();
                     let state = app.state::<crate::AppState>();
                     let new_binding = hk.binding.clone();

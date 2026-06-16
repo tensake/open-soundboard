@@ -26,6 +26,7 @@ struct Progress {
 
 #[tauri::command]
 fn play_sound(path: String, volume: Option<f32>, state: State<AppState>) -> Result<u32, String> {
+    println!("Playing sound {path}");
     let device = state.cable_device.clone();
     let handle =
         audio::play_sound(&path, device, volume.unwrap_or(1.0)).map_err(|e| e.to_string())?;
@@ -149,6 +150,7 @@ async fn register_hotkey(
     hk: config::hotkey::HotKeyEntry,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
+    println!("Registering hotkey: {hk:?}");
     // Send register command
     let (tx, rx) = mpsc::channel();
     let tx_pipe = state.hotkey_tx.clone();
@@ -171,6 +173,7 @@ async fn register_hotkey(
 
 #[tauri::command]
 fn update_hotkey(hk: config::hotkey::HotKeyEntry, state: State<AppState>) -> Result<(), String> {
+    println!("Updating hotkey: {hk:?}");
     // Send update command
     let (tx, rx) = mpsc::channel();
     state
@@ -187,6 +190,7 @@ fn update_hotkey(hk: config::hotkey::HotKeyEntry, state: State<AppState>) -> Res
 
 #[tauri::command]
 fn unregister_hotkey(id: String, state: State<AppState>) -> Result<(), String> {
+    println!("Unregistering hotkey: {id}");
     // Send unregister command
     let parsed = Uuid::parse_str(&id).map_err(|e| e.to_string())?;
     let (tx, rx) = mpsc::channel();
