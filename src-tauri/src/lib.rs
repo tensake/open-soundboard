@@ -240,13 +240,7 @@ pub fn run() {
                 cfg: Mutex::new(cfg),
                 hotkey_tx,
             };
-            let hotkeys = app_state.cfg.lock().get_hotkeys();
             app.manage(app_state);
-
-            // Register saved hotkeys on startup
-            for hk in hotkeys {
-                let _ = register_hotkey(hk.clone(), app.state());
-            }
 
             Ok(())
         })

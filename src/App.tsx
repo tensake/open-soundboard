@@ -5,9 +5,16 @@ import {
   Switch,
   Match,
   onMount,
+  onCleanup,
 } from "solid-js";
+import { listen } from "@tauri-apps/api/event";
 import { Cherry, Settings as SettingsIcon } from "lucide-solid";
-import { getActiveSounds } from "./lib";
+import {
+  getActiveSounds,
+  HotKeyEntry,
+  registerHotkey,
+  getHotkeys,
+} from "./lib";
 import { Tab } from "./types";
 import Dashboard from "./components/tabs/dashboard";
 import Settings from "./components/tabs/settings";
@@ -20,9 +27,11 @@ const TABS = {
 };
 
 let registerSound: (id: number, path: string) => void = () => {};
+let unlisten: () => void;
 
 export default function App() {
   const [activeTab, setActiveTab] = createSignal<Tab>(Tab.Dashboard);
+  const [allHotkeys, setAllHotkeys] = createSignal<HotKeyEntry[]>([]);
 
   const [volumePct, setVolumePct] = createSignal(
     Number(localStorage.getItem("volumePct") ?? 100),
@@ -32,8 +41,20 @@ export default function App() {
   );
 
   onMount(async () => {
+    // Register all active sounds
     const ids = await getActiveSounds();
     ids.forEach((id) => registerSound(id, ""));
+
+    // Register all hotkeys
+    const hotkeys = await getHotkeys();
+    setAllHotkeys(hotkeys);
+    hotkeys.forEach((hk) => registerHotkey(hk));
+
+    // Listen for hotkeys
+    unlisten = await listen("hotkey-pressed", (event) => {
+      const hotkey = event.payload as HotKeyEntry;
+      // TODO: handle hotkeys
+    });
   });
 
   createEffect(() => {
@@ -44,6 +65,8 @@ export default function App() {
   const handleSoundPlayed = (id: number, path: string) => {
     registerSound(id, path);
   };
+
+  onCleanup(() => unlisten?.());
 
   return (
     <main class="flex h-screen w-screen overflow-hidden">
