@@ -145,22 +145,24 @@ fn get_hotkeys(state: State<AppState>) -> Vec<config::hotkey::HotKeyEntry> {
 }
 
 #[tauri::command]
-fn register_hotkey(
+async fn register_hotkey(
     hk: config::hotkey::HotKeyEntry,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<String, String> {
     // Send register command
     let (tx, rx) = mpsc::channel();
-    state
-        .hotkey_tx
+    let tx_pipe = state.hotkey_tx.clone();
+    tx_pipe
         .send(config::hotkey::HotKeyCmd::Register(hk.clone(), tx))
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Worker thread communication broken: {e}"))?;
 
     // Receive result
     let result = rx.recv().map_err(|e| e.to_string())?;
     match result {
-        Ok(returned_id) => {
-            state.cfg.lock().insert_hotkey(hk);
+        Ok((returned_id, normalized_binding)) => {
+            let mut normalized_hk = hk.clone();
+            normalized_hk.binding = normalized_binding;
+            state.cfg.lock().insert_hotkey(normalized_hk);
             Ok(returned_id.to_string())
         }
         Err(e) => Err(e),
@@ -261,6 +263,7 @@ pub fn run() {
                                 .iter()
                                 .find(|h| h.binding == shortcut.to_string())
                             {
+                                println!("Hotkey {0} pressed! Context: {1}", hk.binding, hk.context);
                                 let _ = app.emit("hotkey-pressed", hk.clone());
                             }
                         }

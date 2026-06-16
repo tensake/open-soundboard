@@ -17,7 +17,7 @@ pub enum HotKeyKind {
 }
 
 pub enum HotKeyCmd {
-    Register(HotKeyEntry, Sender<Result<Uuid, String>>),
+    Register(HotKeyEntry, Sender<Result<(Uuid, String), String>>),
     Unregister(Uuid, Sender<Result<(), String>>),
     Update(HotKeyEntry, Sender<Result<(), String>>),
 }
@@ -35,16 +35,18 @@ pub fn listen_hotkeys(app_handle: tauri::AppHandle, hotkey_rx: Receiver<HotKeyCm
         match hotkey_rx.try_recv() {
             Ok(cmd) => match cmd {
                 HotKeyCmd::Register(hk, tx) => {
+                    println!("Registering hotkey: {hk:?}");
                     let app = app_handle.clone();
                     let binding = hk.binding;
 
                     let _ =
                         app_handle.run_on_main_thread(move || match Shortcut::from_str(&binding) {
                             Ok(shortcut) => {
+                                let normalized = shortcut.to_string();
                                 let res = app
                                     .global_shortcut()
                                     .register(shortcut)
-                                    .map(|_| hk.id)
+                                    .map(|_| (hk.id, normalized))
                                     .map_err(|e| format!("Hotkey registration failed: {e}"));
 
                                 let _ = tx.send(res);
@@ -56,6 +58,7 @@ pub fn listen_hotkeys(app_handle: tauri::AppHandle, hotkey_rx: Receiver<HotKeyCm
                 }
 
                 HotKeyCmd::Unregister(id, tx) => {
+                    println!("Unregistering hotkey: {id}");
                     let app = app_handle.clone();
                     let state = app.state::<crate::AppState>();
 
@@ -83,6 +86,7 @@ pub fn listen_hotkeys(app_handle: tauri::AppHandle, hotkey_rx: Receiver<HotKeyCm
                 }
 
                 HotKeyCmd::Update(hk, tx) => {
+                    println!("Updating hotkey: {hk:?}");
                     let app = app_handle.clone();
                     let state = app.state::<crate::AppState>();
                     let new_binding = hk.binding.clone();
