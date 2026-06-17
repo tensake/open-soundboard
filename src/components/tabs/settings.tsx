@@ -6,6 +6,7 @@ import {
   getHotkeys,
   unregisterHotkey,
   updateHotkey,
+  registerHotkey,
 } from "../../lib";
 import type { HotKeyEntry } from "../../lib";
 import { Trash2 } from "lucide-solid";
@@ -17,6 +18,60 @@ interface SettingsProps {
   setMicVolumePct: Setter<number>;
   volumePct: Accessor<number>;
   setVolumePct: Setter<number>;
+}
+
+const CONTROL_ACTIONS = [
+  "Mute",
+  "Unmute",
+  "MicMute",
+  "MicUnmute",
+  "StopAll",
+  "PauseAll",
+  "ResumeAll",
+];
+
+function HotKeyItem(props: {
+  hotkey: HotKeyEntry;
+  disabled: boolean;
+  refetchHotkeys: () => void;
+  onStartCapture: (hotkey: HotKeyEntry) => void;
+}) {
+  return (
+    <div class="flex items-center justify-between gap-4 px-3 py-2 rounded-md transition-all bg-surface-0 hover:bg-surface-1">
+      {/* Unregister button */}
+      <div class="flex items-center gap-3 min-w-0 flex-1">
+        <button
+          onClick={async (_) => {
+            await unregisterHotkey(props.hotkey.id);
+            props.refetchHotkeys();
+          }}
+          disabled={props.disabled}
+          class="disabled:opacity-30 disabled:cursor-not-allowed text-text"
+          title="Unregister hotkey"
+        >
+          <Trash2 class="w-3.5 h-3.5" />
+        </button>
+
+        {/* Context */}
+        <div class="flex flex-col min-w-0">
+          <span class="text-sm font-medium text-text truncate">
+            {props.hotkey.context.split(/[\\/]/).pop()}
+          </span>
+          <span class="text-xs text-subtext-1">{props.hotkey.kind}</span>
+        </div>
+      </div>
+
+      {/* Binding */}
+      <div class="shrink-0">
+        <kbd
+          class="px-2 py-1 text-xs bg-mantle text-primary-400 rounded cursor-pointer select-none"
+          onClick={() => props.onStartCapture(props.hotkey)}
+        >
+          {props.hotkey.binding}
+        </kbd>
+      </div>
+    </div>
+  );
 }
 
 export default function Settings(props: SettingsProps) {
@@ -45,12 +100,21 @@ export default function Settings(props: SettingsProps) {
     const current = capturingHotkey();
     if (!current) return;
 
-    await updateHotkey({
-      id: current.id,
-      binding,
-      kind: current.kind,
-      context: current.context,
-    });
+    if (current.id) {
+      await updateHotkey({
+        id: current.id,
+        binding,
+        kind: current.kind,
+        context: current.context,
+      });
+    } else {
+      await registerHotkey({
+        id: crypto.randomUUID(),
+        binding,
+        kind: current.kind,
+        context: current.context,
+      });
+    }
 
     setCapturingHotkey(null);
     refetchHotkeys();
@@ -93,8 +157,43 @@ export default function Settings(props: SettingsProps) {
         />
         <span class="text-sm">{props.volumePct()}%</span>
       </div>
+
+      {/* Control Hotkeys */}
       <div class="max-w-xl">
-        <h2 class="text-lg font-medium mb-3 text-text">Registered Hotkeys</h2>
+        <h2 class="text-lg font-medium mb-3 text-text">Control Hotkeys</h2>
+        <div class="grid grid-cols-1 gap-2">
+          <For each={CONTROL_ACTIONS}>
+            {(action) => {
+              const registered = () =>
+                hotkeys()?.find(
+                  (hk) => hk.kind === "Control" && hk.context === action,
+                );
+
+              return (
+                <HotKeyItem
+                  hotkey={
+                    registered() ?? {
+                      id: "",
+                      binding: "Click to bind",
+                      kind: "Control",
+                      context: action,
+                    }
+                  }
+                  disabled={!registered()}
+                  onStartCapture={(hk) => setCapturingHotkey(hk)}
+                  refetchHotkeys={refetchHotkeys}
+                />
+              );
+            }}
+          </For>
+        </div>
+      </div>
+
+      {/* Sound Hotkeys */}
+      <div class="max-w-xl">
+        <h2 class="text-lg font-medium mb-3 text-text">
+          Registered Sound Hotkeys
+        </h2>
         <div class="grid grid-cols-1 gap-2">
           <For
             each={hotkeys()?.filter((hk) => hk.kind === "Sound")}
@@ -105,38 +204,12 @@ export default function Settings(props: SettingsProps) {
             }
           >
             {(hotkey) => (
-              <div class="flex items-center justify-between gap-4 px-3 py-2 rounded-md transition-all bg-surface-0 hover:bg-surface-1">
-                {/* Unregister button */}
-                <div class="flex items-center gap-3 min-w-0 flex-1">
-                  <button
-                    onClick={async (_) => {
-                      await unregisterHotkey(hotkey.id);
-                      refetchHotkeys();
-                    }}
-                    title="Unregister hotkey"
-                  >
-                    <Trash2 class="w-3.5 h-3.5" />
-                  </button>
-
-                  {/* Context */}
-                  <div class="flex flex-col min-w-0">
-                    <span class="text-sm font-medium text-text truncate">
-                      {hotkey.context.split(/[\\/]/).pop()}
-                    </span>
-                    <span class="text-xs text-subtext-1">{hotkey.kind}</span>
-                  </div>
-                </div>
-
-                {/* Binding */}
-                <div class="shrink-0">
-                  <kbd
-                    class="px-2 py-1 text-xs bg-mantle text-primary-400 rounded cursor-pointer select-none"
-                    onClick={() => setCapturingHotkey(hotkey)}
-                  >
-                    {hotkey.binding}
-                  </kbd>
-                </div>
-              </div>
+              <HotKeyItem
+                hotkey={hotkey}
+                disabled={false}
+                onStartCapture={(hk) => setCapturingHotkey(hk)}
+                refetchHotkeys={refetchHotkeys}
+              />
             )}
           </For>
         </div>
