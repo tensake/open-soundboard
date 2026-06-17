@@ -18,37 +18,12 @@ import {
 } from "../../lib";
 import type { HotKeyEntry } from "../../lib";
 import { SoundTab } from "../../types";
+import HotkeyOverlay from "./../hotkeyOverlay";
 
 interface DashboardProps {
   handlePlaySound: (path: string) => void | Promise<void>;
   volumePct: Accessor<number>;
   setVolumePct: Setter<number>;
-}
-
-function buildBinding(e: KeyboardEvent): string {
-  const parts: string[] = [];
-
-  // Add modifiers
-  if (e.ctrlKey) parts.push("Ctrl");
-  if (e.altKey) parts.push("Alt");
-  if (e.shiftKey) parts.push("Shift");
-  if (e.metaKey) parts.push("Super");
-  const key = e.key;
-
-  // Skip bare modifier keys
-  if (["Control", "Alt", "Shift", "Meta"].includes(key)) return "";
-
-  // Normalize key names
-  const keyMap: Record<string, string> = {
-    " ": "Space",
-    ArrowUp: "Up",
-    ArrowDown: "Down",
-    ArrowLeft: "Left",
-    ArrowRight: "Right",
-  };
-
-  parts.push(keyMap[key] ?? (key.length === 1 ? key.toUpperCase() : key));
-  return parts.join("+");
 }
 
 function SoundItem(props: {
@@ -114,8 +89,6 @@ export default function Dashboard(props: DashboardProps) {
   );
   const [capturingFor, setCapturingFor] = createSignal<string | null>(null);
 
-  let captureListener: ((e: KeyboardEvent) => void) | null = null;
-
   createEffect(() => {
     const loadedTabs = tabs();
     if (!currentTab() && loadedTabs?.length) {
@@ -139,42 +112,24 @@ export default function Dashboard(props: DashboardProps) {
     refetch();
   };
 
-  const cancelCapture = () => {
-    setCapturingFor(null);
-
-    if (captureListener) {
-      window.removeEventListener("keydown", captureListener);
-      captureListener = null;
-    }
-  };
-
   const handleStartCapture = (path: string) => {
     setCapturingFor(path);
+  };
 
-    captureListener = (e: KeyboardEvent) => {
-      // Cancel capture if escape is pressed
-      if (e.key === "Escape") {
-        cancelCapture();
-        return;
-      }
+  const handleCapture = async (binding: string) => {
+    const path = capturingFor();
+    if (!path) return;
 
-      const binding = buildBinding(e);
-      if (!binding) return;
-
-      e.preventDefault();
-      cancelCapture();
-
-      // Register hotkey
-      const hk: HotKeyEntry = {
-        id: crypto.randomUUID(),
-        binding,
-        kind: "Sound",
-        context: path,
-      };
-      registerHotkey(hk).then(() => refetchHotkeys());
+    const hk: HotKeyEntry = {
+      id: crypto.randomUUID(),
+      binding,
+      kind: "Sound",
+      context: path,
     };
 
-    window.addEventListener("keydown", captureListener);
+    await registerHotkey(hk);
+    refetchHotkeys();
+    setCapturingFor(null);
   };
 
   const handleUnregister = async (e: MouseEvent, path: string) => {
@@ -189,25 +144,11 @@ export default function Dashboard(props: DashboardProps) {
 
   return (
     <div class="flex flex-col h-full overflow-hidden">
-      {/* Hotkey capture overlay */}
-      <Show when={capturingFor()}>
-        <div
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-          onClick={cancelCapture}
-        >
-          <div
-            class="bg-surface-0 rounded-lg p-8 flex flex-col items-center gap-2 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Keyboard class="w-8 h-8 text-blue" />
-            <p class="text-text font-medium">Press a key combination</p>
-            <p class="text-subtext-0 text-sm truncate max-w-xs">
-              {capturingFor()!.split(/[\\/]/).pop()}
-            </p>
-            <p class="text-subtext-1 pt-2 text-xs">Click Escape to cancel</p>
-          </div>
-        </div>
-      </Show>
+      <HotkeyOverlay
+        capturingFor={capturingFor()}
+        onCapture={handleCapture}
+        onCancel={() => setCapturingFor(null)}
+      />
 
       {/* Tabs */}
       <div class="flex items-center gap-px bg-crust px-2 pt-2 shrink-0">

@@ -5,9 +5,12 @@ import {
   setGeneralVolume,
   getHotkeys,
   unregisterHotkey,
+  updateHotkey,
 } from "../../lib";
+import type { HotKeyEntry } from "../../lib";
 import { Trash2 } from "lucide-solid";
-import { For, onMount, createResource } from "solid-js";
+import { For, onMount, createResource, createSignal } from "solid-js";
+import HotkeyOverlay from "./../hotkeyOverlay";
 
 interface SettingsProps {
   micVolumePct: Accessor<number>;
@@ -18,6 +21,8 @@ interface SettingsProps {
 
 export default function Settings(props: SettingsProps) {
   const [hotkeys, { refetch: refetchHotkeys }] = createResource(getHotkeys);
+  const [capturingHotkey, setCapturingHotkey] =
+    createSignal<HotKeyEntry | null>(null);
 
   onMount(async () => {
     const vol = await getMicVolume();
@@ -36,10 +41,31 @@ export default function Settings(props: SettingsProps) {
     setGeneralVolume(value / 100);
   };
 
+  const handleCapture = async (binding: string) => {
+    const current = capturingHotkey();
+    if (!current) return;
+
+    await updateHotkey({
+      id: current.id,
+      binding,
+      kind: current.kind,
+      context: current.context,
+    });
+
+    setCapturingHotkey(null);
+    refetchHotkeys();
+  };
+
   refetchHotkeys();
 
   return (
     <div class="flex flex-col gap-4 m-4">
+      <HotkeyOverlay
+        capturingFor={capturingHotkey() ? capturingHotkey()!.context : null}
+        onCapture={handleCapture}
+        onCancel={() => setCapturingHotkey(null)}
+      />
+
       <h1 class="text-2xl font-bold">Settings</h1>
       <div class="max-w-md">
         <h2 class="text-lg font-medium mb-1">Microphone Volume</h2>
@@ -102,9 +128,11 @@ export default function Settings(props: SettingsProps) {
                 </div>
 
                 {/* Binding */}
-                {/* TODO: update binding on click */}
                 <div class="shrink-0">
-                  <kbd class="px-2 py-1 text-xs bg-mantle text-primary-400 rounded">
+                  <kbd
+                    class="px-2 py-1 text-xs bg-mantle text-primary-400 rounded cursor-pointer select-none"
+                    onClick={() => setCapturingHotkey(hotkey)}
+                  >
                     {hotkey.binding}
                   </kbd>
                 </div>

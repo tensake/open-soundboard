@@ -15,6 +15,11 @@ import {
   registerHotkey,
   getHotkeys,
   playSound,
+  stopAllSounds,
+  resumeSound,
+  pauseSound,
+  setGeneralVolume,
+  setMicVolume,
 } from "./lib";
 import { Tab } from "./types";
 import Dashboard from "./components/tabs/dashboard";
@@ -32,7 +37,7 @@ let unlisten: () => void;
 
 export default function App() {
   const [activeTab, setActiveTab] = createSignal<Tab>(Tab.Dashboard);
-  const [allHotkeys, setAllHotkeys] = createSignal<HotKeyEntry[]>([]);
+  const [_, setAllHotkeys] = createSignal<HotKeyEntry[]>([]);
 
   const [volumePct, setVolumePct] = createSignal(
     Number(localStorage.getItem("volumePct") ?? 100),
@@ -40,6 +45,36 @@ export default function App() {
   const [micVolumePct, setMicVolumePct] = createSignal(
     Number(localStorage.getItem("micVolumePct") ?? 100),
   );
+
+  const controlActions: Record<string, () => void | Promise<void>> = {
+    Mute: () => {
+      setVolumePct(0);
+      setGeneralVolume(0);
+    },
+    Unmute: () => {
+      setVolumePct(100);
+      setGeneralVolume(1.0);
+    },
+    MicMute: () => {
+      setMicVolumePct(0);
+      setMicVolume(0);
+    },
+    MicUnmute: () => {
+      setMicVolumePct(100);
+      setMicVolume(1.0);
+    },
+    StopAll: () => {
+      stopAllSounds();
+    },
+    PauseAll: async () => {
+      const ids = await getActiveSounds();
+      ids.forEach(pauseSound);
+    },
+    ResumeAll: async () => {
+      const ids = await getActiveSounds();
+      ids.forEach(resumeSound);
+    },
+  };
 
   onMount(async () => {
     // Register all active sounds
@@ -52,10 +87,19 @@ export default function App() {
     hotkeys.forEach((hk) => registerHotkey(hk));
 
     // Listen for hotkeys
-    unlisten = await listen("hotkey-pressed", (event) => {
+    unlisten = await listen("hotkey-pressed", async (event) => {
       const hotkey = event.payload as HotKeyEntry;
       if (hotkey.kind === "Sound") {
         handlePlaySound(hotkey.context);
+      }
+
+      if (hotkey.kind === "Control") {
+        const action = controlActions[hotkey.binding];
+        if (action) {
+          await action();
+        } else {
+          console.warn(`Unknown control binding received: ${hotkey.binding}`);
+        }
       }
     });
   });
