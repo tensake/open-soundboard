@@ -1,6 +1,13 @@
 import type { Accessor, Setter } from "solid-js";
-import { getMicVolume, setMicVolume, setGeneralVolume } from "../../lib";
-import { onMount } from "solid-js";
+import {
+  getMicVolume,
+  setMicVolume,
+  setGeneralVolume,
+  getHotkeys,
+  unregisterHotkey,
+} from "../../lib";
+import { Trash2 } from "lucide-solid";
+import { For, onMount, createResource } from "solid-js";
 
 interface SettingsProps {
   micVolumePct: Accessor<number>;
@@ -10,6 +17,8 @@ interface SettingsProps {
 }
 
 export default function Settings(props: SettingsProps) {
+  const [hotkeys, { refetch: refetchHotkeys }] = createResource(getHotkeys);
+
   onMount(async () => {
     const vol = await getMicVolume();
     props.setMicVolumePct(Math.round(vol * 100));
@@ -27,10 +36,12 @@ export default function Settings(props: SettingsProps) {
     setGeneralVolume(value / 100);
   };
 
+  refetchHotkeys();
+
   return (
-    <div class="flex flex-col gap-4 max-w-md m-4">
+    <div class="flex flex-col gap-4 m-4">
       <h1 class="text-2xl font-bold">Settings</h1>
-      <div>
+      <div class="max-w-md">
         <h2 class="text-lg font-medium mb-1">Microphone Volume</h2>
         <input
           type="range"
@@ -43,7 +54,7 @@ export default function Settings(props: SettingsProps) {
         />
         <span class="text-sm">{props.micVolumePct()}%</span>
       </div>
-      <div>
+      <div class="max-w-md">
         <h2 class="text-lg font-medium mb-1">General Volume</h2>
         <input
           type="range"
@@ -55,6 +66,52 @@ export default function Settings(props: SettingsProps) {
           class="w-full cursor-pointer"
         />
         <span class="text-sm">{props.volumePct()}%</span>
+      </div>
+      <div class="max-w-xl">
+        <h2 class="text-lg font-medium mb-3 text-text">Registered Hotkeys</h2>
+        <div class="grid grid-cols-1 gap-2">
+          <For
+            each={hotkeys()}
+            fallback={
+              <div class="text-sm text-subtext-1">
+                No hotkeys are registered yet. Use the dashboard to add one!
+              </div>
+            }
+          >
+            {(hotkey) => (
+              <div class="flex items-center justify-between gap-4 px-3 py-2 rounded-md transition-all bg-surface-0 hover:bg-surface-1">
+                {/* Unregister button */}
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                  <button
+                    onClick={async (_) => {
+                      await unregisterHotkey(hotkey.id);
+                      refetchHotkeys();
+                    }}
+                    title="Unregister hotkey"
+                  >
+                    <Trash2 class="w-3.5 h-3.5" />
+                  </button>
+
+                  {/* Context */}
+                  <div class="flex flex-col min-w-0">
+                    <span class="text-sm font-medium text-text truncate">
+                      {hotkey.context.split(/[\\/]/).pop()}
+                    </span>
+                    <span class="text-xs text-subtext-1">{hotkey.kind}</span>
+                  </div>
+                </div>
+
+                {/* Binding */}
+                {/* TODO: update binding on click */}
+                <div class="shrink-0">
+                  <kbd class="px-2 py-1 text-xs bg-mantle text-primary-400 rounded">
+                    {hotkey.binding}
+                  </kbd>
+                </div>
+              </div>
+            )}
+          </For>
+        </div>
       </div>
     </div>
   );
