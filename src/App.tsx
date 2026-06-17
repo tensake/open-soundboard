@@ -94,11 +94,11 @@ export default function App() {
       }
 
       if (hotkey.kind === "Control") {
-        const action = controlActions[hotkey.binding];
+        const action = controlActions[hotkey.context];
         if (action) {
           await action();
         } else {
-          console.warn(`Unknown control binding received: ${hotkey.binding}`);
+          console.warn(`Unknown control action received: ${hotkey.context}`);
         }
       }
     });

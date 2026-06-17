@@ -97,7 +97,7 @@ export default function Settings(props: SettingsProps) {
         <h2 class="text-lg font-medium mb-3 text-text">Registered Hotkeys</h2>
         <div class="grid grid-cols-1 gap-2">
           <For
-            each={hotkeys()}
+            each={hotkeys()?.filter((hk) => hk.kind === "Sound")}
             fallback={
               <div class="text-sm text-subtext-1">
                 No hotkeys are registered yet. Use the dashboard to add one!
