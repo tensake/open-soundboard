@@ -19,7 +19,6 @@ pub enum HotKeyKind {
 pub enum HotKeyCmd {
     Register(HotKeyEntry, Sender<Result<(Uuid, String), String>>),
     Unregister(Uuid, Sender<Result<(), String>>),
-    Update(HotKeyEntry, Sender<Result<String, String>>),
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -82,43 +81,6 @@ pub fn listen_hotkeys(app_handle: tauri::AppHandle, hotkey_rx: Receiver<HotKeyCm
                         let _ = tx.send(Err(format!("Hotkey with id {id} not found")));
                     }
                 }
-
-                HotKeyCmd::Update(hk, tx) => {
-                    let app = app_handle.clone();
-                    let state = app.state::<crate::AppState>();
-                    let new_binding = hk.binding.clone();
-
-                    let active_hotkeys = state.cfg.lock().get_hotkeys();
-                    if let Some(old_hk) = active_hotkeys.iter().find(|h| h.id == hk.id) {
-                        let old_binding = old_hk.binding.clone();
-
-                        let _ = app_handle.run_on_main_thread(move || {
-                            // Unregister old hotkey
-                            if let Ok(old_hk) = Shortcut::from_str(&old_binding) {
-                                let _ = app.global_shortcut().unregister(old_hk);
-                            }
-
-                            match Shortcut::from_str(&new_binding) {
-                                // Register new hotkey
-                                Ok(new_shortcut) => {
-                                    let normalized = new_shortcut.to_string();
-                                    let res = app
-                                        .global_shortcut()
-                                        .register(new_shortcut)
-                                        .map(|_| normalized)
-                                        .map_err(|e| format!("Hotkey update failed: {e}"));
-
-                                    let _ = tx.send(res);
-                                }
-                                Err(e) => {
-                                    let _ = tx.send(Err(format!("Invalid new hotkey string: {e}")));
-                                }
-                            }
-                        });
-                    } else {
-                        let _ = tx.send(Err(format!("Hotkey with id {} not found", hk.id)));
-                    }
-                }
             },
             Err(TryRecvError::Empty) => {
                 std::thread::sleep(Duration::from_millis(50));
@@ -144,15 +106,5 @@ impl config::Config {
             self.save();
         }
         removed
-    }
-
-    pub fn update_hotkey(&mut self, hk: HotKeyEntry) -> Result<(), String> {
-        if self.hotkeys.contains_key(&hk.id) {
-            self.hotkeys.insert(hk.id, hk);
-            self.save();
-            Ok(())
-        } else {
-            Err(format!("Hotkey id {} not found", hk.id))
-        }
     }
 }

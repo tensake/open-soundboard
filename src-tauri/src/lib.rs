@@ -172,20 +172,14 @@ async fn register_hotkey(
 }
 
 #[tauri::command]
-async fn update_hotkey(hk: config::hotkey::HotKeyEntry, state: State<'_, AppState>) -> Result<(), String> {
-    println!("Updating hotkey: {hk:?}");
-    // Send update command
-    let (tx, rx) = mpsc::channel();
-    state
-        .hotkey_tx
-        .send(config::hotkey::HotKeyCmd::Update(hk.clone(), tx))
+async fn update_hotkey(
+    hk: config::hotkey::HotKeyEntry,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    unregister_hotkey(hk.id.clone().to_string(), state.clone())
+        .await
         .map_err(|e| e.to_string())?;
-
-    // Receive result
-    let normalized_binding = rx.recv().map_err(|e| e.to_string())??;
-    let mut normalized_hk = hk.clone();
-    normalized_hk.binding = normalized_binding;
-    state.cfg.lock().update_hotkey(normalized_hk)
+    Ok(register_hotkey(hk, state).await?)
 }
 
 #[tauri::command]
@@ -263,7 +257,10 @@ pub fn run() {
                                 .iter()
                                 .find(|h| h.binding == shortcut.to_string())
                             {
-                                println!("Hotkey {0} pressed! Context: {1}", hk.binding, hk.context);
+                                println!(
+                                    "Hotkey {0} pressed! Context: {1}",
+                                    hk.binding, hk.context
+                                );
                                 let _ = app.emit("hotkey-pressed", hk.clone());
                             }
                         }
