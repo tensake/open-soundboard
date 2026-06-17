@@ -172,7 +172,7 @@ async fn register_hotkey(
 }
 
 #[tauri::command]
-fn update_hotkey(hk: config::hotkey::HotKeyEntry, state: State<AppState>) -> Result<(), String> {
+async fn update_hotkey(hk: config::hotkey::HotKeyEntry, state: State<'_, AppState>) -> Result<(), String> {
     println!("Updating hotkey: {hk:?}");
     // Send update command
     let (tx, rx) = mpsc::channel();
@@ -189,7 +189,7 @@ fn update_hotkey(hk: config::hotkey::HotKeyEntry, state: State<AppState>) -> Res
 }
 
 #[tauri::command]
-fn unregister_hotkey(id: String, state: State<AppState>) -> Result<(), String> {
+async fn unregister_hotkey(id: String, state: State<'_, AppState>) -> Result<(), String> {
     println!("Unregistering hotkey: {id}");
     // Send unregister command
     let parsed = Uuid::parse_str(&id).map_err(|e| e.to_string())?;
