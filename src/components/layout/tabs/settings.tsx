@@ -7,11 +7,11 @@ import {
   unregisterHotkey,
   updateHotkey,
   registerHotkey,
-} from "../../lib";
-import type { HotKeyEntry } from "../../lib";
+} from "../../../lib";
+import type { HotKeyEntry } from "../../../lib";
 import { Trash2 } from "lucide-solid";
 import { For, onMount, createResource, createSignal } from "solid-js";
-import HotkeyOverlay from "./../hotkeyOverlay";
+import HotkeyOverlay from "../hotkeyOverlay";
 
 interface SettingsProps {
   micVolumePct: Accessor<number>;

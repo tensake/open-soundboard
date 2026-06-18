@@ -23,9 +23,9 @@ import {
 } from "./lib";
 import { listenAlerts } from "./lib/alerts";
 import { Tab } from "./types";
-import Dashboard from "./components/tabs/dashboard";
-import Settings from "./components/tabs/settings";
-import SoundsList from "./components/soundsList";
+import Dashboard from "./components/layout/tabs/dashboard";
+import Settings from "./components/layout/tabs/settings";
+import SoundsList from "./components/sounds/soundsList";
 import "./App.css";
 
 const TABS = {

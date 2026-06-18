@@ -8,7 +8,7 @@ import {
   stopSound,
   getProgress,
   formatTime,
-} from "../lib";
+} from "../../lib";
 
 interface SoundEntry {
   ids: number[];

@@ -15,12 +15,12 @@ import {
   getHotkeys,
   registerHotkey,
   unregisterHotkey,
-} from "../../lib";
-import type { HotKeyEntry } from "../../lib";
-import { alerts } from "../../lib/alerts";
-import { SoundTab } from "../../types";
-import HotkeyOverlay from "./../hotkeyOverlay";
-import AlertItem from "../ui/alert";
+} from "../../../lib";
+import type { HotKeyEntry } from "../../../lib";
+import { alerts } from "../../../lib/alerts";
+import { SoundTab } from "../../../types";
+import HotkeyOverlay from "../hotkeyOverlay";
+import AlertItem from "../../ui/alert";
 
 interface DashboardProps {
   handlePlaySound: (path: string) => void | Promise<void>;
