@@ -84,6 +84,7 @@ function SoundItem(props: {
 export default function Dashboard(props: DashboardProps) {
   const [tabs, { refetch }] = createResource(getTabs);
   const [hotkeys, { refetch: refetchHotkeys }] = createResource(getHotkeys);
+  const [searchQuery, setSearchQuery] = createSignal<string | null>(null);
   const [currentTab, setCurrentTab] = createSignal<[SoundTab, string[]] | null>(
     null,
   );
@@ -140,6 +141,14 @@ export default function Dashboard(props: DashboardProps) {
     refetchHotkeys();
   };
 
+  const filteredSounds = () => {
+    const sounds = currentTab()?.[1] ?? [];
+    const q = searchQuery()?.toLowerCase();
+    return q
+      ? sounds.filter((s) => s.split(/[\\/]/).pop()!.toLowerCase().includes(q))
+      : sounds;
+  };
+
   const isCurrentTab = (tab: SoundTab) => currentTab()?.[0].id === tab.id;
 
   return (
@@ -161,7 +170,10 @@ export default function Dashboard(props: DashboardProps) {
                     ? "bg-surface-0 text-text"
                     : "bg-mantle text-subtext-0 hover:bg-surface-1 hover:text-subtext-1"
                 }`}
-                onClick={() => setCurrentTab([tab, sounds])}
+                onClick={() => {
+                  setCurrentTab([tab, sounds]);
+                  setSearchQuery(null);
+                }}
               >
                 <span>{tab.name}</span>
                 <div
@@ -186,6 +198,23 @@ export default function Dashboard(props: DashboardProps) {
         </div>
       </div>
 
+      {/* Search */}
+      <div class="bg-mantle px-2 py-1.5 shrink-0 flex border-b border-surface-0">
+        <input
+          type="text"
+          class="w-full bg-base text-sm truncate"
+          placeholder="Enter a sound name to search..."
+          value={searchQuery() ?? ""}
+          onInput={(e) => setSearchQuery(e.currentTarget.value || null)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              const first = filteredSounds()[0];
+              if (first) props.handlePlaySound(first);
+            }
+          }}
+        />
+      </div>
+
       {/* Sounds list */}
       <div class="flex-1 overflow-y-auto bg-base">
         <Show
@@ -199,7 +228,7 @@ export default function Dashboard(props: DashboardProps) {
           }
         >
           <For
-            each={currentTab()?.[1]}
+            each={filteredSounds()}
             fallback={
               <p class="text-sm text-subtext-0 p-4">
                 No sound files are found in this folder.
