@@ -23,6 +23,10 @@
   --color-subtext-0: #6c6f85;
   --color-innertext: #eff1f5;
 
+  --color-error: #d20f39;
+  --color-warn: #df8e1d;
+  --color-info: #1e66f5;
+
   --color-primary-50: oklch(0.97 0.032 19.81);
   --color-primary-100: oklch(0.94 0.075 19.81);
   --color-primary-200: oklch(0.88 0.14 19.81);
@@ -50,6 +54,10 @@
     --color-subtext-0: #a6adc8;
     --color-innertext: #1e1e2e;
 
+    --color-error: #f38ba8;
+    --color-warn: #f9e2af;
+    --color-info: #89b4fa;
+
     --color-primary-50: oklch(0.97 0.019 2.76);
     --color-primary-100: oklch(0.94 0.045 2.76);
     --color-primary-200: oklch(0.88 0.084 2.76);
@@ -73,6 +81,9 @@
   --color-subtext-1: var(--color-subtext-1);
   --color-subtext-0: var(--color-subtext-0);
   --color-innertext: var(--color-innertext);
+  --color-error: var(--color-error);
+  --color-warn: var(--color-warn);
+  --color-info: var(--color-info);
   --color-primary-50: var(--color-primary-50);
   --color-primary-100: var(--color-primary-100);
   --color-primary-200: var(--color-primary-200);

@@ -17,8 +17,10 @@ import {
   unregisterHotkey,
 } from "../../lib";
 import type { HotKeyEntry } from "../../lib";
+import { alerts } from "../../lib/alerts";
 import { SoundTab } from "../../types";
 import HotkeyOverlay from "./../hotkeyOverlay";
+import AlertItem from "../ui/alert";
 
 interface DashboardProps {
   handlePlaySound: (path: string) => void | Promise<void>;
@@ -152,12 +154,15 @@ export default function Dashboard(props: DashboardProps) {
   const isCurrentTab = (tab: SoundTab) => currentTab()?.[0].id === tab.id;
 
   return (
-    <div class="flex flex-col h-full overflow-hidden">
+    <div class="flex flex-col h-full overflow-hidden bg-crust">
       <HotkeyOverlay
         capturingFor={capturingFor()}
         onCapture={handleCapture}
         onCancel={() => setCapturingFor(null)}
       />
+
+      {/* Alerts */}
+      <For each={alerts()}>{(alert) => <AlertItem alert={alert} />}</For>
 
       {/* Tabs */}
       <div class="flex items-center gap-px bg-crust px-2 pt-2 shrink-0">
@@ -199,7 +204,7 @@ export default function Dashboard(props: DashboardProps) {
       </div>
 
       {/* Search */}
-      <div class="bg-mantle px-2 py-1.5 shrink-0 flex border-b border-surface-0">
+      <div class="bg-mantle px-2 py-1.5 shrink-0 flex border-b border-t border-surface-0">
         <input
           type="text"
           class="w-full bg-base text-sm truncate"

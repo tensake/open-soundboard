@@ -21,6 +21,7 @@ import {
   setGeneralVolume,
   setMicVolume,
 } from "./lib";
+import { listenAlerts } from "./lib/alerts";
 import { Tab } from "./types";
 import Dashboard from "./components/tabs/dashboard";
 import Settings from "./components/tabs/settings";
@@ -99,6 +100,10 @@ export default function App() {
     const hotkeys = await getHotkeys();
     setAllHotkeys(hotkeys);
     hotkeys.forEach((hk) => registerHotkey(hk));
+
+    // Listen for alerts
+    const unlistenAlerts = listenAlerts();
+    onCleanup(() => unlistenAlerts.then((f) => f()));
 
     // Listen for hotkeys
     unlisten = await listen("hotkey-pressed", async (event) => {

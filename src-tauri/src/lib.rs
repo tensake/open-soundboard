@@ -26,8 +26,14 @@ struct Progress {
 }
 
 #[derive(Serialize, Clone)]
-pub struct Alert {
-    pub kind: &'static str,
+enum AlertKind {
+    Error,
+    Warn,
+}
+
+#[derive(Serialize, Clone)]
+struct Alert {
+    pub kind: AlertKind,
     pub title: &'static str,
     pub message: String,
 }
@@ -221,7 +227,7 @@ pub fn run() {
                     app.emit(
                         "alert",
                         Alert {
-                            kind: "error",
+                            kind: AlertKind::Error,
                             title: "Input device error",
                             message: e,
                         },
@@ -235,7 +241,7 @@ pub fn run() {
                     app.emit(
                         "alert",
                         Alert {
-                            kind: "error",
+                            kind: AlertKind::Error,
                             title: "Cable error",
                             message: e,
                         },
@@ -260,7 +266,7 @@ pub fn run() {
                             app.emit(
                                 "alert",
                                 Alert {
-                                    kind: "warn",
+                                    kind: AlertKind::Warn,
                                     title: "Microphone forwarding error",
                                     message: e.to_string(),
                                 },
