@@ -2,7 +2,7 @@ use cpal::traits::{DeviceTrait, HostTrait};
 
 /// On Windows, get VB-Audio virtual cable device.
 #[cfg(target_os = "windows")]
-pub fn get_cable() -> cpal::Device {
+pub fn get_cable() -> Result<cpal::Device, String> {
     let host = cpal::default_host();
     host.output_devices()
         .unwrap()
@@ -11,7 +11,7 @@ pub fn get_cable() -> cpal::Device {
                 .map(|desc| desc.name().contains("CABLE Input"))
                 .unwrap_or(false)
         })
-        .expect("Virtual Cable not found. Install on https://vb-audio.com/Cable/")
+        .ok_or("Virtual Cable not found. Install on https://vb-audio.com/Cable/".to_string())
 }
 
 #[cfg(target_os = "linux")]
@@ -76,7 +76,7 @@ fn create_virtual_sink() {
 
 /// On Linux, get virtual sink.
 #[cfg(target_os = "linux")]
-pub fn get_cable() -> cpal::Device {
+pub fn get_cable() -> Result<cpal::Device, String> {
     create_virtual_sink();
 
     let host = cpal::default_host();
@@ -87,12 +87,12 @@ pub fn get_cable() -> cpal::Device {
                 .map(|desc| desc.name().contains("OpenSoundBoard"))
                 .unwrap_or(false)
         })
-        .expect("Virtual sink not found")
+        .ok_or("Virtual sink not found".to_string())
 }
 
 /// On macOS, get BlackHole virtual audio device.
 #[cfg(target_os = "macos")]
-pub fn get_cable() -> cpal::Device {
+pub fn get_cable() -> Result<cpal::Device, String> {
     let host = cpal::default_host();
     host.output_devices()
         .unwrap()
@@ -101,8 +101,9 @@ pub fn get_cable() -> cpal::Device {
                 .map(|desc| desc.name().contains("BlackHole"))
                 .unwrap_or(false)
         })
-        .expect(
-            "BlackHole not found — install it from https://github.com/ExistentialAudio/BlackHole",
+        .ok_or(
+            "BlackHole not found. Install on https://github.com/ExistentialAudio/BlackHole"
+                .to_string(),
         )
 }
 
@@ -113,8 +114,8 @@ pub fn get_cable() -> cpal::Device {
 }
 
 /// Get the default microphone device.
-pub fn get_input_device() -> cpal::Device {
+pub fn get_input_device() -> Result<cpal::Device, String> {
     cpal::default_host()
         .default_input_device()
-        .expect("No default input device found")
+        .ok_or("No default input device found".to_string())
 }

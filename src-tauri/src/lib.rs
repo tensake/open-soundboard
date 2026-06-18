@@ -1,4 +1,5 @@
 use parking_lot::Mutex;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::mpsc;
@@ -10,24 +11,35 @@ mod audio;
 mod config;
 
 struct AppState {
-    cable_device: Arc<cpal::Device>,
+    cable_device: Option<Arc<cpal::Device>>,
     playing_sounds: Arc<Mutex<HashMap<u32, audio::PlaybackHandle>>>,
     next_id: AtomicU32,
-    mic_handle: audio::mic::MicrophoneHandle,
+    mic_handle: Option<audio::mic::MicrophoneHandle>,
     cfg: Mutex<config::Config>,
     hotkey_tx: mpsc::Sender<config::hotkey::HotKeyCmd>,
 }
 
-#[derive(serde::Serialize)]
+#[derive(Serialize)]
 struct Progress {
     current: f64,
     total: f64,
 }
 
+#[derive(Serialize, Clone)]
+pub struct Alert {
+    pub kind: &'static str,
+    pub title: &'static str,
+    pub message: String,
+}
+
 #[tauri::command]
 fn play_sound(path: String, volume: Option<f32>, state: State<AppState>) -> Result<u32, String> {
     println!("Playing sound {path}");
-    let device = state.cable_device.clone();
+    let device = state
+        .cable_device
+        .as_ref()
+        .ok_or("No output device found")?
+        .clone();
     let handle =
         audio::play_sound(&path, device, volume.unwrap_or(1.0)).map_err(|e| e.to_string())?;
     let id = state.next_id.fetch_add(1, Ordering::Relaxed);
@@ -101,17 +113,17 @@ fn get_active_sounds(state: State<AppState>) -> Vec<u32> {
 
 #[tauri::command]
 fn get_mic_volume(state: tauri::State<AppState>) -> f32 {
-    state.mic_handle.volume()
+    state.mic_handle.as_ref().map_or(0.0, |h| h.volume())
 }
 
 #[tauri::command]
 fn set_mic_volume(volume: f32, state: tauri::State<AppState>) {
-    state.mic_handle.set_volume(volume);
+    state.mic_handle.as_ref().map(|h| h.set_volume(volume));
 }
 
 #[tauri::command]
 fn stop_mic(state: tauri::State<AppState>) {
-    state.mic_handle.stop();
+    state.mic_handle.as_ref().map(|h| h.stop());
 }
 
 #[tauri::command]
@@ -201,23 +213,66 @@ async fn unregister_hotkey(id: String, state: State<'_, AppState>) -> Result<(),
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let playing_sounds = Arc::new(Mutex::new(HashMap::<u32, audio::PlaybackHandle>::new()));
-    let input_device = Arc::new(audio::device::get_input_device());
-    let cable_device = Arc::new(audio::device::get_cable());
-
-    // Sound cleanup thread
-    let playing_sounds_cleanup = playing_sounds.clone();
-    std::thread::spawn(move || loop {
-        std::thread::sleep(std::time::Duration::from_secs(1));
-        playing_sounds_cleanup.lock().retain(|_, h| !h.is_done());
-    });
-
-    // Start microphone forwarding
-    let mic_handle = audio::mic::start_forwarding(input_device, cable_device.clone())
-        .expect("Failed to start microphone forwarding");
-
     tauri::Builder::default()
         .setup(move |app| {
+            let playing_sounds = Arc::new(Mutex::new(HashMap::<u32, audio::PlaybackHandle>::new()));
+            let input_device = audio::device::get_input_device()
+                .map_err(|e| {
+                    app.emit(
+                        "alert",
+                        Alert {
+                            kind: "error",
+                            title: "Input device error",
+                            message: e,
+                        },
+                    )
+                    .ok()
+                })
+                .ok()
+                .map(Arc::new);
+            let cable_device = audio::device::get_cable()
+                .map_err(|e| {
+                    app.emit(
+                        "alert",
+                        Alert {
+                            kind: "error",
+                            title: "Cable error",
+                            message: e,
+                        },
+                    )
+                    .ok()
+                })
+                .ok()
+                .map(Arc::new);
+
+            // Sound cleanup thread
+            let playing_sounds_cleanup = playing_sounds.clone();
+            std::thread::spawn(move || loop {
+                std::thread::sleep(std::time::Duration::from_secs(1));
+                playing_sounds_cleanup.lock().retain(|_, h| !h.is_done());
+            });
+
+            // Start microphone forwarding
+            let mic_handle = match (&input_device, &cable_device) {
+                (Some(input), Some(cable)) => {
+                    audio::mic::start_forwarding(input.clone(), cable.clone())
+                        .map_err(|e| {
+                            app.emit(
+                                "alert",
+                                Alert {
+                                    kind: "warn",
+                                    title: "Microphone forwarding error",
+                                    message: e.to_string(),
+                                },
+                            )
+                            .ok()
+                        })
+                        .ok()
+                }
+                _ => None,
+            };
+
+            // Load config
             let cfg = config::Config::new(
                 app.path()
                     .app_data_dir()
