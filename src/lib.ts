@@ -1,6 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { Progress, SoundTab } from "./types";
 
+export type HotKeyKind = "Sound" | "Control";
+
+export interface HotKeyEntry {
+  id: string,
+  binding: string,
+  kind: HotKeyKind,
+  context: string,
+}
+
 export const getTabs = () => invoke<[SoundTab, string[]][]>("get_tabs");
 export const addTab = (name: string, path: string) => invoke("add_tab", { name, path });
 export const removeTab = (id: string) => invoke("remove_tab", { id });
@@ -31,6 +40,14 @@ export const getMicVolume = () => invoke<number>("get_mic_volume");
 
 export const setMicVolume = (volume: number) =>
   invoke("set_mic_volume", { volume });
+
+export const getHotkeys = () => invoke<HotKeyEntry[]>("get_hotkeys");
+
+export const registerHotkey = (hk: HotKeyEntry) => invoke("register_hotkey", { hk });
+
+export const updateHotkey = (hk: HotKeyEntry) => invoke("update_hotkey", { hk });
+
+export const unregisterHotkey = (id: string) => invoke("unregister_hotkey", { id });
 
 export function formatTime(secs: number): string {
   if (!isFinite(secs) || secs < 0) return "0:00";

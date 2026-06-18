@@ -6,22 +6,88 @@ import {
   Show,
 } from "solid-js";
 import type { Accessor, Setter } from "solid-js";
-import { Play, Plus, Trash2 } from "lucide-solid";
+import { Play, Plus, Trash2, Keyboard, KeyboardOff } from "lucide-solid";
 import { open } from "@tauri-apps/plugin-dialog";
-import { playSound, getTabs, addTab, removeTab } from "../../lib";
+import {
+  getTabs,
+  addTab,
+  removeTab,
+  getHotkeys,
+  registerHotkey,
+  unregisterHotkey,
+} from "../../lib";
+import type { HotKeyEntry } from "../../lib";
 import { SoundTab } from "../../types";
+import HotkeyOverlay from "./../hotkeyOverlay";
 
 interface DashboardProps {
-  onSoundPlayed: (id: number, path: string) => void;
+  handlePlaySound: (path: string) => void | Promise<void>;
   volumePct: Accessor<number>;
   setVolumePct: Setter<number>;
 }
 
+function SoundItem(props: {
+  sound: string;
+  odd: boolean;
+  registered: HotKeyEntry | undefined;
+  onPlay: () => void;
+  onStartCapture: () => void;
+  onUnregister: (e: MouseEvent) => void | Promise<void>;
+}) {
+  return (
+    <div
+      class={`group flex items-center gap-2 px-3 py-1 cursor-pointer transition-colors ${
+        props.odd ? "bg-base" : "bg-mantle"
+      } hover:bg-surface-0 hover:text-primary-400`}
+      onClick={props.onPlay}
+    >
+      {/* Name */}
+      <Play class="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+      <span class="text-sm truncate flex-1">
+        {props.sound.split(/[\\/]/).pop()}
+      </span>
+
+      {/* Register/Unregister button */}
+      <Show
+        when={props.registered}
+        fallback={
+          <div
+            class="opacity-0 group-hover:opacity-100 hover:text-blue transition-opacity ml-auto shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              props.onStartCapture();
+            }}
+            title="Click to register hotkey"
+          >
+            <Keyboard class="w-3.5 h-3.5" />
+          </div>
+        }
+      >
+        {(hk) => (
+          <div
+            class="opacity-0 group-hover:opacity-100 hover:text-red transition-opacity ml-auto shrink-0 flex items-center gap-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              props.onUnregister(e);
+            }}
+            title="Click to unregister hotkey"
+          >
+            <span class="text-xs text-subtext-0">{hk().binding}</span>
+            <KeyboardOff class="w-3.5 h-3.5" />
+          </div>
+        )}
+      </Show>
+    </div>
+  );
+}
+
 export default function Dashboard(props: DashboardProps) {
   const [tabs, { refetch }] = createResource(getTabs);
+  const [hotkeys, { refetch: refetchHotkeys }] = createResource(getHotkeys);
   const [currentTab, setCurrentTab] = createSignal<[SoundTab, string[]] | null>(
     null,
   );
+  const [capturingFor, setCapturingFor] = createSignal<string | null>(null);
 
   createEffect(() => {
     const loadedTabs = tabs();
@@ -30,10 +96,8 @@ export default function Dashboard(props: DashboardProps) {
     }
   });
 
-  const handlePlay = async (path: string) => {
-    const id = await playSound(path, props.volumePct() / 100);
-    props.onSoundPlayed(id, path);
-  };
+  const findHotkeyForSound = (path: string): HotKeyEntry | undefined =>
+    hotkeys()?.find((hk) => hk.context === path);
 
   const handleAddTab = async () => {
     const selected = await open({ directory: true, multiple: false });
@@ -48,10 +112,44 @@ export default function Dashboard(props: DashboardProps) {
     refetch();
   };
 
+  const handleStartCapture = (path: string) => {
+    setCapturingFor(path);
+  };
+
+  const handleCapture = async (binding: string) => {
+    const path = capturingFor();
+    if (!path) return;
+
+    const hk: HotKeyEntry = {
+      id: crypto.randomUUID(),
+      binding,
+      kind: "Sound",
+      context: path,
+    };
+
+    await registerHotkey(hk);
+    refetchHotkeys();
+    setCapturingFor(null);
+  };
+
+  const handleUnregister = async (e: MouseEvent, path: string) => {
+    e.stopPropagation();
+    const hk = findHotkeyForSound(path);
+    if (!hk) return;
+    await unregisterHotkey(hk.id);
+    refetchHotkeys();
+  };
+
   const isCurrentTab = (tab: SoundTab) => currentTab()?.[0].id === tab.id;
 
   return (
     <div class="flex flex-col h-full overflow-hidden">
+      <HotkeyOverlay
+        capturingFor={capturingFor()}
+        onCapture={handleCapture}
+        onCancel={() => setCapturingFor(null)}
+      />
+
       {/* Tabs */}
       <div class="flex items-center gap-px bg-crust px-2 pt-2 shrink-0">
         <Show when={tabs()}>
@@ -109,17 +207,14 @@ export default function Dashboard(props: DashboardProps) {
             }
           >
             {(sound, i) => (
-              <div
-                class={`group flex items-center gap-2 px-3 py-1 cursor-pointer transition-colors ${
-                  i() % 2 === 0 ? "bg-base" : "bg-mantle"
-                } hover:bg-surface-0 hover:text-primary-400`}
-                onClick={() => handlePlay(sound)}
-              >
-                <Play class="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <span class="text-sm truncate">
-                  {sound.split(/[\\/]/).pop()}
-                </span>
-              </div>
+              <SoundItem
+                sound={sound}
+                odd={i() % 2 !== 0}
+                registered={findHotkeyForSound(sound)}
+                onPlay={() => props.handlePlaySound(sound)}
+                onStartCapture={() => handleStartCapture(sound)}
+                onUnregister={(e) => handleUnregister(e, sound)}
+              />
             )}
           </For>
         </Show>

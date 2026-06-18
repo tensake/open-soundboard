@@ -5,9 +5,22 @@ import {
   Switch,
   Match,
   onMount,
+  onCleanup,
 } from "solid-js";
-import { LayoutDashboard, Settings as SettingsIcon } from "lucide-solid";
-import { getActiveSounds } from "./lib";
+import { listen } from "@tauri-apps/api/event";
+import { Cherry, Settings as SettingsIcon } from "lucide-solid";
+import {
+  getActiveSounds,
+  HotKeyEntry,
+  registerHotkey,
+  getHotkeys,
+  playSound,
+  stopAllSounds,
+  resumeSound,
+  pauseSound,
+  setGeneralVolume,
+  setMicVolume,
+} from "./lib";
 import { Tab } from "./types";
 import Dashboard from "./components/tabs/dashboard";
 import Settings from "./components/tabs/settings";
@@ -15,14 +28,19 @@ import SoundsList from "./components/soundsList";
 import "./App.css";
 
 const TABS = {
-  [Tab.Dashboard]: { icon: LayoutDashboard },
+  [Tab.Dashboard]: { icon: Cherry },
   [Tab.Settings]: { icon: SettingsIcon },
 };
 
 let registerSound: (id: number, path: string) => void = () => {};
+let unlisten: () => void;
 
 export default function App() {
   const [activeTab, setActiveTab] = createSignal<Tab>(Tab.Dashboard);
+  const [_, setAllHotkeys] = createSignal<HotKeyEntry[]>([]);
+  const [muted, setMuted] = createSignal(0);
+  const [micMuted, setMicMuted] = createSignal(0);
+  const [paused, setPaused] = createSignal(false);
 
   const [volumePct, setVolumePct] = createSignal(
     Number(localStorage.getItem("volumePct") ?? 100),
@@ -31,9 +49,73 @@ export default function App() {
     Number(localStorage.getItem("micVolumePct") ?? 100),
   );
 
+  const controlActions: Record<string, () => void | Promise<void>> = {
+    Mute: () => {
+      // Unmute
+      if (muted() > 0 && volumePct() === 0) {
+        setVolumePct(muted());
+        setGeneralVolume(muted() / 100);
+        setMuted(0);
+      } else {
+        // Mute
+        setMuted(volumePct());
+        setVolumePct(0);
+        setGeneralVolume(0);
+      }
+    },
+    MicMute: () => {
+      // Unmute
+      if (micMuted() > 0 && micVolumePct() === 0) {
+        setMicVolumePct(micMuted());
+        setMicVolume(micMuted() / 100);
+        setMicMuted(0);
+      } else {
+        // Mute
+        setMicMuted(micVolumePct());
+        setMicVolumePct(0);
+        setMicVolume(0);
+      }
+    },
+    StopAll: () => {
+      stopAllSounds();
+    },
+    PauseResumeAll: async () => {
+      const ids = await getActiveSounds();
+      if (paused()) {
+        ids.forEach(resumeSound);
+      } else {
+        ids.forEach(pauseSound);
+      }
+      setPaused(!paused());
+    },
+  };
+
   onMount(async () => {
+    // Register all active sounds
     const ids = await getActiveSounds();
     ids.forEach((id) => registerSound(id, ""));
+
+    // Register all hotkeys
+    const hotkeys = await getHotkeys();
+    setAllHotkeys(hotkeys);
+    hotkeys.forEach((hk) => registerHotkey(hk));
+
+    // Listen for hotkeys
+    unlisten = await listen("hotkey-pressed", async (event) => {
+      const hotkey = event.payload as HotKeyEntry;
+      if (hotkey.kind === "Sound") {
+        handlePlaySound(hotkey.context);
+      }
+
+      if (hotkey.kind === "Control") {
+        const action = controlActions[hotkey.context];
+        if (action) {
+          await action();
+        } else {
+          console.warn(`Unknown control action received: ${hotkey.context}`);
+        }
+      }
+    });
   });
 
   createEffect(() => {
@@ -41,9 +123,12 @@ export default function App() {
     localStorage.setItem("micVolumePct", String(micVolumePct()));
   });
 
-  const handleSoundPlayed = (id: number, path: string) => {
+  const handlePlaySound = async (path: string) => {
+    const id = await playSound(path, volumePct() / 100);
     registerSound(id, path);
   };
+
+  onCleanup(() => unlisten?.());
 
   return (
     <main class="flex h-screen w-screen overflow-hidden">
@@ -70,7 +155,7 @@ export default function App() {
           <Switch>
             <Match when={activeTab() === Tab.Dashboard}>
               <Dashboard
-                onSoundPlayed={handleSoundPlayed}
+                handlePlaySound={handlePlaySound}
                 volumePct={volumePct}
                 setVolumePct={setVolumePct}
               />
