@@ -20,15 +20,7 @@ interface SettingsProps {
   setVolumePct: Setter<number>;
 }
 
-const CONTROL_ACTIONS = [
-  "Mute",
-  "Unmute",
-  "MicMute",
-  "MicUnmute",
-  "StopAll",
-  "PauseAll",
-  "ResumeAll",
-];
+const CONTROL_ACTIONS = ["Mute", "MicMute", "StopAll", "PauseResumeAll"];
 
 function HotKeyItem(props: {
   hotkey: HotKeyEntry;

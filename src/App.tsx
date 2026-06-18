@@ -38,6 +38,9 @@ let unlisten: () => void;
 export default function App() {
   const [activeTab, setActiveTab] = createSignal<Tab>(Tab.Dashboard);
   const [_, setAllHotkeys] = createSignal<HotKeyEntry[]>([]);
+  const [muted, setMuted] = createSignal(0);
+  const [micMuted, setMicMuted] = createSignal(0);
+  const [paused, setPaused] = createSignal(false);
 
   const [volumePct, setVolumePct] = createSignal(
     Number(localStorage.getItem("volumePct") ?? 100),
@@ -48,31 +51,42 @@ export default function App() {
 
   const controlActions: Record<string, () => void | Promise<void>> = {
     Mute: () => {
-      setVolumePct(0);
-      setGeneralVolume(0);
-    },
-    Unmute: () => {
-      setVolumePct(100);
-      setGeneralVolume(1.0);
+      // Unmute
+      if (muted() > 0 && volumePct() === 0) {
+        setVolumePct(muted());
+        setGeneralVolume(muted() / 100);
+        setMuted(0);
+      } else {
+        // Mute
+        setMuted(volumePct());
+        setVolumePct(0);
+        setGeneralVolume(0);
+      }
     },
     MicMute: () => {
-      setMicVolumePct(0);
-      setMicVolume(0);
-    },
-    MicUnmute: () => {
-      setMicVolumePct(100);
-      setMicVolume(1.0);
+      // Unmute
+      if (micMuted() > 0 && micVolumePct() === 0) {
+        setMicVolumePct(micMuted());
+        setMicVolume(micMuted() / 100);
+        setMicMuted(0);
+      } else {
+        // Mute
+        setMicMuted(micVolumePct());
+        setMicVolumePct(0);
+        setMicVolume(0);
+      }
     },
     StopAll: () => {
       stopAllSounds();
     },
-    PauseAll: async () => {
+    PauseResumeAll: async () => {
       const ids = await getActiveSounds();
-      ids.forEach(pauseSound);
-    },
-    ResumeAll: async () => {
-      const ids = await getActiveSounds();
-      ids.forEach(resumeSound);
+      if (paused()) {
+        ids.forEach(resumeSound);
+      } else {
+        ids.forEach(pauseSound);
+      }
+      setPaused(!paused());
     },
   };
 
