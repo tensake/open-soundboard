@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
 import { Play, Keyboard, KeyboardOff } from "lucide-solid";
-import { HotKeyEntry } from "../../lib";
+import { HotKeyEntry } from "../../../lib";
 
 export default function SoundItem(props: {
   sound: string;
@@ -13,7 +13,7 @@ export default function SoundItem(props: {
   return (
     <div
       class={`group flex items-center gap-2 px-3 py-1 cursor-pointer transition-colors ${
-        props.odd ? "bg-base" : "bg-mantle"
+        props.odd ? "bg-(--background-color)" : "bg-mantle"
       } hover:bg-surface-0 hover:text-primary-400`}
       onClick={props.onPlay}
     >

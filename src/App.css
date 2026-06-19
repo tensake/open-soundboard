@@ -16,6 +16,7 @@
 
   --color-mantle: #e6e9ef;
   --color-crust: #dce0e8;
+  --color-base: #eff1f5;
   --color-surface-0: #ccd0da;
   --color-surface-1: #bcc0cc;
   --color-surface-2: #acb0be;
@@ -47,6 +48,7 @@
 
     --color-mantle: #181825;
     --color-crust: #11111b;
+    --color-base: #1e1e2e;
     --color-surface-0: #313244;
     --color-surface-1: #45475a;
     --color-surface-2: #585b70;
@@ -75,6 +77,7 @@
 @theme inline {
   --color-mantle: var(--color-mantle);
   --color-crust: var(--color-crust);
+  --color-base: var(--color-base);
   --color-surface-0: var(--color-surface-0);
   --color-surface-1: var(--color-surface-1);
   --color-surface-2: var(--color-surface-2);

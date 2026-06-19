@@ -37,7 +37,7 @@ export default function App() {
     await listenAlerts();
 
     // Listen for hotkeys
-    await listen("hotkey-pressed", async (event) => {
+    listen("hotkey-pressed", async (event) => {
       const hotkey = event.payload as HotKeyEntry;
       if (hotkey.kind === "Sound") {
         playSound(hotkey.context);
