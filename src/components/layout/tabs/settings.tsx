@@ -1,31 +1,25 @@
-import type { Accessor, Setter } from "solid-js";
 import {
   getMicVolume,
-  setMicVolume,
-  setGeneralVolume,
-  getHotkeys,
+  hotkeys,
+  refetchHotkeys,
   unregisterHotkey,
   updateHotkey,
   registerHotkey,
+  volumePct,
+  micVolumePct,
+  setMicVolumePct,
+  CONTROL_ACTIONS,
+  handleMicVolumeSlider,
+  handleVolumeSlider,
 } from "../../../lib";
 import type { HotKeyEntry } from "../../../lib";
 import { Trash2 } from "lucide-solid";
-import { For, onMount, createResource, createSignal } from "solid-js";
+import { For, onMount, createSignal } from "solid-js";
 import HotkeyOverlay from "../hotkeyOverlay";
-
-interface SettingsProps {
-  micVolumePct: Accessor<number>;
-  setMicVolumePct: Setter<number>;
-  volumePct: Accessor<number>;
-  setVolumePct: Setter<number>;
-}
-
-const CONTROL_ACTIONS = ["Mute", "MicMute", "StopAll", "PauseResumeAll"];
 
 function HotKeyItem(props: {
   hotkey: HotKeyEntry;
   disabled: boolean;
-  refetchHotkeys: () => void;
   onStartCapture: (hotkey: HotKeyEntry) => void;
 }) {
   return (
@@ -35,7 +29,6 @@ function HotKeyItem(props: {
         <button
           onClick={async (_) => {
             await unregisterHotkey(props.hotkey.id);
-            props.refetchHotkeys();
           }}
           disabled={props.disabled}
           class="disabled:opacity-30 disabled:cursor-not-allowed text-text"
@@ -66,27 +59,14 @@ function HotKeyItem(props: {
   );
 }
 
-export default function Settings(props: SettingsProps) {
-  const [hotkeys, { refetch: refetchHotkeys }] = createResource(getHotkeys);
+export default function Settings() {
   const [capturingHotkey, setCapturingHotkey] =
     createSignal<HotKeyEntry | null>(null);
 
   onMount(async () => {
     const vol = await getMicVolume();
-    props.setMicVolumePct(Math.round(vol * 100));
+    setMicVolumePct(Math.round(vol * 100));
   });
-
-  const handleMicVolume = (e: Event) => {
-    const value = parseFloat((e.currentTarget as HTMLInputElement).value);
-    props.setMicVolumePct(value);
-    setMicVolume(value / 100);
-  };
-
-  const handleVolume = (e: Event) => {
-    const value = parseFloat((e.currentTarget as HTMLInputElement).value);
-    props.setVolumePct(value);
-    setGeneralVolume(value / 100);
-  };
 
   const handleCapture = async (binding: string) => {
     const current = capturingHotkey();
@@ -99,6 +79,7 @@ export default function Settings(props: SettingsProps) {
         kind: current.kind,
         context: current.context,
       });
+      refetchHotkeys();
     } else {
       await registerHotkey({
         id: crypto.randomUUID(),
@@ -109,10 +90,7 @@ export default function Settings(props: SettingsProps) {
     }
 
     setCapturingHotkey(null);
-    refetchHotkeys();
   };
-
-  refetchHotkeys();
 
   return (
     <div class="flex flex-col gap-4 m-4">
@@ -130,11 +108,11 @@ export default function Settings(props: SettingsProps) {
           min="0"
           max="300"
           step="1"
-          value={props.micVolumePct()}
-          onInput={handleMicVolume}
+          value={micVolumePct()}
+          onInput={handleMicVolumeSlider}
           class="w-full cursor-pointer"
         />
-        <span class="text-sm">{props.micVolumePct()}%</span>
+        <span class="text-sm">{micVolumePct()}%</span>
       </div>
       <div class="max-w-md">
         <h2 class="text-lg font-medium mb-1">General Volume</h2>
@@ -143,11 +121,11 @@ export default function Settings(props: SettingsProps) {
           min="0"
           max="100"
           step="1"
-          value={props.volumePct()}
-          onInput={handleVolume}
+          value={volumePct()}
+          onInput={handleVolumeSlider}
           class="w-full cursor-pointer"
         />
-        <span class="text-sm">{props.volumePct()}%</span>
+        <span class="text-sm">{volumePct()}%</span>
       </div>
 
       {/* Control Hotkeys */}
@@ -173,7 +151,6 @@ export default function Settings(props: SettingsProps) {
                   }
                   disabled={!registered()}
                   onStartCapture={(hk) => setCapturingHotkey(hk)}
-                  refetchHotkeys={refetchHotkeys}
                 />
               );
             }}
@@ -200,7 +177,6 @@ export default function Settings(props: SettingsProps) {
                 hotkey={hotkey}
                 disabled={false}
                 onStartCapture={(hk) => setCapturingHotkey(hk)}
-                refetchHotkeys={refetchHotkeys}
               />
             )}
           </For>

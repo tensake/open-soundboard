@@ -1,13 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 import { createSignal } from "solid-js";
-
-export type AlertKind = "Warn" | "Error";
-
-export interface Alert {
-    kind: AlertKind;
-    title: string;
-    message: string;
-}
+import type { Alert } from "./types";
 
 export const [alerts, setAlerts] = createSignal<Alert[]>([]);
 

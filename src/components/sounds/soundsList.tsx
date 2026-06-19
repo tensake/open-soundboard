@@ -1,33 +1,15 @@
-import { createSignal, For, onCleanup, Show } from "solid-js";
-import { createStore, produce } from "solid-js/store";
+import { For, Show, createSignal } from "solid-js";
 import { Pause, Play, Square } from "lucide-solid";
 import {
-  pauseSound,
-  resumeSound,
-  seekSound,
-  stopSound,
-  getProgress,
+  sounds,
+  handlePauseResume,
+  handleStop,
+  handleSeekCommit,
   formatTime,
 } from "../../lib";
+import type { SoundEntry } from "../../lib";
 
-interface SoundEntry {
-  ids: number[];
-  path: string;
-  current: number;
-  total: number;
-  paused: boolean;
-  count: number;
-}
-
-interface SoundRowProps {
-  path: string;
-  sounds: SoundEntry[];
-  onPauseResume: (entry: SoundEntry) => void;
-  onStop: (entry: SoundEntry) => void;
-  onSeekCommit: (entry: SoundEntry, value: number) => void;
-}
-
-function SoundRow(props: SoundRowProps) {
+function SoundRow(props: { path: string; sounds: SoundEntry[] }) {
   const entry = () => props.sounds.find((s) => s.path === props.path)!;
 
   const [seeking, setSeeking] = createSignal(false);
@@ -41,7 +23,6 @@ function SoundRow(props: SoundRowProps) {
 
   return (
     <div class="flex items-center gap-3 px-4 py-2 border-b border-surface-0 last:border-b-0">
-      {/* Name and count */}
       <span class="text-sm truncate w-48 shrink-0">
         <Show when={entry().count > 1}>
           <span class="text-subtext-0 mr-1">{entry().count}x</span>
@@ -49,10 +30,9 @@ function SoundRow(props: SoundRowProps) {
         {name()}
       </span>
 
-      {/* Buttons */}
       <div
         class="shrink-0 hover:text-blue transition-colors cursor-pointer"
-        onClick={() => props.onPauseResume(entry())}
+        onClick={() => handlePauseResume(entry())}
       >
         <Show when={entry().paused} fallback={<Pause class="w-4 h-4" />}>
           <Play class="w-4 h-4" />
@@ -60,12 +40,11 @@ function SoundRow(props: SoundRowProps) {
       </div>
       <div
         class="shrink-0 hover:text-red transition-colors cursor-pointer"
-        onClick={() => props.onStop(entry())}
+        onClick={() => handleStop(entry())}
       >
         <Square class="w-4 h-4" />
       </div>
 
-      {/* Progress bar */}
       <span class="text-xs font-mono tabular-nums shrink-0 text-subtext-0 select-none">
         {formatTime(displayCurrent())}
       </span>
@@ -81,7 +60,7 @@ function SoundRow(props: SoundRowProps) {
         }}
         onInput={(e) => setLocalCurrent(parseFloat(e.currentTarget.value))}
         onChange={(e) => {
-          props.onSeekCommit(entry(), parseFloat(e.currentTarget.value));
+          handleSeekCommit(entry(), parseFloat(e.currentTarget.value));
           setSeeking(false);
         }}
         class="flex-1 cursor-pointer"
@@ -93,110 +72,13 @@ function SoundRow(props: SoundRowProps) {
   );
 }
 
-interface SoundsListProps {
-  onSoundAdded: (register: (id: number, path: string) => void) => void;
-}
-
-export default function SoundsList(props: SoundsListProps) {
-  const [sounds, setSounds] = createStore<SoundEntry[]>([]);
-
-  const addSound = (id: number, path: string) => {
-    const existing = sounds.findIndex((s) => s.path === path);
-
-    if (existing !== -1) {
-      setSounds(
-        produce((s) => {
-          const entry = s.splice(existing, 1)[0];
-          entry.ids.push(id);
-          entry.count += 1;
-          entry.current = 0;
-          entry.paused = false;
-          s.push(entry);
-        }),
-      );
-    } else {
-      setSounds(
-        produce((s) => {
-          s.push({
-            ids: [id],
-            path,
-            current: 0,
-            total: 0,
-            paused: false,
-            count: 1,
-          });
-        }),
-      );
-    }
-  };
-
-  props.onSoundAdded(addSound);
-
-  const removeSound = (path: string) =>
-    setSounds(
-      produce((s) => {
-        const i = s.findIndex((e) => e.path === path);
-        if (i !== -1) s.splice(i, 1);
-      }),
-    );
-
-  const handlePauseResume = (entry: SoundEntry) => {
-    const i = sounds.findIndex((s) => s.path === entry.path);
-    if (i === -1) return;
-
-    entry.ids.forEach((id) =>
-      entry.paused ? resumeSound(id) : pauseSound(id),
-    );
-    setSounds(i, "paused", !entry.paused);
-  };
-
-  const handleStop = (entry: SoundEntry) => {
-    entry.ids.forEach((id) => stopSound(id));
-    removeSound(entry.path);
-  };
-
-  const handleSeekCommit = (entry: SoundEntry, value: number) => {
-    const latestId = entry.ids[entry.ids.length - 1];
-    seekSound(latestId, value);
-    const i = sounds.findIndex((s) => s.path === entry.path);
-    if (i !== -1) setSounds(i, "current", value);
-  };
-
-  const interval = setInterval(async () => {
-    if (!sounds.length) return;
-
-    await Promise.all(
-      sounds.map(async (s, i) => {
-        if (s.paused) return;
-
-        const latestId = s.ids[s.ids.length - 1];
-        const progress = await getProgress(latestId);
-        if (!progress) {
-          removeSound(s.path);
-        } else {
-          setSounds(i, "current", progress.current);
-          setSounds(i, "total", progress.total);
-        }
-      }),
-    );
-  }, 100);
-
-  onCleanup(() => clearInterval(interval));
-
+export default function SoundsList() {
   const reversedPaths = () => [...sounds].map((s) => s.path).reverse();
 
   return (
     <div class="max-h-[40vh] overflow-y-auto border-t border-surface-0 bg-mantle">
       <For each={reversedPaths()} fallback={null}>
-        {(path) => (
-          <SoundRow
-            path={path}
-            sounds={sounds}
-            onPauseResume={handlePauseResume}
-            onStop={handleStop}
-            onSeekCommit={handleSeekCommit}
-          />
-        )}
+        {(path) => <SoundRow path={path} sounds={sounds} />}
       </For>
     </div>
   );
