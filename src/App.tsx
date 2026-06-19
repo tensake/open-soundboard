@@ -1,6 +1,5 @@
 import { createSignal, For, Switch, Match, onMount } from "solid-js";
 import { listen } from "@tauri-apps/api/event";
-import { Cherry, Settings as SettingsIcon } from "lucide-solid";
 import {
   getActiveSounds,
   HotKeyEntry,
@@ -13,17 +12,13 @@ import {
   listenAlerts,
   ControlAction,
   Tab,
+  TABS,
   markAsReady,
 } from "./lib";
 import Dashboard from "./components/layout/tabs/dashboard";
 import Settings from "./components/layout/tabs/settings";
-import SoundsList from "./components/sounds/soundsList";
+import SoundsList from "./components/ui/sounds/soundsList";
 import "./App.css";
-
-const TABS = {
-  [Tab.Dashboard]: { icon: Cherry },
-  [Tab.Settings]: { icon: SettingsIcon },
-};
 
 export default function App() {
   const [activeTab, setActiveTab] = createSignal<Tab>(Tab.Dashboard);

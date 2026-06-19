@@ -7,8 +7,6 @@ export type AlertKind = "Warn" | "Error";
 export type HotKeyKind = "Sound" | "Control";
 export type ControlAction = "Mute" | "MicMute" | "StopAll" | "PauseResumeAll";
 
-export const CONTROL_ACTIONS = ["Mute", "MicMute", "StopAll", "PauseResumeAll"];
-
 export interface Alert {
     kind: AlertKind;
     title: string;

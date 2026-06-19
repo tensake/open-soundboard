@@ -16,7 +16,7 @@ import { alerts } from "../../../lib/alert";
 import { SoundTab } from "../../../lib/types";
 import HotkeyOverlay from "../hotkeyOverlay";
 import AlertItem from "../../ui/alert";
-import SoundItem from "../../sounds/soundItem";
+import SoundItem from "../../ui/sounds/soundItem";
 
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = createSignal<string | null>(null);

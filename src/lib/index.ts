@@ -4,3 +4,4 @@ export * from "./hotkey";
 export * from "./sound";
 export * from "./tab";
 export * from "./types";
+export * from "./constants";

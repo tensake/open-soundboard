@@ -6,8 +6,8 @@ import {
   handleStop,
   handleSeekCommit,
   formatTime,
-} from "../../lib";
-import type { SoundEntry } from "../../lib";
+  SoundEntry,
+} from "../../../lib";
 
 function SoundRow(props: { path: string; sounds: SoundEntry[] }) {
   const entry = () => props.sounds.find((s) => s.path === props.path)!;
