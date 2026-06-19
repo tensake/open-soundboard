@@ -14,6 +14,7 @@ import {
   Tab,
   TABS,
   markAsReady,
+  checkForUpdate,
 } from "./lib";
 import Dashboard from "./components/layout/tabs/dashboard";
 import Settings from "./components/layout/tabs/settings";
@@ -57,6 +58,9 @@ export default function App() {
 
     // Mark frontend as ready
     await markAsReady();
+
+    // Check for update
+    await checkForUpdate();
   });
 
   return (

@@ -17,6 +17,7 @@ import { SoundTab } from "../../../lib/types";
 import HotkeyOverlay from "../hotkeyOverlay";
 import AlertItem from "../../ui/alert";
 import SoundItem from "../../ui/sounds/soundItem";
+import UpdateNotification from "../../ui/updateNotification";
 
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = createSignal<string | null>(null);
@@ -80,6 +81,9 @@ export default function Dashboard() {
         onCapture={handleCapture}
         onCancel={() => setCapturingFor(null)}
       />
+
+      {/* Updater */}
+      <UpdateNotification />
 
       {/* Alerts */}
       <For each={alerts()}>{(alert) => <AlertItem alert={alert} />}</For>
