@@ -29,7 +29,11 @@ export default function App() {
 
     // Register all hotkeys
     for (const hk of hotkeys.latest ?? []) {
-      await registerHotkeyCmd(hk);
+      try {
+        await registerHotkeyCmd(hk);
+      } catch (e) {
+        console.warn("hotkey already registered", hk, e);
+      }
     }
     await refetchHotkeys();
 
@@ -37,7 +41,7 @@ export default function App() {
     await listenAlerts();
 
     // Listen for hotkeys
-    listen("hotkey-pressed", async (event) => {
+    await listen("hotkey-pressed", async (event) => {
       const hotkey = event.payload as HotKeyEntry;
       if (hotkey.kind === "Sound") {
         playSound(hotkey.context);
