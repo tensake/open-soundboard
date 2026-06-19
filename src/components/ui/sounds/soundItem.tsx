@@ -12,7 +12,7 @@ export default function SoundItem(props: {
 }) {
   return (
     <div
-      class={`group flex items-center gap-2 px-3 py-1 cursor-pointer transition-colors ${
+      class={`group flex items-center gap-2 px-3 py-1 cursor-pointer transition-colors border-l border-surface-0 ${
         props.odd ? "bg-(--background-color)" : "bg-mantle"
       } hover:bg-surface-0 hover:text-primary-400`}
       onClick={props.onPlay}

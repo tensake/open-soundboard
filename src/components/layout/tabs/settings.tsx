@@ -133,7 +133,7 @@ export default function Settings() {
                     </button>
                   </div>
                   <textarea
-                    rows={4}
+                    rows={16}
                     class="w-full"
                     placeholder="Enter your own css here."
                     value={customCss()}

@@ -128,7 +128,7 @@ export default function Dashboard() {
       </div>
 
       {/* Search */}
-      <div class="bg-mantle px-2 py-1.5 shrink-0 flex border-b border-t border-surface-0">
+      <div class="bg-mantle px-2 py-1.5 shrink-0 flex border-t border-surface-0 border-l border-b rounded-t-md">
         <input
           type="text"
           class="w-full bg-base text-sm truncate"
