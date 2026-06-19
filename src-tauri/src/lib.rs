@@ -17,6 +17,9 @@ struct AppState {
     mic_handle: Option<audio::mic::MicrophoneHandle>,
     cfg: Mutex<config::Config>,
     hotkey_tx: mpsc::Sender<config::hotkey::HotKeyCmd>,
+
+    /// Alerts that are stored before frontend is ready to receive them
+    pending_alerts: Mutex<Vec<Alert>>,
 }
 
 #[derive(Serialize)]
@@ -217,37 +220,40 @@ async fn unregister_hotkey(id: String, state: State<'_, AppState>) -> Result<(),
     Ok(())
 }
 
+#[tauri::command]
+fn mark_as_ready(app: tauri::AppHandle, state: State<AppState>) -> Result<(), String> {
+    let alerts: Vec<Alert> = state.pending_alerts.lock().drain(..).collect();
+    for alert in alerts {
+        app.emit("alert", alert).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(move |app| {
+            // Initialize state
             let playing_sounds = Arc::new(Mutex::new(HashMap::<u32, audio::PlaybackHandle>::new()));
+            let mut pending_alerts = Vec::new();
+
+            // Get audio devices
             let input_device = audio::device::get_input_device()
                 .map_err(|e| {
-                    app.emit(
-                        "alert",
-                        Alert {
-                            kind: AlertKind::Error,
-                            title: "Input device error",
-                            message: e,
-                        },
-                    )
-                    .ok()
+                    pending_alerts.push(Alert { kind: AlertKind::Error, title: "Input device error", message: e });
                 })
                 .ok()
                 .map(Arc::new);
             let cable_device = audio::device::get_cable()
                 .map_err(|e| {
-                    app.emit(
-                        "alert",
+                    pending_alerts.push(
                         Alert {
                             kind: AlertKind::Error,
-                            title: "Cable error",
+                            title: "Output device error",
                             message: e,
                         },
                     )
-                    .ok()
                 })
                 .ok()
                 .map(Arc::new);
@@ -264,15 +270,11 @@ pub fn run() {
                 (Some(input), Some(cable)) => {
                     audio::mic::start_forwarding(input.clone(), cable.clone())
                         .map_err(|e| {
-                            app.emit(
-                                "alert",
-                                Alert {
-                                    kind: AlertKind::Warn,
-                                    title: "Microphone forwarding error",
-                                    message: e.to_string(),
-                                },
-                            )
-                            .ok()
+                            pending_alerts.push(Alert {
+                                kind: AlertKind::Warn,
+                                title: "Microphone forwarding error",
+                                message: e.to_string(),
+                            });
                         })
                         .ok()
                 }
@@ -299,6 +301,7 @@ pub fn run() {
                 mic_handle,
                 cfg: Mutex::new(cfg),
                 hotkey_tx,
+                pending_alerts: Mutex::new(pending_alerts),
             };
             app.manage(app_state);
 
@@ -355,6 +358,8 @@ pub fn run() {
             register_hotkey,
             update_hotkey,
             unregister_hotkey,
+            // Initialization
+            mark_as_ready,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

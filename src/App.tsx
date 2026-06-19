@@ -13,6 +13,7 @@ import {
   listenAlerts,
   ControlAction,
   Tab,
+  markAsReady,
 } from "./lib";
 import Dashboard from "./components/layout/tabs/dashboard";
 import Settings from "./components/layout/tabs/settings";
@@ -35,10 +36,10 @@ export default function App() {
     for (const hk of hotkeys.latest ?? []) {
       await registerHotkeyCmd(hk);
     }
-    refetchHotkeys();
+    await refetchHotkeys();
 
     // Listen for alerts
-    listenAlerts();
+    await listenAlerts();
 
     // Listen for hotkeys
     await listen("hotkey-pressed", async (event) => {
@@ -54,6 +55,9 @@ export default function App() {
         }
       }
     });
+
+    // Mark frontend as ready
+    await markAsReady();
   });
 
   return (

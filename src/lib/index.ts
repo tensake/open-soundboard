@@ -1,4 +1,4 @@
-export * from "./helpers";
+export * from "./utils";
 export * from "./alert";
 export * from "./hotkey";
 export * from "./sound";
