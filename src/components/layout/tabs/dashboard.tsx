@@ -1,5 +1,5 @@
 import { createEffect, createSignal, For, Show } from "solid-js";
-import { Plus, Trash2 } from "lucide-solid";
+import { Plus, Trash2, Repeat, Shuffle } from "lucide-solid";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   tabs,
@@ -9,7 +9,10 @@ import {
   registerHotkey,
   unregisterHotkey,
   findHotkeyForSound,
-  playSound,
+  playSoundTabMode,
+  playlistMode,
+  nextPlaylistMode,
+  setCurrentTabPaths,
 } from "../../../lib";
 import type { HotKeyEntry } from "../../../lib";
 import { alerts } from "../../../lib/alert";
@@ -31,6 +34,11 @@ export default function Dashboard() {
     if (!currentTab() && loadedTabs?.length) {
       setCurrentTab(loadedTabs[0]);
     }
+  });
+
+  // Update current sounds from tab for playlist
+  createEffect(() => {
+    setCurrentTabPaths(currentTab()?.[1] ?? []);
   });
 
   const handleAddTab = async () => {
@@ -128,7 +136,7 @@ export default function Dashboard() {
       </div>
 
       {/* Search */}
-      <div class="bg-mantle px-2 py-1.5 shrink-0 flex border-t border-surface-0 border-l border-b rounded-t-md">
+      <div class="bg-mantle px-2 py-1.5 shrink-0 flex items-center gap-2 border-t border-surface-0 border-l border-b rounded-t-md pr-2">
         <input
           type="text"
           class="w-full bg-base text-sm truncate"
@@ -138,10 +146,28 @@ export default function Dashboard() {
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               const first = filteredSounds()[0];
-              if (first) playSound(first);
+              if (first) playSoundTabMode(first);
             }
           }}
         />
+
+        {/* Playlist mode */}
+        <div
+          class={`shrink-0 flex items-center justify-center cursor-pointer transition-colors px-2 ${
+            playlistMode() === "disabled"
+              ? "text-subtext-0"
+              : "text-primary-400"
+          }`}
+          onClick={nextPlaylistMode}
+          title={`Playlist mode: ${playlistMode()}`}
+        >
+          <Show
+            when={playlistMode() === "shuffle"}
+            fallback={<Repeat class="w-4 h-4" />}
+          >
+            <Shuffle class="w-4 h-4" />
+          </Show>
+        </div>
       </div>
 
       {/* Sounds list */}
@@ -169,7 +195,7 @@ export default function Dashboard() {
                 sound={sound}
                 odd={i() % 2 !== 0}
                 registered={findHotkeyForSound(sound)}
-                onPlay={() => playSound(sound)}
+                onPlay={() => playSoundTabMode(sound)}
                 onStartCapture={() => setCapturingFor(sound)}
                 onUnregister={(e) => handleUnregister(e, sound)}
               />

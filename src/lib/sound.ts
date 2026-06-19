@@ -1,8 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Progress } from "./types";
+import { Progress, PlaylistMode } from "./types";
 import { createSignal, createEffect } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import { ControlAction, SoundEntry } from "./types";
+import { PLAYLIST_ORDER } from "./constants";
 
 export const [volumePct, setVolumePct] = createSignal(
   Number(localStorage.getItem("volumePct") ?? 100),
@@ -14,13 +15,58 @@ export const [muted, setMuted] = createSignal(0);
 export const [micMuted, setMicMuted] = createSignal(0);
 export const [paused, setPaused] = createSignal(false);
 export const [sounds, setSounds] = createStore<SoundEntry[]>([]);
+export const [playlistMode, setPlaylistMode] = createSignal<PlaylistMode>("disabled");
+export const [currentTabPaths, setCurrentTabPaths] = createSignal<string[]>([]);
+export const [finishedPlaylistSound, setFinishedPlaylistSound] = createSignal<{
+  path: string;
+  mode: PlaylistMode;
+} | null>(null);
+
+export function nextPlaylistMode() {
+  const idx = PLAYLIST_ORDER.indexOf(playlistMode());
+  setPlaylistMode(PLAYLIST_ORDER[(idx + 1) % PLAYLIST_ORDER.length]);
+}
+export function nextSoundPlaylistMode(path: string) {
+  const i = sounds.findIndex((s) => s.path === path);
+  if (i === -1) return;
+  const idx = PLAYLIST_ORDER.indexOf(sounds[i].playlistMode);
+  setSounds(i, "playlistMode", PLAYLIST_ORDER[(idx + 1) % PLAYLIST_ORDER.length]);
+}
+
+createEffect(() => {
+  const finished = finishedPlaylistSound();
+  if (!finished) return;
+  setFinishedPlaylistSound(null);
+
+  if (finished.mode === "repeat") {
+    playSoundTagged(finished.path, "repeat");
+    return;
+  }
+
+  if (finished.mode === "shuffle") {
+    const tabSounds = currentTabPaths();
+    if (tabSounds.length === 0) return;
+
+    let next = finished.path;
+    if (tabSounds.length > 1) {
+      do {
+        next = tabSounds[Math.floor(Math.random() * tabSounds.length)];
+      } while (next === finished.path);
+    }
+    playSoundTagged(next, "shuffle");
+  }
+});
 
 createEffect(() => {
   localStorage.setItem("volumePct", String(volumePct()));
   localStorage.setItem("micVolumePct", String(micVolumePct()));
 });
 
-export function registerSound(id: number, path: string) {
+export function registerSound(
+  id: number,
+  path: string,
+  mode: PlaylistMode = "disabled",
+) {
   const existing = sounds.findIndex((s) => s.path === path);
 
   if (existing !== -1) {
@@ -31,6 +77,7 @@ export function registerSound(id: number, path: string) {
         entry.count += 1;
         entry.current = 0;
         entry.paused = false;
+        entry.playlistMode = mode;
         s.push(entry);
       }),
     );
@@ -44,6 +91,7 @@ export function registerSound(id: number, path: string) {
           total: 0,
           paused: false,
           count: 1,
+          playlistMode: mode,
         });
       }),
     );
@@ -91,6 +139,9 @@ export const _updateProgressInterval = setInterval(async () => {
       const latestId = s.ids[s.ids.length - 1];
       const progress = await getProgress(latestId);
       if (!progress) {
+        if (s.playlistMode !== "disabled") {
+          setFinishedPlaylistSound({ path: s.path, mode: s.playlistMode });
+        }
         removeSound(s.path);
       } else {
         setSounds(i, "current", progress.current);
@@ -125,24 +176,42 @@ export const controlActions: Record<ControlAction, () => void | Promise<void>> =
   },
   StopAll: () => {
     stopAllSounds();
+    setFinishedPlaylistSound(null);
+    setSounds([]);
   },
   PauseResumeAll: async () => {
     const ids = await getActiveSounds();
-    if (paused()) {
-      ids.forEach(resumeSound);
-    } else {
+    const newPaused = !paused();
+
+    if (newPaused) {
       ids.forEach(pauseSound);
+    } else {
+      ids.forEach(resumeSound);
     }
-    setPaused(!paused());
+
+    setPaused(newPaused);
+    setSounds(
+      produce((s) => {
+        s.forEach((entry) => {
+          entry.paused = newPaused;
+        });
+      }),
+    );
   },
 };
 
 export const playSoundCmd = (path: string, volume: number) =>
   invoke<number>("play_sound", { path, volume });
 
-export async function playSound(path: string) {
+export async function playSoundTagged(path: string, mode: PlaylistMode) {
   const id = await playSoundCmd(path, volumePct() / 100);
-  registerSound(id, path);
+  registerSound(id, path, mode);
+}
+export async function playSoundTabMode(path: string) {
+  return playSoundTagged(path, playlistMode());
+}
+export async function playSound(path: string) {
+  return playSoundTagged(path, "disabled");
 }
 
 export const getActiveSounds = () => invoke<number[]>("get_active_sounds");

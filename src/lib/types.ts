@@ -6,11 +6,12 @@ export enum Tab {
 export type AlertKind = "Warn" | "Error";
 export type HotKeyKind = "Sound" | "Control";
 export type ControlAction = "Mute" | "MicMute" | "StopAll" | "PauseResumeAll";
+export type PlaylistMode = "disabled" | "repeat" | "shuffle";
 
 export interface Alert {
-    kind: AlertKind;
-    title: string;
-    message: string;
+  kind: AlertKind;
+  title: string;
+  message: string;
 }
 
 export interface HotKeyEntry {
@@ -38,4 +39,5 @@ export interface SoundEntry {
   total: number;
   paused: boolean;
   count: number;
+  playlistMode: PlaylistMode;
 }

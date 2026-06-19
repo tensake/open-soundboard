@@ -1,11 +1,12 @@
 import { For, Show, createSignal } from "solid-js";
-import { Pause, Play, Square } from "lucide-solid";
+import { Pause, Play, Square, Repeat, Shuffle } from "lucide-solid";
 import { TransitionGroup } from "solid-transition-group";
 import {
   sounds,
   handlePauseResume,
   handleStop,
   handleSeekCommit,
+  nextSoundPlaylistMode,
   formatTime,
   SoundEntry,
 } from "../../../lib";
@@ -24,13 +25,38 @@ function SoundRow(props: { path: string; sounds: SoundEntry[] }) {
 
   return (
     <div class="flex items-center gap-3 px-4 py-2 border-b border-surface-0 last:border-b-0">
-      <span class="text-sm truncate w-48 shrink-0">
-        <Show when={entry().count > 1}>
-          <span class="text-subtext-0 mr-1">{entry().count}x</span>
-        </Show>
-        {name()}
+      <span class="text-sm truncate w-48 shrink-0 flex items-center gap-1.5">
+        {/* Name */}
+        <span class="truncate">
+          <Show when={entry().count > 1}>
+            <span class="text-subtext-0 mr-1">{entry().count}x</span>
+          </Show>
+          {name()}
+        </span>
+
+        {/* Playlist mode */}
+        <div
+          class={`shrink-0 cursor-pointer transition-colors ${
+            entry().playlistMode === "disabled"
+              ? "text-subtext-0"
+              : "text-primary-400"
+          }`}
+          onClick={(e) => {
+            e.stopPropagation();
+            nextSoundPlaylistMode(entry().path);
+          }}
+          title={`Playlist: ${entry().playlistMode}`}
+        >
+          <Show
+            when={entry().playlistMode === "shuffle"}
+            fallback={<Repeat class="w-3.5 h-3.5" />}
+          >
+            <Shuffle class="w-3.5 h-3.5" />
+          </Show>
+        </div>
       </span>
 
+      {/* Controls */}
       <div
         class="shrink-0 hover:text-blue transition-colors cursor-pointer"
         onClick={() => handlePauseResume(entry())}
