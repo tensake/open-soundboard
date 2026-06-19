@@ -167,6 +167,16 @@ fn get_hotkeys(state: State<AppState>) -> Vec<config::hotkey::HotKeyEntry> {
 }
 
 #[tauri::command]
+fn get_custom_css(config: State<Mutex<config::Config>>) -> Result<String, String> {
+    config.lock().get_custom_css()
+}
+
+#[tauri::command]
+fn save_custom_css(config: State<Mutex<config::Config>>, css: String) -> Result<(), String> {
+    config.lock().save_custom_css(&css)
+}
+
+#[tauri::command]
 async fn register_hotkey(
     hk: config::hotkey::HotKeyEntry,
     state: State<'_, AppState>,
@@ -241,19 +251,21 @@ pub fn run() {
             // Get audio devices
             let input_device = audio::device::get_input_device()
                 .map_err(|e| {
-                    pending_alerts.push(Alert { kind: AlertKind::Error, title: "Input device error", message: e });
+                    pending_alerts.push(Alert {
+                        kind: AlertKind::Error,
+                        title: "Input device error",
+                        message: e,
+                    });
                 })
                 .ok()
                 .map(Arc::new);
             let cable_device = audio::device::get_cable()
                 .map_err(|e| {
-                    pending_alerts.push(
-                        Alert {
-                            kind: AlertKind::Error,
-                            title: "Output device error",
-                            message: e,
-                        },
-                    )
+                    pending_alerts.push(Alert {
+                        kind: AlertKind::Error,
+                        title: "Output device error",
+                        message: e,
+                    })
                 })
                 .ok()
                 .map(Arc::new);
@@ -353,6 +365,8 @@ pub fn run() {
             get_tabs,
             add_tab,
             remove_tab,
+            get_custom_css,
+            save_custom_css,
             // Hotkeys
             get_hotkeys,
             register_hotkey,

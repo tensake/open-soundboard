@@ -4,10 +4,12 @@ use std::fs;
 use std::path::PathBuf;
 use uuid::Uuid;
 
+pub mod customcss;
 pub mod hotkey;
 pub mod tab;
 
 const DATA_FILE: &str = "data.json";
+const CSS_FILE: &str = "style.css";
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
