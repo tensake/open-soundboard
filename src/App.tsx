@@ -1,4 +1,11 @@
-import { createSignal, For, Switch, Match, onMount } from "solid-js";
+import {
+  createSignal,
+  For,
+  Switch,
+  Match,
+  onMount,
+  createEffect,
+} from "solid-js";
 import { listen } from "@tauri-apps/api/event";
 import {
   getActiveSounds,
@@ -15,6 +22,8 @@ import {
   TABS,
   markAsReady,
   checkForUpdate,
+  customCss,
+  applyCustomCss,
 } from "./lib";
 import Dashboard from "./components/layout/tabs/dashboard";
 import Settings from "./components/layout/tabs/settings";
@@ -61,6 +70,12 @@ export default function App() {
 
     // Check for update
     await checkForUpdate();
+  });
+
+  createEffect(() => {
+    // Apply custom css
+    const css = customCss();
+    if (css !== undefined) applyCustomCss(css);
   });
 
   return (

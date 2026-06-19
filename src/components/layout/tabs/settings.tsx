@@ -9,6 +9,9 @@ import {
   handleMicVolumeSlider,
   handleVolumeSlider,
   SETTINGS_TABS,
+  customCss,
+  applyCustomCss,
+  saveCustomCss,
 } from "../../../lib";
 import type { HotKeyEntry } from "../../../lib";
 import { For, createSignal, Show } from "solid-js";
@@ -17,6 +20,7 @@ import HotKeyItem from "../../ui/hotkeys/hotkeyItem";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = createSignal("general");
+  const [draftCss, setDraftCss] = createSignal("");
   const [capturingHotkey, setCapturingHotkey] =
     createSignal<HotKeyEntry | null>(null);
 
@@ -78,6 +82,7 @@ export default function Settings() {
 
       {/* Content */}
       <div class="flex-1 overflow-y-auto p-6">
+        {/* General tab */}
         <Show when={activeTab() === "general"}>
           <h1 class="text-2xl font-bold mb-4">General</h1>
 
@@ -110,6 +115,28 @@ export default function Settings() {
           </div>
         </Show>
 
+        {/* Appearance tab */}
+        <Show when={activeTab() === "appearance"}>
+          <h1 class="text-2xl font-bold mb-4">Appearance</h1>
+
+          <div class="max-w-xl">
+            <h2 class="text-lg font-medium mb-1">Custom CSS</h2>
+            <textarea
+              rows={4}
+              class="w-full"
+              placeholder="Enter your own css here."
+              value={customCss()}
+              onInput={(e) => {
+                const val = e.currentTarget.value;
+                setDraftCss(val);
+                applyCustomCss(val);
+              }}
+            />
+            <button onClick={() => saveCustomCss(draftCss())}>Save CSS</button>
+          </div>
+        </Show>
+
+        {/* Hotkeys tab */}
         <Show when={activeTab() === "hotkeys"}>
           <h1 class="text-2xl font-bold mb-4">Hotkeys</h1>
 

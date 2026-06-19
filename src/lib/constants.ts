@@ -10,5 +10,6 @@ export const TABS = {
 
 export const SETTINGS_TABS = [
   { id: "general", label: "General" },
+  { id: "appearance", label: "Appearance" },
   { id: "hotkeys", label: "Hotkeys" },
 ] as const;

@@ -167,13 +167,14 @@ fn get_hotkeys(state: State<AppState>) -> Vec<config::hotkey::HotKeyEntry> {
 }
 
 #[tauri::command]
-fn get_custom_css(config: State<Mutex<config::Config>>) -> Result<String, String> {
-    config.lock().get_custom_css()
+fn get_custom_css(state: State<AppState>) -> Result<String, String> {
+    state.cfg.lock().get_custom_css()
 }
 
 #[tauri::command]
-fn save_custom_css(config: State<Mutex<config::Config>>, css: String) -> Result<(), String> {
-    config.lock().save_custom_css(&css)
+fn save_custom_css(state: State<AppState>, css: String) -> Result<(), String> {
+    println!("Saving custom CSS...");
+    state.cfg.lock().save_custom_css(&css)
 }
 
 #[tauri::command]
