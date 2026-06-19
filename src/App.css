@@ -16,12 +16,17 @@
 
   --color-mantle: #e6e9ef;
   --color-crust: #dce0e8;
+  --color-base: #eff1f5;
   --color-surface-0: #ccd0da;
   --color-surface-1: #bcc0cc;
   --color-surface-2: #acb0be;
   --color-subtext-1: #5c5f77;
   --color-subtext-0: #6c6f85;
   --color-innertext: #eff1f5;
+
+  --color-error: #d20f39;
+  --color-warn: #df8e1d;
+  --color-info: #1e66f5;
 
   --color-primary-50: oklch(0.97 0.032 19.81);
   --color-primary-100: oklch(0.94 0.075 19.81);
@@ -43,12 +48,17 @@
 
     --color-mantle: #181825;
     --color-crust: #11111b;
+    --color-base: #1e1e2e;
     --color-surface-0: #313244;
     --color-surface-1: #45475a;
     --color-surface-2: #585b70;
     --color-subtext-1: #bac2de;
     --color-subtext-0: #a6adc8;
     --color-innertext: #1e1e2e;
+
+    --color-error: #f38ba8;
+    --color-warn: #f9e2af;
+    --color-info: #89b4fa;
 
     --color-primary-50: oklch(0.97 0.019 2.76);
     --color-primary-100: oklch(0.94 0.045 2.76);
@@ -67,12 +77,16 @@
 @theme inline {
   --color-mantle: var(--color-mantle);
   --color-crust: var(--color-crust);
+  --color-base: var(--color-base);
   --color-surface-0: var(--color-surface-0);
   --color-surface-1: var(--color-surface-1);
   --color-surface-2: var(--color-surface-2);
   --color-subtext-1: var(--color-subtext-1);
   --color-subtext-0: var(--color-subtext-0);
   --color-innertext: var(--color-innertext);
+  --color-error: var(--color-error);
+  --color-warn: var(--color-warn);
+  --color-info: var(--color-info);
   --color-primary-50: var(--color-primary-50);
   --color-primary-100: var(--color-primary-100);
   --color-primary-200: var(--color-primary-200);
@@ -94,8 +108,7 @@ button {
   padding: 0 12px;
   background: var(--color-primary-400);
   color: var(--color-innertext);
-  border: 2px solid var(--color-primary-500);
-  border-radius: 6px;
+  border-radius: 12px;
   font-size: 13px;
   font-weight: 500;
   font-family: inherit;
@@ -103,11 +116,9 @@ button {
 }
 button:hover {
   background: var(--color-primary-500);
-  border-color: var(--color-primary-600);
 }
 button:active {
   background: var(--color-primary-600);
-  border-color: var(--color-primary-700);
 }
 button:disabled {
   opacity: 0.45;
@@ -231,4 +242,49 @@ hr {
   background-color: var(--color-surface-1);
   margin-top: 16px;
   margin-bottom: 16px;
+}
+
+.fade-enter-active,
+.fade-exit-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter,
+.fade-exit-to {
+  opacity: 0;
+}
+
+.slide-up-enter-active,
+.slide-up-exit-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease,
+    height 0.25s ease,
+    padding 0.25s ease;
+  overflow: hidden;
+}
+.slide-up-enter,
+.slide-up-exit-to {
+  opacity: 0;
+  height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  transform: translateY(12px);
+}
+
+.slide-down-enter-active,
+.slide-down-exit-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease,
+    height 0.25s ease,
+    padding 0.25s ease;
+  overflow: hidden;
+}
+.slide-down-enter,
+.slide-down-exit-to {
+  opacity: 0;
+  height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  transform: translateY(-12px);
 }

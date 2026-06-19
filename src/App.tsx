@@ -1,134 +1,83 @@
 import {
   createSignal,
-  createEffect,
   For,
   Switch,
   Match,
   onMount,
-  onCleanup,
+  createEffect,
 } from "solid-js";
 import { listen } from "@tauri-apps/api/event";
-import { Cherry, Settings as SettingsIcon } from "lucide-solid";
 import {
   getActiveSounds,
   HotKeyEntry,
-  registerHotkey,
-  getHotkeys,
+  registerHotkeyCmd,
+  hotkeys,
+  refetchHotkeys,
   playSound,
-  stopAllSounds,
-  resumeSound,
-  pauseSound,
-  setGeneralVolume,
-  setMicVolume,
+  controlActions,
+  registerSound,
+  listenAlerts,
+  ControlAction,
+  Tab,
+  TABS,
+  markAsReady,
+  checkForUpdate,
+  customCss,
+  applyCustomCss,
 } from "./lib";
-import { Tab } from "./types";
-import Dashboard from "./components/tabs/dashboard";
-import Settings from "./components/tabs/settings";
-import SoundsList from "./components/soundsList";
+import Dashboard from "./components/layout/tabs/dashboard";
+import Settings from "./components/layout/tabs/settings";
+import SoundsList from "./components/ui/sounds/soundsList";
+import { Transition } from "solid-transition-group";
 import "./App.css";
-
-const TABS = {
-  [Tab.Dashboard]: { icon: Cherry },
-  [Tab.Settings]: { icon: SettingsIcon },
-};
-
-let registerSound: (id: number, path: string) => void = () => {};
-let unlisten: () => void;
 
 export default function App() {
   const [activeTab, setActiveTab] = createSignal<Tab>(Tab.Dashboard);
-  const [_, setAllHotkeys] = createSignal<HotKeyEntry[]>([]);
-  const [muted, setMuted] = createSignal(0);
-  const [micMuted, setMicMuted] = createSignal(0);
-  const [paused, setPaused] = createSignal(false);
-
-  const [volumePct, setVolumePct] = createSignal(
-    Number(localStorage.getItem("volumePct") ?? 100),
-  );
-  const [micVolumePct, setMicVolumePct] = createSignal(
-    Number(localStorage.getItem("micVolumePct") ?? 100),
-  );
-
-  const controlActions: Record<string, () => void | Promise<void>> = {
-    Mute: () => {
-      // Unmute
-      if (muted() > 0 && volumePct() === 0) {
-        setVolumePct(muted());
-        setGeneralVolume(muted() / 100);
-        setMuted(0);
-      } else {
-        // Mute
-        setMuted(volumePct());
-        setVolumePct(0);
-        setGeneralVolume(0);
-      }
-    },
-    MicMute: () => {
-      // Unmute
-      if (micMuted() > 0 && micVolumePct() === 0) {
-        setMicVolumePct(micMuted());
-        setMicVolume(micMuted() / 100);
-        setMicMuted(0);
-      } else {
-        // Mute
-        setMicMuted(micVolumePct());
-        setMicVolumePct(0);
-        setMicVolume(0);
-      }
-    },
-    StopAll: () => {
-      stopAllSounds();
-    },
-    PauseResumeAll: async () => {
-      const ids = await getActiveSounds();
-      if (paused()) {
-        ids.forEach(resumeSound);
-      } else {
-        ids.forEach(pauseSound);
-      }
-      setPaused(!paused());
-    },
-  };
-
   onMount(async () => {
     // Register all active sounds
     const ids = await getActiveSounds();
     ids.forEach((id) => registerSound(id, ""));
 
     // Register all hotkeys
-    const hotkeys = await getHotkeys();
-    setAllHotkeys(hotkeys);
-    hotkeys.forEach((hk) => registerHotkey(hk));
+    for (const hk of hotkeys.latest ?? []) {
+      try {
+        await registerHotkeyCmd(hk);
+      } catch (e) {
+        console.warn("hotkey already registered", hk, e);
+      }
+    }
+    await refetchHotkeys();
+
+    // Listen for alerts
+    await listenAlerts();
 
     // Listen for hotkeys
-    unlisten = await listen("hotkey-pressed", async (event) => {
+    await listen("hotkey-pressed", async (event) => {
       const hotkey = event.payload as HotKeyEntry;
       if (hotkey.kind === "Sound") {
-        handlePlaySound(hotkey.context);
+        playSound(hotkey.context);
       }
 
       if (hotkey.kind === "Control") {
-        const action = controlActions[hotkey.context];
+        const action = controlActions[hotkey.context as ControlAction];
         if (action) {
           await action();
-        } else {
-          console.warn(`Unknown control action received: ${hotkey.context}`);
         }
       }
     });
+
+    // Mark frontend as ready
+    await markAsReady();
+
+    // Check for update
+    await checkForUpdate();
   });
 
   createEffect(() => {
-    localStorage.setItem("volumePct", String(volumePct()));
-    localStorage.setItem("micVolumePct", String(micVolumePct()));
+    // Apply custom css
+    const css = customCss();
+    if (css !== undefined) applyCustomCss(css);
   });
-
-  const handlePlaySound = async (path: string) => {
-    const id = await playSound(path, volumePct() / 100);
-    registerSound(id, path);
-  };
-
-  onCleanup(() => unlisten?.());
 
   return (
     <main class="flex h-screen w-screen overflow-hidden">
@@ -139,7 +88,7 @@ export default function App() {
             return (
               <div
                 onClick={() => setActiveTab(tabValue)}
-                class={`flex items-center gap-3 p-2 transition-colors cursor-pointer ${
+                class={`flex items-center gap-3 p-2 transition-colors duration-200 cursor-pointer ${
                   activeTab() === tabValue ? "text-primary-400" : ""
                 }`}
               >
@@ -152,26 +101,19 @@ export default function App() {
 
       <div class="flex flex-col flex-1 min-w-0">
         <div class="flex-1 overflow-y-auto">
-          <Switch>
-            <Match when={activeTab() === Tab.Dashboard}>
-              <Dashboard
-                handlePlaySound={handlePlaySound}
-                volumePct={volumePct}
-                setVolumePct={setVolumePct}
-              />
-            </Match>
-            <Match when={activeTab() === Tab.Settings}>
-              <Settings
-                micVolumePct={micVolumePct}
-                setMicVolumePct={setMicVolumePct}
-                volumePct={volumePct}
-                setVolumePct={setVolumePct}
-              />
-            </Match>
-          </Switch>
+          <Transition name="fade">
+            <Switch>
+              <Match when={activeTab() === Tab.Dashboard}>
+                <Dashboard />
+              </Match>
+              <Match when={activeTab() === Tab.Settings}>
+                <Settings />
+              </Match>
+            </Switch>
+          </Transition>
         </div>
 
-        <SoundsList onSoundAdded={(fn) => (registerSound = fn)} />
+        <SoundsList />
       </div>
     </main>
   );
