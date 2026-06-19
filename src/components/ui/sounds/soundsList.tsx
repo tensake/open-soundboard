@@ -1,5 +1,6 @@
 import { For, Show, createSignal } from "solid-js";
 import { Pause, Play, Square } from "lucide-solid";
+import { TransitionGroup } from "solid-transition-group";
 import {
   sounds,
   handlePauseResume,
@@ -77,9 +78,19 @@ export default function SoundsList() {
 
   return (
     <div class="max-h-[40vh] overflow-y-auto border-t border-surface-0 bg-mantle">
-      <For each={reversedPaths()} fallback={null}>
-        {(path) => <SoundRow path={path} sounds={sounds} />}
-      </For>
+      <TransitionGroup
+        enterActiveClass="slide-down-enter-active"
+        enterClass="slide-down-enter"
+        enterToClass="slide-down-enter-to"
+        exitActiveClass="slide-up-exit-active"
+        exitClass="slide-up-exit"
+        exitToClass="slide-up-exit-to"
+        appear
+      >
+        <For each={reversedPaths()} fallback={null}>
+          {(path) => <SoundRow path={path} sounds={sounds} />}
+        </For>
+      </TransitionGroup>
     </div>
   );
 }

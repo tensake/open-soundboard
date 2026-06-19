@@ -28,6 +28,7 @@ import {
 import Dashboard from "./components/layout/tabs/dashboard";
 import Settings from "./components/layout/tabs/settings";
 import SoundsList from "./components/ui/sounds/soundsList";
+import { Transition } from "solid-transition-group";
 import "./App.css";
 
 export default function App() {
@@ -87,7 +88,7 @@ export default function App() {
             return (
               <div
                 onClick={() => setActiveTab(tabValue)}
-                class={`flex items-center gap-3 p-2 transition-colors cursor-pointer ${
+                class={`flex items-center gap-3 p-2 transition-colors duration-200 cursor-pointer ${
                   activeTab() === tabValue ? "text-primary-400" : ""
                 }`}
               >
@@ -100,14 +101,16 @@ export default function App() {
 
       <div class="flex flex-col flex-1 min-w-0">
         <div class="flex-1 overflow-y-auto">
-          <Switch>
-            <Match when={activeTab() === Tab.Dashboard}>
-              <Dashboard />
-            </Match>
-            <Match when={activeTab() === Tab.Settings}>
-              <Settings />
-            </Match>
-          </Switch>
+          <Transition name="fade">
+            <Switch>
+              <Match when={activeTab() === Tab.Dashboard}>
+                <Dashboard />
+              </Match>
+              <Match when={activeTab() === Tab.Settings}>
+                <Settings />
+              </Match>
+            </Switch>
+          </Transition>
         </div>
 
         <SoundsList />

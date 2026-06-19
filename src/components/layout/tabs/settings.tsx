@@ -14,9 +14,10 @@ import {
   saveCustomCss,
 } from "../../../lib";
 import type { HotKeyEntry } from "../../../lib";
-import { For, createSignal, Show } from "solid-js";
+import { For, createSignal, Switch, Match } from "solid-js";
 import HotkeyOverlay from "../hotkeyOverlay";
 import HotKeyItem from "../../ui/hotkeys/hotkeyItem";
+import { Transition } from "solid-transition-group";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = createSignal("general");
@@ -70,7 +71,7 @@ export default function Settings() {
                   setActiveTab(tab.id);
                 }
               }}
-              class={`select-none cursor-pointer px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 hover:bg-primary-400/10 ${
+              class={`select-none cursor-pointer px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 hover:bg-primary-400/10 ${
                 activeTab() === tab.id ? "text-primary-400" : "text-subtext-1"
               }`}
             >
@@ -82,117 +83,135 @@ export default function Settings() {
 
       {/* Content */}
       <div class="flex-1 overflow-y-auto p-6">
-        {/* General tab */}
-        <Show when={activeTab() === "general"}>
-          <h1 class="text-2xl font-bold mb-4">General</h1>
+        <Transition name="fade" mode="outin">
+          <Switch>
+            {/* General tab */}
+            <Match when={activeTab() === "general"}>
+              <div>
+                <h1 class="text-2xl font-bold mb-4">General</h1>
 
-          <div class="max-w-md mb-6">
-            <h2 class="text-lg font-medium mb-1">Microphone Volume</h2>
-            <input
-              type="range"
-              min="0"
-              max="300"
-              step="1"
-              value={micVolumePct()}
-              onInput={handleMicVolumeSlider}
-              class="w-full cursor-pointer"
-            />
-            <span class="text-sm">{micVolumePct()}%</span>
-          </div>
-
-          <div class="max-w-md">
-            <h2 class="text-lg font-medium mb-1">General Volume</h2>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              value={volumePct()}
-              onInput={handleVolumeSlider}
-              class="w-full cursor-pointer"
-            />
-            <span class="text-sm">{volumePct()}%</span>
-          </div>
-        </Show>
-
-        {/* Appearance tab */}
-        <Show when={activeTab() === "appearance"}>
-          <h1 class="text-2xl font-bold mb-4">Appearance</h1>
-
-          <div class="max-w-xl">
-            <h2 class="text-lg font-medium mb-1">Custom CSS</h2>
-            <textarea
-              rows={4}
-              class="w-full"
-              placeholder="Enter your own css here."
-              value={customCss()}
-              onInput={(e) => {
-                const val = e.currentTarget.value;
-                setDraftCss(val);
-                applyCustomCss(val);
-              }}
-            />
-            <button onClick={() => saveCustomCss(draftCss())}>Save CSS</button>
-          </div>
-        </Show>
-
-        {/* Hotkeys tab */}
-        <Show when={activeTab() === "hotkeys"}>
-          <h1 class="text-2xl font-bold mb-4">Hotkeys</h1>
-
-          <div class="max-w-xl mb-6">
-            <h2 class="text-lg font-medium mb-3 text-text">Control Hotkeys</h2>
-            <div class="grid grid-cols-1 gap-2">
-              <For each={CONTROL_ACTIONS}>
-                {(action) => {
-                  const registered = () =>
-                    hotkeys()?.find(
-                      (hk) => hk.kind === "Control" && hk.context === action,
-                    );
-
-                  return (
-                    <HotKeyItem
-                      hotkey={
-                        registered() ?? {
-                          id: "",
-                          binding: "Click to bind",
-                          kind: "Control",
-                          context: action,
-                        }
-                      }
-                      disabled={!registered()}
-                      onStartCapture={(hk) => setCapturingHotkey(hk)}
-                    />
-                  );
-                }}
-              </For>
-            </div>
-          </div>
-
-          <div class="max-w-xl">
-            <h2 class="text-lg font-medium mb-3 text-text">
-              Registered Sound Hotkeys
-            </h2>
-            <div class="grid grid-cols-1 gap-2">
-              <For
-                each={hotkeys()?.filter((hk) => hk.kind === "Sound")}
-                fallback={
-                  <div class="text-sm text-subtext-1">
-                    No hotkeys are registered yet. Use the dashboard to add one!
-                  </div>
-                }
-              >
-                {(hotkey) => (
-                  <HotKeyItem
-                    hotkey={hotkey}
-                    disabled={false}
-                    onStartCapture={(hk) => setCapturingHotkey(hk)}
+                <div class="max-w-md mb-6">
+                  <h2 class="text-lg font-medium mb-1">Microphone Volume</h2>
+                  <input
+                    type="range"
+                    min="0"
+                    max="300"
+                    step="1"
+                    value={micVolumePct()}
+                    onInput={handleMicVolumeSlider}
+                    class="w-full cursor-pointer"
                   />
-                )}
-              </For>
-            </div>
-          </div>
-        </Show>
+                  <span class="text-sm">{micVolumePct()}%</span>
+                </div>
+
+                <div class="max-w-md">
+                  <h2 class="text-lg font-medium mb-1">General Volume</h2>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={volumePct()}
+                    onInput={handleVolumeSlider}
+                    class="w-full cursor-pointer"
+                  />
+                  <span class="text-sm">{volumePct()}%</span>
+                </div>
+              </div>
+            </Match>
+
+            {/* Appearance tab */}
+            <Match when={activeTab() === "appearance"}>
+              <div>
+                <h1 class="text-2xl font-bold mb-4">Appearance</h1>
+
+                <div class="max-w-xl flex flex-col gap-2">
+                  <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-medium mb-1">Custom CSS</h2>
+                    <button onClick={() => saveCustomCss(draftCss())}>
+                      Save CSS
+                    </button>
+                  </div>
+                  <textarea
+                    rows={4}
+                    class="w-full"
+                    placeholder="Enter your own css here."
+                    value={customCss()}
+                    onInput={(e) => {
+                      const val = e.currentTarget.value;
+                      setDraftCss(val);
+                      applyCustomCss(val);
+                    }}
+                  />
+                </div>
+              </div>
+            </Match>
+
+            {/* Hotkeys tab */}
+            <Match when={activeTab() === "hotkeys"}>
+              <div>
+                <h1 class="text-2xl font-bold mb-4">Hotkeys</h1>
+
+                <div class="max-w-xl mb-6">
+                  <h2 class="text-lg font-medium mb-3 text-text">
+                    Control Hotkeys
+                  </h2>
+                  <div class="grid grid-cols-1 gap-2">
+                    <For each={CONTROL_ACTIONS}>
+                      {(action) => {
+                        const registered = () =>
+                          hotkeys()?.find(
+                            (hk) =>
+                              hk.kind === "Control" && hk.context === action,
+                          );
+
+                        return (
+                          <HotKeyItem
+                            hotkey={
+                              registered() ?? {
+                                id: "",
+                                binding: "Click to bind",
+                                kind: "Control",
+                                context: action,
+                              }
+                            }
+                            disabled={!registered()}
+                            onStartCapture={(hk) => setCapturingHotkey(hk)}
+                          />
+                        );
+                      }}
+                    </For>
+                  </div>
+                </div>
+
+                <div class="max-w-xl">
+                  <h2 class="text-lg font-medium mb-3 text-text">
+                    Registered Sound Hotkeys
+                  </h2>
+                  <div class="grid grid-cols-1 gap-2">
+                    <For
+                      each={hotkeys()?.filter((hk) => hk.kind === "Sound")}
+                      fallback={
+                        <div class="text-sm text-subtext-1">
+                          No hotkeys are registered yet. Use the dashboard to
+                          add one!
+                        </div>
+                      }
+                    >
+                      {(hotkey) => (
+                        <HotKeyItem
+                          hotkey={hotkey}
+                          disabled={false}
+                          onStartCapture={(hk) => setCapturingHotkey(hk)}
+                        />
+                      )}
+                    </For>
+                  </div>
+                </div>
+              </div>
+            </Match>
+          </Switch>
+        </Transition>
       </div>
     </div>
   );

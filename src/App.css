@@ -246,3 +246,48 @@ hr {
   margin-top: 16px;
   margin-bottom: 16px;
 }
+
+.fade-enter-active,
+.fade-exit-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter,
+.fade-exit-to {
+  opacity: 0;
+}
+
+.slide-up-enter-active,
+.slide-up-exit-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease,
+    height 0.25s ease,
+    padding 0.25s ease;
+  overflow: hidden;
+}
+.slide-up-enter,
+.slide-up-exit-to {
+  opacity: 0;
+  height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  transform: translateY(12px);
+}
+
+.slide-down-enter-active,
+.slide-down-exit-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease,
+    height 0.25s ease,
+    padding 0.25s ease;
+  overflow: hidden;
+}
+.slide-down-enter,
+.slide-down-exit-to {
+  opacity: 0;
+  height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  transform: translateY(-12px);
+}
