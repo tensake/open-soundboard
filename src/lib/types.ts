@@ -39,5 +39,6 @@ export interface SoundEntry {
   total: number;
   paused: boolean;
   count: number;
+  speed: number;
   playlistMode: PlaylistMode;
 }

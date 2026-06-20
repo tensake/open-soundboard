@@ -14,6 +14,8 @@ import {
   saveCustomCss,
   setAutoStart,
   autoStartSignal,
+  handleAllSoundPlaybackSpeedSlider,
+  soundPlaybackSpeed,
 } from "../../../lib";
 import type { HotKeyEntry } from "../../../lib";
 import { For, createSignal, Switch, Match } from "solid-js";
@@ -22,7 +24,7 @@ import HotKeyItem from "../../ui/hotkeys/hotkeyItem";
 import { Transition } from "solid-transition-group";
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = createSignal("general");
+  const [activeTab, setActiveTab] = createSignal("sound");
   const [draftCss, setDraftCss] = createSignal("");
   const [capturingHotkey, setCapturingHotkey] =
     createSignal<HotKeyEntry | null>(null);
@@ -87,10 +89,10 @@ export default function Settings() {
       <div class="flex-1 overflow-y-auto p-6">
         <Transition name="fade" mode="outin">
           <Switch>
-            {/* General tab */}
-            <Match when={activeTab() === "general"}>
+            {/* Sound tab */}
+            <Match when={activeTab() === "sound"}>
               <div>
-                <h1 class="text-2xl font-bold mb-4">General</h1>
+                <h1 class="text-2xl font-bold mb-4">Sound</h1>
 
                 <div class="max-w-md mb-6">
                   <h2 class="text-lg font-medium mb-1">Microphone Volume</h2>
@@ -106,7 +108,7 @@ export default function Settings() {
                   <span class="text-sm">{micVolumePct()}%</span>
                 </div>
 
-                <div class="max-w-md">
+                <div class="max-w-md mb-6">
                   <h2 class="text-lg font-medium mb-1">General Volume</h2>
                   <input
                     type="range"
@@ -118,6 +120,20 @@ export default function Settings() {
                     class="w-full cursor-pointer"
                   />
                   <span class="text-sm">{volumePct()}%</span>
+                </div>
+
+                <div class="max-w-md mb-6">
+                  <h2 class="text-lg font-medium mb-1">Sound Speed</h2>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2.5"
+                    step="0.05"
+                    value={soundPlaybackSpeed()}
+                    onInput={handleAllSoundPlaybackSpeedSlider}
+                    class="w-full cursor-pointer"
+                  />
+                  <span class="text-sm">{soundPlaybackSpeed()}x</span>
                 </div>
               </div>
             </Match>
