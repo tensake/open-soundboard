@@ -11,7 +11,7 @@ pub fn spawn_stream(
     rx: mpsc::Receiver<Vec<f32>>,
     state: Arc<AtomicU8>,
     volume: Arc<AtomicU32>,
-    ready_tx: Option<mpsc::SyncSender<Result<(), String>>>
+    ready_tx: Option<mpsc::SyncSender<Result<(), String>>>,
 ) {
     // Create output stream in a separate thread.
     // Spawn everything in a thread because Stream is !Send.

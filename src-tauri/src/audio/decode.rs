@@ -3,7 +3,7 @@ use rubato::{
     calculate_cutoff, Async, FixedAsync, Indexing, Resampler, SincInterpolationParameters,
     SincInterpolationType, WindowFunction,
 };
-use std::sync::atomic::{AtomicU64, AtomicU32, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU64, AtomicU8, Ordering};
 use std::sync::mpsc;
 use std::sync::Arc;
 use symphonia::core::formats::{SeekMode, SeekTo};
@@ -228,7 +228,14 @@ pub fn decode_loop(
         // Resample to match cable sample rate if needed
         if let Some(r) = &mut resampler {
             let current_speed = f32::from_bits(speed.load(Ordering::Relaxed)) as f64;
-            chunk = resample_chunk(&mut leftover, &chunk, r, resample_channels, base_ratio, current_speed)?;
+            chunk = resample_chunk(
+                &mut leftover,
+                &chunk,
+                r,
+                resample_channels,
+                base_ratio,
+                current_speed,
+            )?;
             if chunk.is_empty() {
                 continue;
             }
