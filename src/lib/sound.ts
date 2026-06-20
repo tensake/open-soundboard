@@ -11,6 +11,7 @@ export const [volumePct, setVolumePct] = createSignal(
 export const [micVolumePct, setMicVolumePct] = createSignal(
   Number(localStorage.getItem("micVolumePct") ?? 100),
 );
+export const [micPitchPct, setMicPitchPct] = createSignal(0);
 export const [soundPlaybackSpeed, setSoundPlaybackSpeed] = createSignal(1.0);
 export const [muted, setMuted] = createSignal(0);
 export const [micMuted, setMicMuted] = createSignal(0);
@@ -241,6 +242,11 @@ export const getMicVolume = () => invoke<number>("get_mic_volume");
 
 export const setMicVolume = (volume: number) =>
   invoke("set_mic_volume", { volume });
+
+export const setMicPitch = (semitones: number) =>
+  invoke("set_mic_pitch", { semitones });
+
+export const getMicPitch = () => invoke<number>("get_mic_pitch");
 
 export const setPlaybackSpeed = (id: number, speed: number) =>
   invoke("set_playback_speed", { id, speed });
