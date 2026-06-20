@@ -94,7 +94,7 @@ fn microphone_loop(
 
             // Resample if needed
             if let Some(r) = &mut resampler {
-                match decode::resample_chunk(&mut leftover, &chunk, r, resample_channels) {
+                match decode::resample_chunk(&mut leftover, &chunk, r, resample_channels, ratio, 1.0) {
                     Ok(out) => chunk = out,
                     Err(_) => return,
                 }
@@ -159,7 +159,6 @@ pub fn start_forwarding(
         state.clone(),
         volume.clone(),
         Some(ready_tx),
-        None,
     );
 
     // Wait until the output stream is fully ready

@@ -208,6 +208,7 @@ pub fn run() {
             cmd::stop_all_sounds,
             cmd::get_progress,
             cmd::get_active_sounds,
+            cmd::set_playback_speed,
             // Microphone
             cmd::get_mic_volume,
             cmd::set_mic_volume,

@@ -32,6 +32,7 @@ pub struct Alert {
 pub fn play_sound(
     path: String,
     volume: Option<f32>,
+    speed: Option<f32>,
     state: State<AppState>,
 ) -> Result<u32, String> {
     println!("Playing sound {path}");
@@ -41,7 +42,7 @@ pub fn play_sound(
         .ok_or("No output device found")?
         .clone();
     let handle =
-        audio::play_sound(&path, device, volume.unwrap_or(1.0)).map_err(|e| e.to_string())?;
+        audio::play_sound(&path, device, volume.unwrap_or(1.0), speed.unwrap_or(1.0)).map_err(|e| e.to_string())?;
     let id = state.next_id.fetch_add(1, Ordering::Relaxed);
     state.playing_sounds.lock().insert(id, handle);
     Ok(id)
@@ -86,6 +87,13 @@ pub fn set_general_volume(volume: f32, state: State<AppState>) {
 pub fn set_volume(id: u32, volume: f32, state: State<AppState>) {
     if let Some(h) = state.playing_sounds.lock().get(&id) {
         h.set_volume(volume);
+    }
+}
+
+#[tauri::command]
+pub fn set_playback_speed(id: u32, speed: f32, state: State<AppState>) {
+    if let Some(h) = state.playing_sounds.lock().get(&id) {
+        h.set_speed(speed);
     }
 }
 

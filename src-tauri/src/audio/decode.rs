@@ -3,7 +3,7 @@ use rubato::{
     calculate_cutoff, Async, FixedAsync, Indexing, Resampler, SincInterpolationParameters,
     SincInterpolationType, WindowFunction,
 };
-use std::sync::atomic::{AtomicU64, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicU32, AtomicU8, Ordering};
 use std::sync::mpsc;
 use std::sync::Arc;
 use symphonia::core::formats::{SeekMode, SeekTo};
@@ -20,8 +20,15 @@ pub fn resample_chunk(
     chunk: &[f32],
     resampler: &mut Async<f32>,
     channels: usize,
+    base_ratio: f64,
+    speed: f64,
 ) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
     leftover.extend_from_slice(chunk);
+
+    // Calculate and set resample ratio
+    resampler
+        .set_resample_ratio(base_ratio * (1.0 / speed.max(0.01)), false)
+        .map_err(|e| format!("Failed to set resample ratio: {e}"))?;
 
     // Get required samples for each iteration
     let needed_frames = resampler.input_frames_next();
@@ -71,6 +78,7 @@ pub fn decode_loop(
     state: Arc<AtomicU8>,
     frames_total: Arc<AtomicU64>,
     frames_progress: Arc<AtomicU64>,
+    speed: Arc<AtomicU32>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Decode audio file
     let file =
@@ -109,8 +117,7 @@ pub fn decode_loop(
         .map_err(|e| format!("Failed to create decoder: {path}: {e}"))?;
     let track_id = track.id;
 
-    // Build resampler if needed
-    let need_resample = audio_rate != cable_rate;
+    // Build resampler
     let params = SincInterpolationParameters {
         sinc_len: 64,
         f_cutoff: calculate_cutoff(64, WindowFunction::Blackman2),
@@ -118,29 +125,28 @@ pub fn decode_loop(
         oversampling_factor: 128,
         window: WindowFunction::Blackman2,
     };
-    let ratio = cable_rate as f64 / audio_rate as f64;
+    let base_ratio = cable_rate as f64 / audio_rate as f64;
     let resample_channels = if audio_channels == 2 && cable_channels == 1 {
         1
     } else {
         audio_channels
     };
-    let mut resampler = need_resample
-        .then(|| {
-            Async::<f32>::new_sinc(
-                ratio,
-                1.1,
-                &params,
-                1024,
-                resample_channels,
-                FixedAsync::Input,
-            )
-            .map_err(|e| format!("Failed to create resampler: {e}"))
-        })
-        .transpose()?;
+
+    let mut resampler = Some(
+        Async::<f32>::new_sinc(
+            base_ratio,
+            3.0,
+            &params,
+            1024,
+            resample_channels,
+            FixedAsync::Input,
+        )
+        .map_err(|e| format!("Failed to create resampler: {e}"))?,
+    );
 
     // Set total frame count
     if let Some(n) = track.codec_params.n_frames {
-        let cable_total = (n as f64 * ratio) as u64;
+        let cable_total = (n as f64 * base_ratio) as u64;
         frames_total.store(cable_total, Ordering::Relaxed);
     }
 
@@ -214,9 +220,15 @@ pub fn decode_loop(
                 .collect();
         }
 
+        // Update progress
+        let source_frames = (chunk.len() / resample_channels) as u64;
+        let cable_equiv_frames = (source_frames as f64 * base_ratio) as u64;
+        frames_progress.fetch_add(cable_equiv_frames, Ordering::Relaxed);
+
         // Resample to match cable sample rate if needed
         if let Some(r) = &mut resampler {
-            chunk = resample_chunk(&mut leftover, &chunk, r, resample_channels)?;
+            let current_speed = f32::from_bits(speed.load(Ordering::Relaxed)) as f64;
+            chunk = resample_chunk(&mut leftover, &chunk, r, resample_channels, base_ratio, current_speed)?;
             if chunk.is_empty() {
                 continue;
             }
