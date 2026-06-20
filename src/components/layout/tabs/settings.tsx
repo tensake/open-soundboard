@@ -12,6 +12,8 @@ import {
   customCss,
   applyCustomCss,
   saveCustomCss,
+  setAutoStart,
+  autoStartSignal,
 } from "../../../lib";
 import type { HotKeyEntry } from "../../../lib";
 import { For, createSignal, Switch, Match } from "solid-js";
@@ -206,6 +208,26 @@ export default function Settings() {
                         />
                       )}
                     </For>
+                  </div>
+                </div>
+              </div>
+            </Match>
+
+            {/* System tab */}
+            <Match when={activeTab() === "system"}>
+              <div>
+                <h1 class="text-2xl font-bold mb-4">System Settings</h1>
+
+                <div class="max-w-xl flex flex-col gap-2">
+                  <div class="flex items-center justify-between">
+                    <h2 class="text-sm shrink-0">
+                      Start the soundboard with system in the background.
+                    </h2>
+                    <input
+                      type="checkbox"
+                      checked={autoStartSignal()}
+                      onInput={(e) => setAutoStart(e.currentTarget.checked)}
+                    />
                   </div>
                 </div>
               </div>

@@ -9,6 +9,7 @@ use tauri::{
     tray::TrayIconBuilder,
 };
 use tauri::{Emitter, Manager, State};
+use tauri_plugin_autostart::ManagerExt;
 use uuid::Uuid;
 
 mod audio;
@@ -244,6 +245,36 @@ fn mark_as_ready(app: tauri::AppHandle, state: State<AppState>) -> Result<(), St
     Ok(())
 }
 
+#[tauri::command]
+fn set_autostart(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
+    println!("Setting autostart to {enabled}");
+    if enabled {
+        app.autolaunch().enable().map_err(|e| e.to_string())
+    } else {
+        app.autolaunch().disable().map_err(|e| e.to_string())
+    }
+}
+
+#[tauri::command]
+fn get_autostart(app: tauri::AppHandle) -> Result<bool, String> {
+    app.autolaunch().is_enabled().map_err(|e| e.to_string())
+}
+
+fn hide_window(app: &tauri::AppHandle, label: &str) {
+    println!("Hiding {label} window");
+    if let Some(window) = app.get_webview_window(label) {
+        let _ = window.hide();
+    }
+}
+
+fn show_window(app: &tauri::AppHandle, label: &str) {
+    println!("Showing {label} window");
+    if let Some(window) = app.get_webview_window(label) {
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
 fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
     // Setup tray menu
     let show = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
@@ -257,10 +288,7 @@ fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "show" => {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                }
+                show_window(app, "main");
             }
             "quit" => {
                 app.exit(0);
@@ -270,11 +298,7 @@ fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
         .on_tray_icon_event(|tray, event| {
             if let tauri::tray::TrayIconEvent::Click { button, .. } = event {
                 if button == tauri::tray::MouseButton::Left {
-                    let app = tray.app_handle();
-                    if let Some(window) = app.get_webview_window("main") {
-                        let _ = window.show();
-                        let _ = window.set_focus();
-                    }
+                    show_window(&tray.app_handle(), "main");
                 }
             }
         })
@@ -287,6 +311,10 @@ fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--hidden"]),
+        ))
         .setup(move |app| {
             // Initialize state
             let playing_sounds = Arc::new(Mutex::new(HashMap::<u32, audio::PlaybackHandle>::new()));
@@ -361,7 +389,13 @@ pub fn run() {
             };
             app.manage(app_state);
 
+            // Setup tray
             setup_tray(app.handle())?;
+
+            // Handle cli arguments
+            if std::env::args().any(|a| a == "--hidden") {
+                hide_window(app.handle(), "main");
+            }
 
             Ok(())
         })
@@ -393,7 +427,7 @@ pub fn run() {
         )
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                window.hide().unwrap();
+                hide_window(window.app_handle(), "main");
                 api.prevent_close();
             }
         })
@@ -426,6 +460,9 @@ pub fn run() {
             unregister_hotkey,
             // Initialization
             mark_as_ready,
+            // Autostart
+            set_autostart,
+            get_autostart,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

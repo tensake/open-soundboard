@@ -125,7 +125,7 @@ button:disabled {
   cursor: not-allowed;
 }
 
-input:not([type="range"]),
+input:not([type="range"]):not([type="checkbox"]),
 select,
 textarea {
   display: block;
@@ -139,11 +139,11 @@ textarea {
   outline: none;
 }
 
-input:not([type="range"])::placeholder,
+input:not([type="range"]):not([type="checkbox"])::placeholder,
 textarea::placeholder {
   color: var(--color-subtext-0);
 }
-input:not([type="range"]),
+input:not([type="range"]):not([type="checkbox"]),
 select {
   height: 34px;
   padding: 0 10px;
@@ -153,21 +153,71 @@ textarea {
   min-height: 80px;
   resize: vertical;
 }
-input:not([type="range"]):hover,
+input:not([type="range"]):not([type="checkbox"]):hover,
 select:hover,
 textarea:hover {
   border-color: var(--color-surface-2);
 }
-input:not([type="range"]):focus,
+input:not([type="range"]):not([type="checkbox"]):focus,
 select:focus,
 textarea:focus {
   border-color: var(--color-primary-500);
   box-shadow: var(--color-primary-600);
 }
-input:not([type="range"]):disabled,
+input:not([type="range"]):not([type="checkbox"]):disabled,
 select:disabled,
 textarea:disabled {
   opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input[type="checkbox"] {
+  appearance: none;
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 24px;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 128px;
+  background: var(--color-surface-2);
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+  outline: none;
+}
+input[type="checkbox"]::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease-in-out;
+}
+input[type="checkbox"]:checked {
+  background: var(--color-primary-500);
+}
+input[type="checkbox"]:checked::before {
+  transform: translateX(16px);
+}
+input[type="checkbox"]:hover {
+  background: var(--color-surface-1);
+}
+input[type="checkbox"]:checked:hover {
+  background: var(--color-primary-600);
+}
+input[type="checkbox"]:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--color-base),
+    0 0 0 4px var(--color-primary-400);
+}
+input[type="checkbox"]:disabled {
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
