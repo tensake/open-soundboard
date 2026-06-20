@@ -12,6 +12,6 @@ impl config::Config {
     }
 
     pub fn save_custom_css(&self, css: &str) -> Result<(), String> {
-        std::fs::write(&self.path.join(config::CSS_FILE), css).map_err(|e| e.to_string())
+        std::fs::write(self.path.join(config::CSS_FILE), css).map_err(|e| e.to_string())
     }
 }

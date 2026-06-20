@@ -92,7 +92,7 @@ pub fn listen_hotkeys(app_handle: tauri::AppHandle, hotkey_rx: Receiver<HotKeyCm
 
 impl config::Config {
     pub fn get_hotkeys(&self) -> Vec<HotKeyEntry> {
-        self.hotkeys.iter().map(|(_, hk)| hk.clone()).collect()
+        self.hotkeys.values().cloned().collect()
     }
 
     pub fn insert_hotkey(&mut self, hk: HotKeyEntry) {

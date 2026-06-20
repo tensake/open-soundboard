@@ -1,5 +1,5 @@
 use cpal::traits::{DeviceTrait, StreamTrait};
-use std::sync::atomic::{AtomicU32, AtomicU64, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 
@@ -12,14 +12,12 @@ pub fn spawn_stream(
     state: Arc<AtomicU8>,
     volume: Arc<AtomicU32>,
     ready_tx: Option<mpsc::SyncSender<Result<(), String>>>,
-    frames_progress: Option<Arc<AtomicU64>>,
 ) {
     // Create output stream in a separate thread.
     // Spawn everything in a thread because Stream is !Send.
     let leftover = Arc::new(Mutex::new(Vec::<f32>::new()));
     let state_cb = state.clone();
     let state_kt = state.clone();
-    let channels = config.channels() as usize;
     std::thread::spawn(move || {
         let leftover_cb = leftover.clone();
         let stream = match device.build_output_stream(
@@ -69,12 +67,6 @@ pub fn spawn_stream(
 
                     // Keep track of written data
                     written += take;
-                }
-
-                // Update progress
-                if let Some(progress) = &frames_progress {
-                    let frames_written = (written / channels) as u64;
-                    progress.fetch_add(frames_written, Ordering::Relaxed);
                 }
             },
             |e| {

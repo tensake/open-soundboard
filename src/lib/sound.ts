@@ -11,6 +11,8 @@ export const [volumePct, setVolumePct] = createSignal(
 export const [micVolumePct, setMicVolumePct] = createSignal(
   Number(localStorage.getItem("micVolumePct") ?? 100),
 );
+export const [micPitchPct, setMicPitchPct] = createSignal(0);
+export const [soundPlaybackSpeed, setSoundPlaybackSpeed] = createSignal(1.0);
 export const [muted, setMuted] = createSignal(0);
 export const [micMuted, setMicMuted] = createSignal(0);
 export const [paused, setPaused] = createSignal(false);
@@ -66,6 +68,7 @@ export function registerSound(
   id: number,
   path: string,
   mode: PlaylistMode = "disabled",
+  speed: number = 1.0,
 ) {
   const existing = sounds.findIndex((s) => s.path === path);
 
@@ -78,6 +81,7 @@ export function registerSound(
         entry.current = 0;
         entry.paused = false;
         entry.playlistMode = mode;
+        entry.speed = speed;
         s.push(entry);
       }),
     );
@@ -92,6 +96,7 @@ export function registerSound(
           paused: false,
           count: 1,
           playlistMode: mode,
+          speed: 1.0,
         });
       }),
     );
@@ -200,12 +205,12 @@ export const controlActions: Record<ControlAction, () => void | Promise<void>> =
   },
 };
 
-export const playSoundCmd = (path: string, volume: number) =>
-  invoke<number>("play_sound", { path, volume });
+export const playSoundCmd = (path: string, volume: number, speed: number) =>
+  invoke<number>("play_sound", { path, volume, speed });
 
 export async function playSoundTagged(path: string, mode: PlaylistMode) {
-  const id = await playSoundCmd(path, volumePct() / 100);
-  registerSound(id, path, mode);
+  const id = await playSoundCmd(path, volumePct() / 100, soundPlaybackSpeed());
+  registerSound(id, path, mode, soundPlaybackSpeed());
 }
 export async function playSoundTabMode(path: string) {
   return playSoundTagged(path, playlistMode());
@@ -238,6 +243,14 @@ export const getMicVolume = () => invoke<number>("get_mic_volume");
 export const setMicVolume = (volume: number) =>
   invoke("set_mic_volume", { volume });
 
+export const setMicPitch = (semitones: number) =>
+  invoke("set_mic_pitch", { semitones });
+
+export const getMicPitch = () => invoke<number>("get_mic_pitch");
+
+export const setPlaybackSpeed = (id: number, speed: number) =>
+  invoke("set_playback_speed", { id, speed });
+
 export function handleVolumeSlider(e: Event) {
   const value = parseFloat((e.currentTarget as HTMLInputElement).value);
   setVolumePct(value);
@@ -248,4 +261,24 @@ export function handleMicVolumeSlider(e: Event) {
   const value = parseFloat((e.currentTarget as HTMLInputElement).value);
   setMicVolumePct(value);
   setMicVolume(value / 100);
+}
+
+export function handleAllSoundPlaybackSpeedSlider(e: Event) {
+  const value = parseFloat((e.currentTarget as HTMLInputElement).value);
+  setSoundPlaybackSpeed(value);
+
+  // Update registered sounds
+  setSounds(
+    produce((s) => {
+      s.forEach((entry) => {
+        entry.speed = value;
+      });
+    }),
+  );
+
+  // Update backend sounds
+  for (const sound of sounds) {
+    const latestId = sound.ids[sound.ids.length - 1];
+    setPlaybackSpeed(latestId, value);
+  }
 }

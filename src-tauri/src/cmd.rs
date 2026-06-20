@@ -32,6 +32,7 @@ pub struct Alert {
 pub fn play_sound(
     path: String,
     volume: Option<f32>,
+    speed: Option<f32>,
     state: State<AppState>,
 ) -> Result<u32, String> {
     println!("Playing sound {path}");
@@ -40,8 +41,8 @@ pub fn play_sound(
         .as_ref()
         .ok_or("No output device found")?
         .clone();
-    let handle =
-        audio::play_sound(&path, device, volume.unwrap_or(1.0)).map_err(|e| e.to_string())?;
+    let handle = audio::play_sound(&path, device, volume.unwrap_or(1.0), speed.unwrap_or(1.0))
+        .map_err(|e| e.to_string())?;
     let id = state.next_id.fetch_add(1, Ordering::Relaxed);
     state.playing_sounds.lock().insert(id, handle);
     Ok(id)
@@ -90,6 +91,13 @@ pub fn set_volume(id: u32, volume: f32, state: State<AppState>) {
 }
 
 #[tauri::command]
+pub fn set_playback_speed(id: u32, speed: f32, state: State<AppState>) {
+    if let Some(h) = state.playing_sounds.lock().get(&id) {
+        h.set_speed(speed);
+    }
+}
+
+#[tauri::command]
 pub fn stop_all_sounds(state: State<AppState>) {
     for (_, h) in state.playing_sounds.lock().drain() {
         h.stop();
@@ -118,12 +126,28 @@ pub fn get_mic_volume(state: tauri::State<AppState>) -> f32 {
 
 #[tauri::command]
 pub fn set_mic_volume(volume: f32, state: tauri::State<AppState>) {
-    state.mic_handle.as_ref().map(|h| h.set_volume(volume));
+    if let Some(h) = state.mic_handle.as_ref() {
+        h.set_volume(volume)
+    }
+}
+
+#[tauri::command]
+pub fn get_mic_pitch(state: tauri::State<AppState>) -> f32 {
+    state.mic_handle.as_ref().map_or(0.0, |h| h.pitch())
+}
+
+#[tauri::command]
+pub fn set_mic_pitch(semitones: f32, state: State<AppState>) {
+    if let Some(h) = state.mic_handle.as_ref() {
+        h.set_pitch(semitones)
+    }
 }
 
 #[tauri::command]
 pub fn stop_mic(state: tauri::State<AppState>) {
-    state.mic_handle.as_ref().map(|h| h.stop());
+    if let Some(h) = state.mic_handle.as_ref() {
+        h.stop()
+    }
 }
 
 #[tauri::command]
@@ -202,7 +226,7 @@ pub async fn update_hotkey(
     unregister_hotkey(hk.id.clone().to_string(), state.clone())
         .await
         .map_err(|e| e.to_string())?;
-    Ok(register_hotkey(hk, state).await?)
+    register_hotkey(hk, state).await
 }
 
 #[tauri::command]

@@ -1,34 +1,59 @@
 use cpal::traits::{DeviceTrait, StreamTrait};
+use pitch_shift::{Shifter, TOTAL_F32};
 use rubato::{
     calculate_cutoff, Async, FixedAsync, SincInterpolationParameters, SincInterpolationType,
     WindowFunction,
 };
+use std::convert::TryInto;
 use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use std::sync::mpsc;
 use std::sync::Arc;
 
 use crate::audio::{decode, output, PlaybackState};
 
+type PitchState = Box<[f32; TOTAL_F32]>;
+
 pub struct MicrophoneHandle {
     volume: Arc<AtomicU32>,
+    pitch: Arc<AtomicU32>,
     state: Arc<AtomicU8>,
 }
 
 impl MicrophoneHandle {
+    /// Set the volume level for the microphone.
     pub fn set_volume(&self, volume: f32) {
         let clamped = volume.clamp(0.0, 3.0);
         self.volume.store(clamped.to_bits(), Ordering::Relaxed);
     }
 
+    /// Get the current volume level for the microphone.
     pub fn volume(&self) -> f32 {
-        let bits = self.volume.load(Ordering::Relaxed);
-        f32::from_bits(bits)
+        f32::from_bits(self.volume.load(Ordering::Relaxed))
     }
 
+    /// Change the pitch of the microphone.
+    pub fn set_pitch(&self, semitones: f32) {
+        let clamped = semitones.clamp(-12.0, 12.0);
+        self.pitch.store(clamped.to_bits(), Ordering::Relaxed);
+    }
+
+    /// Get the current pitch of the microphone.
+    pub fn pitch(&self) -> f32 {
+        f32::from_bits(self.pitch.load(Ordering::Relaxed))
+    }
+
+    /// Stop microphone playback.
     pub fn stop(&self) {
         self.state
             .store(PlaybackState::Stopped as u8, Ordering::Relaxed);
     }
+}
+
+fn shifter() -> Result<PitchState, Box<dyn std::error::Error>> {
+    let state_vec = vec![0.0; TOTAL_F32];
+    state_vec
+        .try_into()
+        .map_err(|_| "Failed to convert state_vec to box".into())
 }
 
 fn microphone_loop(
@@ -37,6 +62,7 @@ fn microphone_loop(
     cable_channels: usize,
     tx: mpsc::SyncSender<Vec<f32>>,
     state: Arc<AtomicU8>,
+    pitch: Arc<AtomicU32>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Get microphone config
     let input_config = input_device
@@ -70,8 +96,15 @@ fn microphone_loop(
         })
         .transpose()?;
 
+    // Initialize pitch shifters for each channel
+    let mut shifters: Vec<Shifter<PitchState>> = (0..cable_channels)
+        .map(|_| shifter().map(Shifter::new))
+        .collect::<Result<_, _>>()?;
+
+    let mut pitch_leftover: Vec<Vec<f32>> = vec![Vec::new(); cable_channels];
     let mut leftover: Vec<f32> = Vec::new();
     let state_cb = state.clone();
+    let pitch_cb = pitch.clone();
 
     let stream = input_device.build_input_stream(
         input_config.into(),
@@ -84,6 +117,7 @@ fn microphone_loop(
             }
 
             let mut chunk = data.to_vec();
+            let semitones = f32::from_bits(pitch_cb.load(Ordering::Relaxed));
 
             // Channel remix to match cable
             if input_channels == 2 && cable_channels == 1 {
@@ -94,7 +128,14 @@ fn microphone_loop(
 
             // Resample if needed
             if let Some(r) = &mut resampler {
-                match decode::resample_chunk(&mut leftover, &chunk, r, resample_channels) {
+                match decode::resample_chunk(
+                    &mut leftover,
+                    &chunk,
+                    r,
+                    resample_channels,
+                    ratio,
+                    1.0,
+                ) {
                     Ok(out) => chunk = out,
                     Err(_) => return,
                 }
@@ -103,8 +144,59 @@ fn microphone_loop(
                 }
             }
 
+            // Pitch shift if needed only
+            if semitones.abs() < 0.01 {
+                let _ = tx.try_send(chunk);
+                return;
+            }
+
+            // Extract data from each channel
+            let channel_bufs: Vec<Vec<f32>> = (0..cable_channels)
+                .map(|c| {
+                    chunk
+                        .iter()
+                        .skip(c)
+                        .step_by(cable_channels)
+                        .copied()
+                        .collect()
+                })
+                .collect();
+
+            // Shift each channel, and ensure chunks are exactly 128 samples
+            let mut shifted_channels: Vec<Vec<f32>> = vec![Vec::new(); cable_channels];
+            for (ch, buf) in channel_bufs.iter().enumerate() {
+                let mut input_for_pitch = Vec::with_capacity(pitch_leftover[ch].len() + buf.len());
+                input_for_pitch.extend_from_slice(&pitch_leftover[ch]);
+                input_for_pitch.extend_from_slice(buf);
+                pitch_leftover[ch].clear();
+
+                let mut offset = 0;
+                while input_for_pitch.len() - offset >= 128 {
+                    let input = &input_for_pitch[offset..offset + 128];
+                    let shifted = shifters[ch].shift(input, semitones, 128, cable_rate as f32);
+                    shifted_channels[ch].extend_from_slice(shifted);
+                    offset += 128;
+                }
+                // Save leftover
+                if offset < input_for_pitch.len() {
+                    pitch_leftover[ch].extend_from_slice(&input_for_pitch[offset..]);
+                }
+            }
+
+            // Merge channels into one
+            let out_frames = shifted_channels.iter().map(|c| c.len()).min().unwrap_or(0);
+            if out_frames == 0 {
+                return;
+            }
+            let mut pitched = vec![0.0f32; out_frames * cable_channels];
+            for frame in 0..out_frames {
+                for ch in 0..cable_channels {
+                    pitched[frame * cable_channels + ch] = shifted_channels[ch][frame];
+                }
+            }
+
             // Send mic chunk without awaiting to maintain real-time
-            let _ = tx.try_send(chunk);
+            let _ = tx.try_send(pitched);
         },
         |e| eprintln!("Mic input stream error: {e}"),
         None,
@@ -133,12 +225,14 @@ pub fn start_forwarding(
     let state = Arc::new(AtomicU8::new(PlaybackState::Playing as u8));
     let (ready_tx, ready_rx) = mpsc::sync_channel::<Result<(), String>>(1);
     let volume = Arc::new(AtomicU32::new(1.0f32.to_bits()));
+    let pitch = Arc::new(AtomicU32::new(0.0f32.to_bits()));
     let config = cable_device
         .default_output_config()
         .map_err(|e| format!("Failed to get cable device config: {e}"))?;
 
     // Spawn microphone capture loop
     let state_mic = state.clone();
+    let pitch_mic = pitch.clone();
     std::thread::spawn(move || {
         if let Err(e) = microphone_loop(
             input_device,
@@ -146,6 +240,7 @@ pub fn start_forwarding(
             config.channels() as usize,
             tx,
             state_mic,
+            pitch_mic,
         ) {
             eprintln!("Error while forwarding microphone: {e}");
         }
@@ -159,7 +254,6 @@ pub fn start_forwarding(
         state.clone(),
         volume.clone(),
         Some(ready_tx),
-        None,
     );
 
     // Wait until the output stream is fully ready
@@ -167,5 +261,9 @@ pub fn start_forwarding(
         .recv()
         .map_err(|_| "Audio thread died unexpectedly")??;
 
-    Ok(MicrophoneHandle { state, volume })
+    Ok(MicrophoneHandle {
+        state,
+        volume,
+        pitch,
+    })
 }

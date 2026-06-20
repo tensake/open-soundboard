@@ -30,6 +30,7 @@ impl From<u8> for PlaybackState {
 pub struct PlaybackHandle {
     state: Arc<AtomicU8>,
     volume: Arc<AtomicU32>,
+    speed: Arc<AtomicU32>,
     frames_progress: Arc<AtomicU64>,
     frames_total: Arc<AtomicU64>,
     sample_rate: u32,
@@ -88,6 +89,12 @@ impl PlaybackHandle {
             total as f64 / self.sample_rate as f64
         }
     }
+
+    /// Set the playback speed.
+    pub fn set_speed(&self, speed: f32) {
+        let clamped = speed.clamp(0.5, 2.0);
+        self.speed.store(clamped.to_bits(), Ordering::Relaxed);
+    }
 }
 
 /// Play an audio file to the default output device and virtual cable.
@@ -97,8 +104,10 @@ pub fn play_sound(
     path: &str,
     device: Arc<cpal::Device>,
     volume: f32,
+    speed: f32,
 ) -> Result<PlaybackHandle, Box<dyn std::error::Error>> {
     let volume = Arc::new(AtomicU32::new(volume.clamp(0.0, 1.0).to_bits()));
+    let speed = Arc::new(AtomicU32::new(speed.clamp(0.5, 2.0).to_bits()));
 
     // Get cable device info
     let config = device
@@ -132,6 +141,7 @@ pub fn play_sound(
     let state_process = state.clone();
     let frames_total_process = frames_total.clone();
     let frames_progress_process = frames_progress.clone();
+    let speed_process = speed.clone();
     std::thread::spawn(move || {
         if let Err(e) = decode::decode_loop(
             &path,
@@ -144,6 +154,7 @@ pub fn play_sound(
             state_process,
             frames_total_process,
             frames_progress_process,
+            speed_process,
         ) {
             eprintln!("Error while processing audio file: {e}");
         }
@@ -157,7 +168,6 @@ pub fn play_sound(
         state.clone(),
         volume.clone(),
         Some(ready_tx),
-        Some(frames_progress.clone()),
     );
 
     // Local stream playback
@@ -167,7 +177,6 @@ pub fn play_sound(
         rx_local,
         state.clone(),
         volume.clone(),
-        None,
         None,
     );
 
@@ -179,6 +188,7 @@ pub fn play_sound(
     Ok(PlaybackHandle {
         state,
         volume,
+        speed,
         frames_progress,
         frames_total,
         sample_rate: cable_rate,

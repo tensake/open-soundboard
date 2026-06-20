@@ -63,7 +63,7 @@ fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
         .on_tray_icon_event(|tray, event| {
             if let tauri::tray::TrayIconEvent::Click { button, .. } = event {
                 if button == tauri::tray::MouseButton::Left {
-                    show_window(&tray.app_handle(), "main");
+                    show_window(tray.app_handle(), "main");
                 }
             }
         })
@@ -208,9 +208,12 @@ pub fn run() {
             cmd::stop_all_sounds,
             cmd::get_progress,
             cmd::get_active_sounds,
+            cmd::set_playback_speed,
             // Microphone
             cmd::get_mic_volume,
             cmd::set_mic_volume,
+            cmd::get_mic_pitch,
+            cmd::set_mic_pitch,
             cmd::stop_mic,
             // Config
             cmd::get_tabs,
