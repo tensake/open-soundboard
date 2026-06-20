@@ -4,6 +4,10 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::mpsc;
 use std::sync::Arc;
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::TrayIconBuilder,
+};
 use tauri::{Emitter, Manager, State};
 use uuid::Uuid;
 
@@ -240,6 +244,45 @@ fn mark_as_ready(app: tauri::AppHandle, state: State<AppState>) -> Result<(), St
     Ok(())
 }
 
+fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
+    // Setup tray menu
+    let show = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit Open Soundboard", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&show, &quit])?;
+
+    // Build tray
+    TrayIconBuilder::new()
+        .icon(app.default_window_icon().unwrap().clone())
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "show" => {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+            "quit" => {
+                app.exit(0);
+            }
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let tauri::tray::TrayIconEvent::Click { button, .. } = event {
+                if button == tauri::tray::MouseButton::Left {
+                    let app = tray.app_handle();
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                }
+            }
+        })
+        .build(app)?;
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -318,6 +361,8 @@ pub fn run() {
             };
             app.manage(app_state);
 
+            setup_tray(app.handle())?;
+
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
@@ -346,6 +391,12 @@ pub fn run() {
                 })
                 .build(),
         )
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                window.hide().unwrap();
+                api.prevent_close();
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             // Sound
             play_sound,
