@@ -51,7 +51,9 @@ impl MicrophoneHandle {
 
 fn shifter() -> Result<PitchState, Box<dyn std::error::Error>> {
     let state_vec = vec![0.0; TOTAL_F32];
-    state_vec.try_into().map_err(|_| "Failed to convert state_vec to box".into())
+    state_vec
+        .try_into()
+        .map_err(|_| "Failed to convert state_vec to box".into())
 }
 
 fn microphone_loop(
@@ -163,8 +165,7 @@ fn microphone_loop(
             // Shift each channel, and ensure chunks are exactly 128 samples
             let mut shifted_channels: Vec<Vec<f32>> = vec![Vec::new(); cable_channels];
             for (ch, buf) in channel_bufs.iter().enumerate() {
-                let mut input_for_pitch =
-                    Vec::with_capacity(pitch_leftover[ch].len() + buf.len());
+                let mut input_for_pitch = Vec::with_capacity(pitch_leftover[ch].len() + buf.len());
                 input_for_pitch.extend_from_slice(&pitch_leftover[ch]);
                 input_for_pitch.extend_from_slice(buf);
                 pitch_leftover[ch].clear();
@@ -172,8 +173,7 @@ fn microphone_loop(
                 let mut offset = 0;
                 while input_for_pitch.len() - offset >= 128 {
                     let input = &input_for_pitch[offset..offset + 128];
-                    let shifted =
-                        shifters[ch].shift(input, semitones, 128, cable_rate as f32);
+                    let shifted = shifters[ch].shift(input, semitones, 128, cable_rate as f32);
                     shifted_channels[ch].extend_from_slice(shifted);
                     offset += 128;
                 }
@@ -184,11 +184,7 @@ fn microphone_loop(
             }
 
             // Merge channels into one
-            let out_frames = shifted_channels
-                .iter()
-                .map(|c| c.len())
-                .min()
-                .unwrap_or(0);
+            let out_frames = shifted_channels.iter().map(|c| c.len()).min().unwrap_or(0);
             if out_frames == 0 {
                 return;
             }

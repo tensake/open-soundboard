@@ -126,8 +126,8 @@ pub fn get_mic_volume(state: tauri::State<AppState>) -> f32 {
 
 #[tauri::command]
 pub fn set_mic_volume(volume: f32, state: tauri::State<AppState>) {
-    if let Some(h) = state.mic_handle.as_ref() { 
-        h.set_volume(volume) 
+    if let Some(h) = state.mic_handle.as_ref() {
+        h.set_volume(volume)
     }
 }
 
@@ -138,15 +138,15 @@ pub fn get_mic_pitch(state: tauri::State<AppState>) -> f32 {
 
 #[tauri::command]
 pub fn set_mic_pitch(semitones: f32, state: State<AppState>) {
-    if let Some(h) = state.mic_handle.as_ref() { 
-        h.set_pitch(semitones) 
+    if let Some(h) = state.mic_handle.as_ref() {
+        h.set_pitch(semitones)
     }
 }
 
 #[tauri::command]
 pub fn stop_mic(state: tauri::State<AppState>) {
-    if let Some(h) = state.mic_handle.as_ref() { 
-        h.stop() 
+    if let Some(h) = state.mic_handle.as_ref() {
+        h.stop()
     }
 }
 
