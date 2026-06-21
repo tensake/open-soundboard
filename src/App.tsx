@@ -101,7 +101,7 @@ export default function App() {
       </nav>
 
       <div class="flex flex-col flex-1 min-w-0">
-        <div class="flex-1 overflow-y-auto">
+        <div class="flex-1 overflow-hidden">
           <Transition name="fade">
             <Switch>
               <Match when={activeTab() === Tab.Dashboard}>
