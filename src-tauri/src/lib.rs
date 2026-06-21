@@ -16,6 +16,7 @@ mod config;
 struct AppState {
     cable_device: Option<Arc<cpal::Device>>,
     playing_sounds: Arc<Mutex<HashMap<u32, audio::PlaybackHandle>>>,
+    forwarding_handles: Arc<Mutex<HashMap<u32, audio::forwarding::ForwardingHandle>>>,
     next_id: AtomicU32,
     mic_handle: Option<audio::mic::MicrophoneHandle>,
     cfg: Mutex<config::Config>,
@@ -88,6 +89,7 @@ pub fn run() {
         .setup(move |app| {
             // Initialize state
             let playing_sounds = Arc::new(Mutex::new(HashMap::<u32, audio::PlaybackHandle>::new()));
+            let forwarding_handles = Arc::new(Mutex::new(HashMap::<u32, audio::forwarding::ForwardingHandle>::new()));
             let mut pending_alerts = Vec::new();
 
             // Get audio devices
@@ -151,6 +153,7 @@ pub fn run() {
             let app_state = AppState {
                 cable_device: cable_device.clone(),
                 playing_sounds: playing_sounds.clone(),
+                forwarding_handles: forwarding_handles,
                 next_id: AtomicU32::new(0),
                 mic_handle,
                 cfg: Mutex::new(cfg),
@@ -220,6 +223,8 @@ pub fn run() {
             cmd::get_mic_pitch,
             cmd::set_mic_pitch,
             cmd::stop_mic,
+            // App forwarding
+            cmd::get_audio_apps,
             // Config
             cmd::get_tabs,
             cmd::add_tab,

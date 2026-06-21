@@ -27,6 +27,7 @@ import {
 } from "./lib";
 import Dashboard from "./components/layout/tabs/dashboard";
 import Settings from "./components/layout/tabs/settings";
+import Forwarding from "./components/layout/tabs/forwarding";
 import SoundsList from "./components/ui/sounds/soundsList";
 import { Transition } from "solid-transition-group";
 import "./App.css";
@@ -105,6 +106,9 @@ export default function App() {
             <Switch>
               <Match when={activeTab() === Tab.Dashboard}>
                 <Dashboard />
+              </Match>
+              <Match when={activeTab() === Tab.Forwarding}>
+                <Forwarding />
               </Match>
               <Match when={activeTab() === Tab.Settings}>
                 <Settings />

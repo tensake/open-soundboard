@@ -1,5 +1,6 @@
 export enum Tab {
   Dashboard = "dashboard",
+  Forwarding = "forwarding",
   Settings = "settings",
 }
 

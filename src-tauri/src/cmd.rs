@@ -120,6 +120,11 @@ pub fn get_active_sounds(state: State<AppState>) -> Vec<u32> {
 }
 
 #[tauri::command]
+pub fn get_audio_apps() -> Result<Vec<u32>, String> {
+    crate::audio::forwarding::get_audio_apps().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn get_mic_volume(state: tauri::State<AppState>) -> f32 {
     state.mic_handle.as_ref().map_or(0.0, |h| h.volume())
 }
