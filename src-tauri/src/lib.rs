@@ -49,6 +49,7 @@ fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
     // Build tray
     TrayIconBuilder::new()
         .icon(app.default_window_icon().unwrap().clone())
+        .tooltip("Open Soundboard")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
