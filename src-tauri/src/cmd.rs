@@ -1,6 +1,8 @@
 use serde::Serialize;
+use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc;
+use std::sync::Arc;
 use tauri::{Emitter, State};
 use tauri_plugin_autostart::ManagerExt;
 use uuid::Uuid;
@@ -120,8 +122,44 @@ pub fn get_active_sounds(state: State<AppState>) -> Vec<u32> {
 }
 
 #[tauri::command]
-pub fn get_audio_apps() -> Result<Vec<u32>, String> {
-    crate::audio::forwarding::get_audio_apps().map_err(|e| e.to_string())
+pub fn get_audio_apps() -> Result<Vec<audio::forwarding::AudioApp>, String> {
+    audio::forwarding::get_audio_apps().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn forward_app(pid: u32, state: tauri::State<AppState>) -> Result<u32, String> {
+    let cable = state
+        .cable_device
+        .clone()
+        .ok_or("No cable device available")?;
+    let volume = Arc::new(AtomicU32::new(1.0f32.to_bits()));
+
+    let handle = audio::forwarding::forward_app(pid, cable, volume).map_err(|e| e.to_string())?;
+    let id = state
+        .next_id
+        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    state.forwarding_handles.lock().insert(id, handle);
+    Ok(id)
+}
+
+#[tauri::command]
+pub fn stop_forward(id: u32, state: tauri::State<AppState>) -> Result<(), String> {
+    if let Some(handle) = state.forwarding_handles.lock().remove(&id) {
+        handle.stop();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_forward_volume(
+    id: u32,
+    volume: f32,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    if let Some(handle) = state.forwarding_handles.lock().get(&id) {
+        handle.set_volume(volume);
+    }
+    Ok(())
 }
 
 #[tauri::command]

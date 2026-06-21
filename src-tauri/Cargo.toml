@@ -34,12 +34,14 @@ parking_lot = "0.12.5"
 tauri-plugin-dialog = "2"
 uuid = { version = "1.23.3", features = ["v4", "serde"] }
 pitch_shift = "2.1.0"
+windows-icons = "0.3.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 cpal = { version = "0.18", features = ["pipewire"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 wasapi = "0.23.0"
+sysinfo = "0.38"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-autostart = "2"

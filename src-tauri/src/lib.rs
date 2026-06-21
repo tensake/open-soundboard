@@ -89,7 +89,10 @@ pub fn run() {
         .setup(move |app| {
             // Initialize state
             let playing_sounds = Arc::new(Mutex::new(HashMap::<u32, audio::PlaybackHandle>::new()));
-            let forwarding_handles = Arc::new(Mutex::new(HashMap::<u32, audio::forwarding::ForwardingHandle>::new()));
+            let forwarding_handles = Arc::new(Mutex::new(HashMap::<
+                u32,
+                audio::forwarding::ForwardingHandle,
+            >::new()));
             let mut pending_alerts = Vec::new();
 
             // Get audio devices
@@ -153,7 +156,7 @@ pub fn run() {
             let app_state = AppState {
                 cable_device: cable_device.clone(),
                 playing_sounds: playing_sounds.clone(),
-                forwarding_handles: forwarding_handles,
+                forwarding_handles,
                 next_id: AtomicU32::new(0),
                 mic_handle,
                 cfg: Mutex::new(cfg),
@@ -225,6 +228,9 @@ pub fn run() {
             cmd::stop_mic,
             // App forwarding
             cmd::get_audio_apps,
+            cmd::set_forward_volume,
+            cmd::stop_forward,
+            cmd::forward_app,
             // Config
             cmd::get_tabs,
             cmd::add_tab,
