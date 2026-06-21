@@ -43,3 +43,16 @@ export interface SoundEntry {
   speed: number;
   playlistMode: PlaylistMode;
 }
+
+export interface ForwardedApp {
+  id: number;
+  pid: number;
+  volume: number;
+  paused: boolean;
+}
+
+export interface AudioApp {
+  id: number;
+  name: string;
+  icon: string | null;
+}
