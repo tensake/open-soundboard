@@ -3,6 +3,7 @@ import { Plus, Trash2, Repeat, Shuffle } from "lucide-solid";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   tabs,
+  refetchTabs,
   addTab,
   removeTab,
   refetchHotkeys,
@@ -32,6 +33,7 @@ export default function Dashboard() {
   createEffect(() => {
     const loadedTabs = tabs();
     if (!currentTab() && loadedTabs?.length) {
+      refetchTabs();
       setCurrentTab(loadedTabs[0]);
     }
   });
