@@ -3,6 +3,7 @@ import { Plus, Trash2, Repeat, Shuffle } from "lucide-solid";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   tabs,
+  refetchTabs,
   addTab,
   removeTab,
   refetchHotkeys,
@@ -29,7 +30,7 @@ export default function Dashboard() {
   );
   const [capturingFor, setCapturingFor] = createSignal<string | null>(null);
 
-  createEffect(() => {
+  createEffect(async () => {
     const loadedTabs = tabs();
     if (!currentTab() && loadedTabs?.length) {
       setCurrentTab(loadedTabs[0]);
@@ -107,8 +108,10 @@ export default function Dashboard() {
                     ? "bg-surface-0 text-text"
                     : "bg-mantle text-subtext-0 hover:bg-surface-1 hover:text-subtext-1"
                 }`}
-                onClick={() => {
-                  setCurrentTab([tab, sounds]);
+                onClick={async () => {
+                  await refetchTabs();
+                  const recentTab = tabs()?.find(([t]) => t.id === tab.id);
+                  setCurrentTab(recentTab ?? [tab, sounds]);
                   setSearchQuery(null);
                 }}
               >

@@ -57,7 +57,7 @@ export default function Settings() {
   };
 
   return (
-    <div class="flex h-full">
+    <div class="flex h-full overflow-y-auto">
       <HotkeyOverlay
         capturingFor={capturingHotkey() ? capturingHotkey()!.context : null}
         onCapture={handleCapture}

@@ -16,6 +16,7 @@ mod config;
 struct AppState {
     cable_device: Option<Arc<cpal::Device>>,
     playing_sounds: Arc<Mutex<HashMap<u32, audio::PlaybackHandle>>>,
+    forwarding_handles: Arc<Mutex<HashMap<u32, audio::forwarding::ForwardingHandle>>>,
     next_id: AtomicU32,
     mic_handle: Option<audio::mic::MicrophoneHandle>,
     cfg: Mutex<config::Config>,
@@ -36,6 +37,7 @@ fn show_window(app: &tauri::AppHandle, label: &str) {
     println!("Showing {label} window");
     if let Some(window) = app.get_webview_window(label) {
         let _ = window.show();
+        let _ = window.unminimize();
         let _ = window.set_focus();
     }
 }
@@ -49,6 +51,7 @@ fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
     // Build tray
     TrayIconBuilder::new()
         .icon(app.default_window_icon().unwrap().clone())
+        .tooltip("Open Soundboard")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
@@ -75,6 +78,9 @@ fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
+            show_window(app, "main");
+        }))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
@@ -83,6 +89,10 @@ pub fn run() {
         .setup(move |app| {
             // Initialize state
             let playing_sounds = Arc::new(Mutex::new(HashMap::<u32, audio::PlaybackHandle>::new()));
+            let forwarding_handles = Arc::new(Mutex::new(HashMap::<
+                u32,
+                audio::forwarding::ForwardingHandle,
+            >::new()));
             let mut pending_alerts = Vec::new();
 
             // Get audio devices
@@ -146,6 +156,7 @@ pub fn run() {
             let app_state = AppState {
                 cable_device: cable_device.clone(),
                 playing_sounds: playing_sounds.clone(),
+                forwarding_handles,
                 next_id: AtomicU32::new(0),
                 mic_handle,
                 cfg: Mutex::new(cfg),
@@ -215,6 +226,11 @@ pub fn run() {
             cmd::get_mic_pitch,
             cmd::set_mic_pitch,
             cmd::stop_mic,
+            // App forwarding
+            cmd::get_audio_apps,
+            cmd::set_forward_volume,
+            cmd::stop_forward,
+            cmd::forward_app,
             // Config
             cmd::get_tabs,
             cmd::add_tab,

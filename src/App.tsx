@@ -27,6 +27,7 @@ import {
 } from "./lib";
 import Dashboard from "./components/layout/tabs/dashboard";
 import Settings from "./components/layout/tabs/settings";
+import Forwarding from "./components/layout/tabs/forwarding";
 import SoundsList from "./components/ui/sounds/soundsList";
 import { Transition } from "solid-transition-group";
 import "./App.css";
@@ -100,11 +101,14 @@ export default function App() {
       </nav>
 
       <div class="flex flex-col flex-1 min-w-0">
-        <div class="flex-1 overflow-y-auto">
+        <div class="flex-1 overflow-hidden">
           <Transition name="fade">
             <Switch>
               <Match when={activeTab() === Tab.Dashboard}>
                 <Dashboard />
+              </Match>
+              <Match when={activeTab() === Tab.Forwarding}>
+                <Forwarding />
               </Match>
               <Match when={activeTab() === Tab.Settings}>
                 <Settings />
