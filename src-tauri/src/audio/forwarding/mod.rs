@@ -37,11 +37,15 @@ impl ForwardingHandle {
 
 pub fn get_audio_apps() -> Result<Vec<AudioApp>, Box<dyn std::error::Error>> {
     #[cfg(target_os = "windows")]
-    let apps = windows::list_sessions()?;
-    #[cfg(target_os = "linux")]
-    todo!();
+    {
+        let apps = windows::list_sessions()?;
+        return Ok(apps);
+    }
 
-    Ok(apps)
+    #[cfg(target_os = "linux")]
+    {
+        return Err("App forwarding is not implemented for your OS yet.".into());
+    }
 }
 
 pub fn forward_app(
@@ -67,7 +71,7 @@ pub fn forward_app(
     });
 
     #[cfg(target_os = "linux")]
-    todo!();
+    return Err();
 
     crate::audio::output::spawn_stream(
         cable_device,

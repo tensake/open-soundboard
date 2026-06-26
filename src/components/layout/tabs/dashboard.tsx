@@ -31,8 +31,6 @@ export default function Dashboard() {
   const [capturingFor, setCapturingFor] = createSignal<string | null>(null);
 
   createEffect(async () => {
-    await refetchTabs();
-
     const loadedTabs = tabs();
     if (!currentTab() && loadedTabs?.length) {
       setCurrentTab(loadedTabs[0]);

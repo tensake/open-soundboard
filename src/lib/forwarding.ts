@@ -6,9 +6,13 @@ export const [audioApps, setAudioApps] = createSignal<AudioApp[]>([]);
 export const [forwardedApps, setForwardedApps] = createSignal<ForwardedApp[]>([]);
 
 export async function refreshAudioApps(): Promise<AudioApp[]> {
-  const apps = await invoke<AudioApp[]>("get_audio_apps");
-  setAudioApps(apps);
-  return apps;
+  try {
+    const apps = await invoke<AudioApp[]>("get_audio_apps");
+    setAudioApps(apps);
+    return apps;
+  } catch (error) {
+    throw error; 
+  }
 }
 
 export async function forwardApp(pid: number): Promise<number> {

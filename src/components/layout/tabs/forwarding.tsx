@@ -89,7 +89,7 @@ export default function Forwarding() {
   // Refresh apps every 5 seconds
   onMount(() => {
     const interval = setInterval(() => {
-      if (!apps.loading) {
+      if (!apps.loading && !apps.error) {
         refetch();
         console.log("Apps refreshed");
       }
@@ -107,22 +107,27 @@ export default function Forwarding() {
           Forward all outgoing audio from a specific app to virtual cable
         </p>
       </div>
+      <Show when={apps.error}>
+        <span class="text-sm text-warn">{String(apps.error)}</span>
+      </Show>
 
       {/* Apps List */}
-      <Show when={!apps.loading && apps()?.length === 0}>
-        <div class="text-sm text-subtext-1">
-          Could not find any apps that are currently playing any audio.
-        </div>
+      <Show when={!apps.error}>
+        <Show when={!apps.loading && apps()?.length === 0}>
+          <div class="text-sm text-subtext-1">
+            Could not find any apps that are currently playing any audio.
+          </div>
+        </Show>
+        <TransitionGroup name="slide-down" appear>
+          <div class="flex flex-col gap-1">
+            <For each={apps()}>
+              {(app) => {
+                return <ForwardItem app={app} />;
+              }}
+            </For>
+          </div>
+        </TransitionGroup>
       </Show>
-      <TransitionGroup name="slide-down" appear>
-        <div class="flex flex-col gap-1">
-          <For each={apps()}>
-            {(app) => {
-              return <ForwardItem app={app} />;
-            }}
-          </For>
-        </div>
-      </TransitionGroup>
     </div>
   );
 }
