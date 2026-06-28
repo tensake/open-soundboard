@@ -1,3 +1,5 @@
+//! Logic for getting the virtual cable device on Windows or creating a null sink on Linux.
+
 use cpal::traits::{DeviceTrait, HostTrait};
 
 /// On Windows, get VB-Audio virtual cable device.

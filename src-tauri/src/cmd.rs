@@ -1,3 +1,5 @@
+//! Commands for interacting with the Tauri application for frontend.
+
 use serde::Serialize;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering;

@@ -1,3 +1,5 @@
+//! Configuration for the application.
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -11,6 +13,9 @@ pub mod tab;
 const DATA_FILE: &str = "data.json";
 const CSS_FILE: &str = "style.css";
 
+/// Represents the application configuration.
+///
+/// The config is taken from a JSON file and is saved on changes.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     tabs: Vec<tab::Tab>,

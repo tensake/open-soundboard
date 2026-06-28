@@ -1,3 +1,5 @@
+//! Provides methods for forwarding audio from a specific process by using PID to the virtual cable device.
+
 use crate::audio::PlaybackState;
 use cpal::traits::DeviceTrait;
 use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};

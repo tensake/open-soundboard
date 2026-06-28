@@ -1,3 +1,5 @@
+//! Logic for microphone forwarding and controlling playback.
+
 use cpal::traits::{DeviceTrait, StreamTrait};
 use pitch_shift::{Shifter, TOTAL_F32};
 use rubato::{
@@ -13,6 +15,7 @@ use crate::audio::{decode, output, PlaybackState};
 
 type PitchState = Box<[f32; TOTAL_F32]>;
 
+/// Handle for controlling the microphone output.
 pub struct MicrophoneHandle {
     volume: Arc<AtomicU32>,
     pitch: Arc<AtomicU32>,
@@ -56,6 +59,7 @@ fn shifter() -> Result<PitchState, Box<dyn std::error::Error>> {
         .map_err(|_| "Failed to convert state_vec to box".into())
 }
 
+/// Microphone loop that reads audio from the input device and sends it to tx.
 fn microphone_loop(
     input_device: Arc<cpal::Device>,
     cable_rate: u32,
@@ -101,11 +105,11 @@ fn microphone_loop(
         .map(|_| shifter().map(Shifter::new))
         .collect::<Result<_, _>>()?;
 
+    // Start the stream
     let mut pitch_leftover: Vec<Vec<f32>> = vec![Vec::new(); cable_channels];
     let mut leftover: Vec<f32> = Vec::new();
     let state_cb = state.clone();
     let pitch_cb = pitch.clone();
-
     let stream = input_device.build_input_stream(
         input_config.into(),
         move |data: &[f32], _| {

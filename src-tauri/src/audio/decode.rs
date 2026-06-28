@@ -1,3 +1,5 @@
+//! Provides methods for decoding audio file and resampling audio data.
+
 use audioadapter_buffers::direct::InterleavedSlice;
 use rubato::{
     calculate_cutoff, Async, FixedAsync, Indexing, Resampler, SincInterpolationParameters,
@@ -15,6 +17,7 @@ use symphonia::core::{
 
 use crate::audio::PlaybackState;
 
+/// Resamples a chunk of audio data using the provided resampler.
 pub fn resample_chunk(
     leftover: &mut Vec<f32>,
     chunk: &[f32],
@@ -67,6 +70,9 @@ pub fn resample_chunk(
     Ok(out)
 }
 
+/// Decodes an audio file and sends the resampled chunks to tx.
+///
+/// This function is blocking and should be run in a separate thread.
 pub fn decode_loop(
     path: &str,
     cable_rate: u32,
@@ -117,7 +123,7 @@ pub fn decode_loop(
         .map_err(|e| format!("Failed to create decoder: {path}: {e}"))?;
     let track_id = track.id;
 
-    // Build resampler
+    // Configure resampler
     let params = SincInterpolationParameters {
         sinc_len: 64,
         f_cutoff: calculate_cutoff(64, WindowFunction::Blackman2),
@@ -132,6 +138,7 @@ pub fn decode_loop(
         audio_channels
     };
 
+    // Initialize resampler
     let mut resampler = Some(
         Async::<f32>::new_sinc(
             base_ratio,
@@ -150,10 +157,8 @@ pub fn decode_loop(
         frames_total.store(cable_total, Ordering::Relaxed);
     }
 
-    // Leftover for frames for resampling
+    // Process audio chunks in a loop
     let mut leftover: Vec<f32> = Vec::new();
-
-    // Process audio chunks
     loop {
         // Respect stop signal from handle
         if matches!(
