@@ -17,7 +17,8 @@ export const [muted, setMuted] = createSignal(0);
 export const [micMuted, setMicMuted] = createSignal(0);
 export const [paused, setPaused] = createSignal(false);
 export const [sounds, setSounds] = createStore<SoundEntry[]>([]);
-export const [playlistMode, setPlaylistMode] = createSignal<PlaylistMode>("disabled");
+export const [playlistMode, setPlaylistMode] =
+  createSignal<PlaylistMode>("disabled");
 export const [currentTabPaths, setCurrentTabPaths] = createSignal<string[]>([]);
 export const [finishedPlaylistSound, setFinishedPlaylistSound] = createSignal<{
   path: string;
@@ -32,7 +33,11 @@ export function nextSoundPlaylistMode(path: string) {
   const i = sounds.findIndex((s) => s.path === path);
   if (i === -1) return;
   const idx = PLAYLIST_ORDER.indexOf(sounds[i].playlistMode);
-  setSounds(i, "playlistMode", PLAYLIST_ORDER[(idx + 1) % PLAYLIST_ORDER.length]);
+  setSounds(
+    i,
+    "playlistMode",
+    PLAYLIST_ORDER[(idx + 1) % PLAYLIST_ORDER.length],
+  );
 }
 
 createEffect(() => {
@@ -116,9 +121,7 @@ export function handlePauseResume(entry: SoundEntry) {
   const i = sounds.findIndex((s) => s.path === entry.path);
   if (i === -1) return;
 
-  entry.ids.forEach((id) =>
-    entry.paused ? resumeSound(id) : pauseSound(id),
-  );
+  entry.ids.forEach((id) => (entry.paused ? resumeSound(id) : pauseSound(id)));
   setSounds(i, "paused", !entry.paused);
 }
 
@@ -156,54 +159,55 @@ export const _updateProgressInterval = setInterval(async () => {
   );
 }, 100);
 
-export const controlActions: Record<ControlAction, () => void | Promise<void>> = {
-  Mute: () => {
-    if (muted() > 0 && volumePct() === 0) {
-      setVolumePct(muted());
-      setGeneralVolume(muted() / 100);
-      setMuted(0);
-    } else {
-      setMuted(volumePct());
-      setVolumePct(0);
-      setGeneralVolume(0);
-    }
-  },
-  MicMute: () => {
-    if (micMuted() > 0 && micVolumePct() === 0) {
-      setMicVolumePct(micMuted());
-      setMicVolume(micMuted() / 100);
-      setMicMuted(0);
-    } else {
-      setMicMuted(micVolumePct());
-      setMicVolumePct(0);
-      setMicVolume(0);
-    }
-  },
-  StopAll: () => {
-    stopAllSounds();
-    setFinishedPlaylistSound(null);
-    setSounds([]);
-  },
-  PauseResumeAll: async () => {
-    const ids = await getActiveSounds();
-    const newPaused = !paused();
+export const controlActions: Record<ControlAction, () => void | Promise<void>> =
+  {
+    Mute: () => {
+      if (muted() > 0 && volumePct() === 0) {
+        setVolumePct(muted());
+        setGeneralVolume(muted() / 100);
+        setMuted(0);
+      } else {
+        setMuted(volumePct());
+        setVolumePct(0);
+        setGeneralVolume(0);
+      }
+    },
+    MicMute: () => {
+      if (micMuted() > 0 && micVolumePct() === 0) {
+        setMicVolumePct(micMuted());
+        setMicVolume(micMuted() / 100);
+        setMicMuted(0);
+      } else {
+        setMicMuted(micVolumePct());
+        setMicVolumePct(0);
+        setMicVolume(0);
+      }
+    },
+    StopAll: () => {
+      stopAllSounds();
+      setFinishedPlaylistSound(null);
+      setSounds([]);
+    },
+    PauseResumeAll: async () => {
+      const ids = await getActiveSounds();
+      const newPaused = !paused();
 
-    if (newPaused) {
-      ids.forEach(pauseSound);
-    } else {
-      ids.forEach(resumeSound);
-    }
+      if (newPaused) {
+        ids.forEach(pauseSound);
+      } else {
+        ids.forEach(resumeSound);
+      }
 
-    setPaused(newPaused);
-    setSounds(
-      produce((s) => {
-        s.forEach((entry) => {
-          entry.paused = newPaused;
-        });
-      }),
-    );
-  },
-};
+      setPaused(newPaused);
+      setSounds(
+        produce((s) => {
+          s.forEach((entry) => {
+            entry.paused = newPaused;
+          });
+        }),
+      );
+    },
+  };
 
 export const playSoundCmd = (path: string, volume: number, speed: number) =>
   invoke<number>("play_sound", { path, volume, speed });

@@ -31,7 +31,7 @@ export type SoundTab = {
   id: string;
   name: string;
   path: string;
-}
+};
 
 export interface SoundEntry {
   ids: number[];

@@ -5,7 +5,7 @@ import type { Alert } from "./types";
 export const [alerts, setAlerts] = createSignal<Alert[]>([]);
 
 export async function listenAlerts() {
-    return listen<Alert>("alert", (event) => {
-        setAlerts(prev => [...prev, event.payload]);
-    });
+  return listen<Alert>("alert", (event) => {
+    setAlerts((prev) => [...prev, event.payload]);
+  });
 }
