@@ -18,3 +18,36 @@ export const SETTINGS_TABS = [
   { id: "hotkeys", label: "Hotkeys" },
   { id: "system", label: "System" },
 ] as const;
+
+export const ONBOARDING_STEPS = [
+  {
+    title: "Welcome!",
+    description:
+      "Thanks for downloading Open Soundboard, I hope you enjoy using it!",
+    image: undefined,
+  },
+  {
+    title: "Get started with sounds",
+    description:
+      "To play sounds you need to add a tab first. Press 'Add tab' and select a folder that has some sounds in it, then you can click a sound file in the tab to play it.",
+    image: undefined,
+  },
+  {
+    title: "Setup hotkeys",
+    description:
+      "You can also configure hotkeys for a specific sound or for actions like stopping all sounds and others. Just hover over a sound in a tab and on the right side click the hotkey button.",
+    image: undefined,
+  },
+  {
+    title: "Tweak settings to your liking",
+    description:
+      "In settings you can customize the appearance of the soundboard by using custom CSS, set the soundboard to start with the system or configure sounds' speed or pitch of your microphone and a lot more.",
+    image: undefined,
+  },
+  {
+    title: "Have fun!",
+    description:
+      "All done! If you have found any bugs or have any feature in mind, please create an issue on https://github.com/tensake/open-soundboard/issues",
+    image: undefined,
+  },
+];
