@@ -148,16 +148,18 @@ pub fn play_sound(
     std::thread::spawn(move || {
         if let Err(e) = decode::decode_loop(
             &path,
-            cable_rate,
-            cable_channels,
-            local_channels,
+            decode::DecodeConfig {
+                cable_rate,
+                cable_channels,
+                local_channels,
+                frames_total: frames_total_process,
+                frames_progress: frames_progress_process,
+                speed: speed_process,
+            },
             tx,
             tx_local,
             seek_rx,
             state_process,
-            frames_total_process,
-            frames_progress_process,
-            speed_process,
         ) {
             eprintln!("Error while processing audio file: {e}");
         }
