@@ -245,6 +245,8 @@ pub fn run() {
             cmd::unregister_hotkey,
             // Initialization
             cmd::mark_as_ready,
+            cmd::onboard,
+            cmd::is_onboarded,
             // Autostart
             cmd::set_autostart,
             cmd::get_autostart,

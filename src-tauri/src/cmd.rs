@@ -301,6 +301,18 @@ pub fn mark_as_ready(app: tauri::AppHandle, state: State<AppState>) -> Result<()
 }
 
 #[tauri::command]
+pub fn onboard(state: State<AppState>) -> Result<(), String> {
+    let mut cfg = state.cfg.lock();
+    cfg.onboard();
+    Ok(())
+}
+
+#[tauri::command]
+pub fn is_onboarded(state: State<AppState>) -> bool {
+    state.cfg.lock().onboarded()
+}
+
+#[tauri::command]
 pub fn set_autostart(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
     println!("Setting autostart to {enabled}");
     if enabled {
