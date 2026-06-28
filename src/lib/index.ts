@@ -7,3 +7,4 @@ export * from "./types";
 export * from "./constants";
 export * from "./updater";
 export * from "./forwarding";
+export * from "./notifications";

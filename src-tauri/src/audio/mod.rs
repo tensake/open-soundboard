@@ -109,6 +109,11 @@ pub fn play_sound(
     volume: f32,
     speed: f32,
 ) -> Result<PlaybackHandle, Box<dyn std::error::Error>> {
+    let file_path = std::path::Path::new(path);
+    if !file_path.exists() {
+        return Err(format!("Cannot find file: {}", path).into());
+    }
+
     let volume = Arc::new(AtomicU32::new(volume.clamp(0.0, 1.0).to_bits()));
     let speed = Arc::new(AtomicU32::new(speed.clamp(0.5, 2.0).to_bits()));
 

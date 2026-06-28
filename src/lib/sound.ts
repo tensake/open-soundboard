@@ -4,6 +4,7 @@ import { createSignal, createEffect } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import { ControlAction, SoundEntry } from "./types";
 import { PLAYLIST_ORDER } from "./constants";
+import { showNotification } from "./notifications";
 
 export const [volumePct, setVolumePct] = createSignal(
   Number(localStorage.getItem("volumePct") ?? 100),
@@ -209,11 +210,23 @@ export const controlActions: Record<ControlAction, () => void | Promise<void>> =
     },
   };
 
-export const playSoundCmd = (path: string, volume: number, speed: number) =>
-  invoke<number>("play_sound", { path, volume, speed });
+export async function playSoundCmd(
+  path: string,
+  volume: number,
+  speed: number,
+) {
+  try {
+    return await invoke<number>("play_sound", { path, volume, speed });
+  } catch (e) {
+    console.error(e);
+    showNotification("Error while playing sound file", String(e));
+  }
+}
 
 export async function playSoundTagged(path: string, mode: PlaylistMode) {
   const id = await playSoundCmd(path, volumePct() / 100, soundPlaybackSpeed());
+  if (id === undefined) return;
+
   registerSound(id, path, mode, soundPlaybackSpeed());
 }
 export async function playSoundTabMode(path: string) {
