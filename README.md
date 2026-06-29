@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://10ku.net/osb/logo.png" alt="Open SoundBoard logo" />
+  <img src="https://10ku.net/osb/logo.png" alt="Open SoundBoard logo" height="300" />
 </p>
 
 [![Tauri](https://img.shields.io/badge/Tauri-24C8D8?logo=tauri&logoColor=fff)](https://tauri.app/)
