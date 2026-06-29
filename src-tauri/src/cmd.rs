@@ -130,6 +130,7 @@ pub fn get_audio_apps() -> Result<Vec<audio::forwarding::AudioApp>, String> {
 
 #[tauri::command]
 pub fn forward_app(pid: u32, state: tauri::State<AppState>) -> Result<u32, String> {
+    println!("Starting forwarder for app: {pid}");
     let cable = state
         .cable_device
         .clone()
@@ -146,6 +147,7 @@ pub fn forward_app(pid: u32, state: tauri::State<AppState>) -> Result<u32, Strin
 
 #[tauri::command]
 pub fn stop_forward(id: u32, state: tauri::State<AppState>) -> Result<(), String> {
+    println!("Stopping forwarder with id: {id}");
     if let Some(handle) = state.forwarding_handles.lock().remove(&id) {
         handle.stop();
     }
@@ -213,11 +215,13 @@ pub fn get_tabs(state: tauri::State<AppState>) -> Vec<(config::tab::Tab, Vec<Str
 
 #[tauri::command]
 pub fn add_tab(state: tauri::State<AppState>, name: String, path: String) {
+    println!("Adding tab: {path}");
     state.cfg.lock().add_tab(name, path);
 }
 
 #[tauri::command]
 pub fn remove_tab(state: tauri::State<AppState>, id: String) {
+    println!("Removing tab: {id}");
     state.cfg.lock().remove_tab(id);
 }
 
