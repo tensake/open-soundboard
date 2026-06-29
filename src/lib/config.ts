@@ -7,7 +7,9 @@ async function fetchTabs(): Promise<[SoundTab, string[]][]> {
 }
 
 export const [tabs, { refetch: refetchTabs }] = createResource(fetchTabs);
-export const [customCss, { refetch: refetchCustomCss }] = createResource(() => invoke<string>("get_custom_css"));
+export const [customCss, { refetch: refetchCustomCss }] = createResource(() =>
+  invoke<string>("get_custom_css"),
+);
 
 export async function addTab(name: string, path: string) {
   await invoke("add_tab", { name, path });

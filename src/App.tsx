@@ -5,6 +5,7 @@ import {
   Match,
   onMount,
   createEffect,
+  Show,
 } from "solid-js";
 import { listen } from "@tauri-apps/api/event";
 import {
@@ -24,11 +25,14 @@ import {
   checkForUpdate,
   customCss,
   applyCustomCss,
+  onboardedSignal,
+  onboard,
 } from "./lib";
 import Dashboard from "./components/layout/tabs/dashboard";
 import Settings from "./components/layout/tabs/settings";
 import Forwarding from "./components/layout/tabs/forwarding";
 import SoundsList from "./components/ui/sounds/soundsList";
+import OnboardingScreen from "./components/layout/onboardingScreen";
 import { Transition } from "solid-transition-group";
 import "./App.css";
 
@@ -81,44 +85,49 @@ export default function App() {
   });
 
   return (
-    <main class="flex h-screen w-screen overflow-hidden">
-      <nav class="flex flex-col gap-2 p-4 w-18 bg-mantle">
-        <For each={Object.values(Tab)}>
-          {(tabValue) => {
-            const meta = TABS[tabValue];
-            return (
-              <div
-                onClick={() => setActiveTab(tabValue)}
-                class={`flex items-center gap-3 p-2 transition-colors duration-200 cursor-pointer ${
-                  activeTab() === tabValue ? "text-primary-400" : ""
-                }`}
-              >
-                <meta.icon class="w-5 h-5 shrink-0" />
-              </div>
-            );
-          }}
-        </For>
-      </nav>
+    <Show
+      when={onboardedSignal()}
+      fallback={<OnboardingScreen onComplete={onboard} />}
+    >
+      <main class="flex h-screen w-screen overflow-hidden">
+        <nav class="flex flex-col gap-2 p-4 w-18 bg-mantle">
+          <For each={Object.values(Tab)}>
+            {(tabValue) => {
+              const meta = TABS[tabValue];
+              return (
+                <div
+                  onClick={() => setActiveTab(tabValue)}
+                  class={`flex items-center gap-3 p-2 transition-colors duration-200 cursor-pointer ${
+                    activeTab() === tabValue ? "text-primary-400" : ""
+                  }`}
+                >
+                  <meta.icon class="w-5 h-5 shrink-0" />
+                </div>
+              );
+            }}
+          </For>
+        </nav>
 
-      <div class="flex flex-col flex-1 min-w-0">
-        <div class="flex-1 overflow-hidden">
-          <Transition name="fade">
-            <Switch>
-              <Match when={activeTab() === Tab.Dashboard}>
-                <Dashboard />
-              </Match>
-              <Match when={activeTab() === Tab.Forwarding}>
-                <Forwarding />
-              </Match>
-              <Match when={activeTab() === Tab.Settings}>
-                <Settings />
-              </Match>
-            </Switch>
-          </Transition>
+        <div class="flex flex-col flex-1 min-w-0">
+          <div class="flex-1 overflow-hidden">
+            <Transition name="fade">
+              <Switch>
+                <Match when={activeTab() === Tab.Dashboard}>
+                  <Dashboard />
+                </Match>
+                <Match when={activeTab() === Tab.Forwarding}>
+                  <Forwarding />
+                </Match>
+                <Match when={activeTab() === Tab.Settings}>
+                  <Settings />
+                </Match>
+              </Switch>
+            </Transition>
+          </div>
+
+          <SoundsList />
         </div>
-
-        <SoundsList />
-      </div>
-    </main>
+      </main>
+    </Show>
   );
 }

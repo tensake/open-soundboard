@@ -1,3 +1,5 @@
+//! Provides methods for forwarding audio from a specific process by using PID to the virtual cable device.
+
 use crate::audio::PlaybackState;
 use cpal::traits::DeviceTrait;
 use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
@@ -38,13 +40,12 @@ impl ForwardingHandle {
 pub fn get_audio_apps() -> Result<Vec<AudioApp>, Box<dyn std::error::Error>> {
     #[cfg(target_os = "windows")]
     {
-        let apps = windows::list_sessions()?;
-        return Ok(apps);
+        windows::list_sessions()
     }
 
     #[cfg(target_os = "linux")]
     {
-        return Err("App forwarding is not implemented for your OS yet.".into());
+        Err("App forwarding is not implemented for your OS yet.".into())
     }
 }
 

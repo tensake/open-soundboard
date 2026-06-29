@@ -3,7 +3,9 @@ import { createSignal } from "solid-js";
 import { ForwardedApp, AudioApp } from "./types";
 
 export const [audioApps, setAudioApps] = createSignal<AudioApp[]>([]);
-export const [forwardedApps, setForwardedApps] = createSignal<ForwardedApp[]>([]);
+export const [forwardedApps, setForwardedApps] = createSignal<ForwardedApp[]>(
+  [],
+);
 
 export async function refreshAudioApps(): Promise<AudioApp[]> {
   try {
@@ -11,7 +13,7 @@ export async function refreshAudioApps(): Promise<AudioApp[]> {
     setAudioApps(apps);
     return apps;
   } catch (error) {
-    throw error; 
+    throw error;
   }
 }
 
@@ -26,7 +28,10 @@ export async function stopForward(id: number): Promise<void> {
   setForwardedApps((prev) => prev.filter((a) => a.id !== id));
 }
 
-export async function setForwardVolume(id: number, volume: number): Promise<void> {
+export async function setForwardVolume(
+  id: number,
+  volume: number,
+): Promise<void> {
   await invoke("set_forward_volume", { id, volume });
   setForwardedApps((prev) =>
     prev.map((a) => (a.id === id ? { ...a, volume } : a)),

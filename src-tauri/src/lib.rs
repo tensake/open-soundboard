@@ -81,6 +81,7 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             show_window(app, "main");
         }))
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
@@ -244,6 +245,8 @@ pub fn run() {
             cmd::unregister_hotkey,
             // Initialization
             cmd::mark_as_ready,
+            cmd::onboard,
+            cmd::is_onboarded,
             // Autostart
             cmd::set_autostart,
             cmd::get_autostart,

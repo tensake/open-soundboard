@@ -1,3 +1,5 @@
+//! Logic for writing audio to the device.
+
 use cpal::traits::{DeviceTrait, StreamTrait};
 use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use std::sync::mpsc;
@@ -5,6 +7,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::audio::PlaybackState;
 
+/// Spawns an output stream thread that reads audio from the rx channel and writes it to the device.
 pub fn spawn_stream(
     device: Arc<cpal::Device>,
     config: cpal::SupportedStreamConfig,

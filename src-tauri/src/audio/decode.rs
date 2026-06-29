@@ -1,3 +1,5 @@
+//! Provides methods for decoding audio file and resampling audio data.
+
 use audioadapter_buffers::direct::InterleavedSlice;
 use rubato::{
     calculate_cutoff, Async, FixedAsync, Indexing, Resampler, SincInterpolationParameters,
@@ -15,6 +17,16 @@ use symphonia::core::{
 
 use crate::audio::PlaybackState;
 
+pub struct DecodeConfig {
+    pub cable_rate: u32,
+    pub cable_channels: usize,
+    pub local_channels: usize,
+    pub frames_total: Arc<AtomicU64>,
+    pub frames_progress: Arc<AtomicU64>,
+    pub speed: Arc<AtomicU32>,
+}
+
+/// Resamples a chunk of audio data using the provided resampler.
 pub fn resample_chunk(
     leftover: &mut Vec<f32>,
     chunk: &[f32],
@@ -67,18 +79,16 @@ pub fn resample_chunk(
     Ok(out)
 }
 
+/// Decodes an audio file and sends the resampled chunks to tx.
+///
+/// This function is blocking and should be run in a separate thread.
 pub fn decode_loop(
     path: &str,
-    cable_rate: u32,
-    cable_channels: usize,
-    local_channels: usize,
+    cfg: DecodeConfig,
     tx: mpsc::SyncSender<Vec<f32>>,
     tx_local: mpsc::SyncSender<Vec<f32>>,
     rx_seek: mpsc::Receiver<f32>,
     state: Arc<AtomicU8>,
-    frames_total: Arc<AtomicU64>,
-    frames_progress: Arc<AtomicU64>,
-    speed: Arc<AtomicU32>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Decode audio file
     let file =
@@ -117,7 +127,7 @@ pub fn decode_loop(
         .map_err(|e| format!("Failed to create decoder: {path}: {e}"))?;
     let track_id = track.id;
 
-    // Build resampler
+    // Configure resampler
     let params = SincInterpolationParameters {
         sinc_len: 64,
         f_cutoff: calculate_cutoff(64, WindowFunction::Blackman2),
@@ -125,13 +135,14 @@ pub fn decode_loop(
         oversampling_factor: 128,
         window: WindowFunction::Blackman2,
     };
-    let base_ratio = cable_rate as f64 / audio_rate as f64;
-    let resample_channels = if audio_channels == 2 && cable_channels == 1 {
+    let base_ratio = cfg.cable_rate as f64 / audio_rate as f64;
+    let resample_channels = if audio_channels == 2 && cfg.cable_channels == 1 {
         1
     } else {
         audio_channels
     };
 
+    // Initialize resampler
     let mut resampler = Some(
         Async::<f32>::new_sinc(
             base_ratio,
@@ -147,13 +158,11 @@ pub fn decode_loop(
     // Set total frame count
     if let Some(n) = track.codec_params.n_frames {
         let cable_total = (n as f64 * base_ratio) as u64;
-        frames_total.store(cable_total, Ordering::Relaxed);
+        cfg.frames_total.store(cable_total, Ordering::Relaxed);
     }
 
-    // Leftover for frames for resampling
+    // Process audio chunks in a loop
     let mut leftover: Vec<f32> = Vec::new();
-
-    // Process audio chunks
     loop {
         // Respect stop signal from handle
         if matches!(
@@ -181,8 +190,8 @@ pub fn decode_loop(
                     leftover.clear();
 
                     // Update progress
-                    let current_frames = (secs as f64 * cable_rate as f64) as u64;
-                    frames_progress.store(current_frames, Ordering::Relaxed);
+                    let current_frames = (secs as f64 * cfg.cable_rate as f64) as u64;
+                    cfg.frames_progress.store(current_frames, Ordering::Relaxed);
                 }
                 Err(e) => eprintln!("Seek failed: {e}"),
             }
@@ -213,7 +222,7 @@ pub fn decode_loop(
         let mut chunk = buf.samples().to_vec();
 
         // Downmix for cable if needed
-        if audio_channels == 2 && cable_channels == 1 {
+        if audio_channels == 2 && cfg.cable_channels == 1 {
             chunk = chunk
                 .chunks_exact(2)
                 .map(|c| (c[0] + c[1]) * 0.707)
@@ -223,11 +232,12 @@ pub fn decode_loop(
         // Update progress
         let source_frames = (chunk.len() / resample_channels) as u64;
         let cable_equiv_frames = (source_frames as f64 * base_ratio) as u64;
-        frames_progress.fetch_add(cable_equiv_frames, Ordering::Relaxed);
+        cfg.frames_progress
+            .fetch_add(cable_equiv_frames, Ordering::Relaxed);
 
         // Resample to match cable sample rate if needed
         if let Some(r) = &mut resampler {
-            let current_speed = f32::from_bits(speed.load(Ordering::Relaxed)) as f64;
+            let current_speed = f32::from_bits(cfg.speed.load(Ordering::Relaxed)) as f64;
             chunk = resample_chunk(
                 &mut leftover,
                 &chunk,
@@ -242,7 +252,7 @@ pub fn decode_loop(
         }
 
         // Upmix for local output if needed
-        let local_chunk = if cable_channels == 1 && 2 == local_channels {
+        let local_chunk = if cfg.cable_channels == 1 && 2 == cfg.local_channels {
             chunk.iter().flat_map(|&s| [s, s]).collect()
         } else {
             chunk.clone()

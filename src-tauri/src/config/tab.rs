@@ -1,3 +1,5 @@
+//! Configuration for tabs in the dashboard.
+
 use crate::config;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -6,6 +8,7 @@ const ALLOWED_FILE_EXT: [&str; 8] = [
     "mp3", "wav", "flac", "vorbis", "ogg", "isomp4", "aac", "pcm",
 ];
 
+/// Represents a tab in the dashboard tab.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Tab {
     id: String,
@@ -14,6 +17,7 @@ pub struct Tab {
 }
 
 impl Tab {
+    /// Lists all sounds in the tab's path that are sound files.
     pub fn list_sounds(&self) -> Vec<PathBuf> {
         config::list_path(PathBuf::from(&self.path))
             .unwrap_or_default()

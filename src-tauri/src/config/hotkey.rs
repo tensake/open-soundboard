@@ -1,3 +1,5 @@
+//! Logic related to registering and unregistering hotkeys.
+
 use crate::config;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -21,6 +23,7 @@ pub enum HotKeyCmd {
     Unregister(Uuid, Sender<Result<(), String>>),
 }
 
+/// Represents a hotkey entry.
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct HotKeyEntry {
     pub id: Uuid,
@@ -29,6 +32,7 @@ pub struct HotKeyEntry {
     pub context: String,
 }
 
+/// Listens for hotkey commands and handles them on the main thread.
 pub fn listen_hotkeys(app_handle: tauri::AppHandle, hotkey_rx: Receiver<HotKeyCmd>) {
     loop {
         match hotkey_rx.try_recv() {

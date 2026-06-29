@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, Show } from "solid-js";
+import { createEffect, createSignal, For, Show, onCleanup } from "solid-js";
 import { Plus, Trash2, Repeat, Shuffle } from "lucide-solid";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
@@ -35,6 +35,22 @@ export default function Dashboard() {
     if (!currentTab() && loadedTabs?.length) {
       setCurrentTab(loadedTabs[0]);
     }
+  });
+
+  // Refresh tabs every 5 seconds
+  createEffect(() => {
+    const interval = setInterval(async () => {
+      await refetchTabs();
+      const activeTab = currentTab()?.[0];
+      if (activeTab) {
+        const updatedTab = tabs()?.find(([t]) => t.id === activeTab.id);
+        if (updatedTab) {
+          setCurrentTab(updatedTab);
+        }
+      }
+    }, 5000);
+
+    onCleanup(() => clearInterval(interval));
   });
 
   // Update current sounds from tab for playlist
