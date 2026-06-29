@@ -20,7 +20,19 @@ export default function OnboardingScreen(props: OnboardingProps) {
 
   return (
     <div class="flex h-screen w-screen items-center justify-center">
-      <div class="flex flex-col gap-6 max-w-xl w-full">
+      <div class="flex flex-col gap-2 max-w-xl w-full">
+        {/* Button and Step number */}
+        <div class="flex justify-between items-start">
+          <span class="text-subtext-0 text-lg leading-none">
+            {stepIndex() + 1}/{ONBOARDING_STEPS.length}
+          </span>
+          <button onClick={handleNext} class="leading-none">
+            {stepIndex() + 1 === ONBOARDING_STEPS.length
+              ? "Let me in!"
+              : "Next"}
+          </button>
+        </div>
+
         {/* Content */}
         <div class="flex flex-col gap-2">
           <h1 class="text-2xl font-bold text-text">{step().title}</h1>
@@ -34,11 +46,6 @@ export default function OnboardingScreen(props: OnboardingProps) {
             class="rounded-lg w-full"
           />
         )}
-
-        {/* Button */}
-        <button onClick={handleNext} class="self-end">
-          {stepIndex() + 1 === ONBOARDING_STEPS.length ? "Let me in!" : "Next"}
-        </button>
       </div>
     </div>
   );
