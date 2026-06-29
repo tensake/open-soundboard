@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { createSignal } from "solid-js";
 
 export const [autoStartSignal, setAutoStartSignal] = createSignal(false);
-export const [onboardedSignal, setOnboarded] = createSignal(false);
+export const [onboardedSignal, setOnboarded] = createSignal(true);
 
 getAutoStart().then(setAutoStartSignal);
 isOnboarded().then(setOnboarded);
