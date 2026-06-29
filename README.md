@@ -14,7 +14,7 @@ A fast, cross-platform and lightweight soundboard built with Rust and Tauri.
 Currently, supports Windows and Linux. Has hotkeys support, app forwarding, and
 customisation.
 
-> [!note] Status
+> [!WARNING]
 > The soundboard is still in development and may not work as expected. Please report any issues you encounter.
 
 ## Preview
