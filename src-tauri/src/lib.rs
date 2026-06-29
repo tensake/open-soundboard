@@ -232,12 +232,6 @@ pub fn run() {
             cmd::set_forward_volume,
             cmd::stop_forward,
             cmd::forward_app,
-            // Config
-            cmd::get_tabs,
-            cmd::add_tab,
-            cmd::remove_tab,
-            cmd::get_custom_css,
-            cmd::save_custom_css,
             // Hotkeys
             cmd::get_hotkeys,
             cmd::register_hotkey,
@@ -247,7 +241,12 @@ pub fn run() {
             cmd::mark_as_ready,
             cmd::onboard,
             cmd::is_onboarded,
-            // Autostart
+            // Config
+            cmd::get_tabs,
+            cmd::add_tab,
+            cmd::remove_tab,
+            cmd::get_custom_css,
+            cmd::save_custom_css,
             cmd::set_autostart,
             cmd::get_autostart,
         ])
