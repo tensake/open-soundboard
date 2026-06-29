@@ -98,6 +98,41 @@ export default function Settings() {
                 <h1 class="text-2xl font-bold mb-4">Sound</h1>
 
                 <div class="max-w-md">
+                  <h2 class="text-lg font-medium mb-1">General Volume</h2>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={volumePct()}
+                    onInput={handleVolumeSlider}
+                    class="w-full cursor-pointer"
+                  />
+                  <span class="text-sm">{volumePct()}%</span>
+                </div>
+
+                <div class="max-w-md">
+                  <h2 class="text-lg font-medium mb-1">Sound Speed</h2>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2.5"
+                    step="0.05"
+                    value={soundPlaybackSpeed()}
+                    onInput={handleAllSoundPlaybackSpeedSlider}
+                    class="w-full cursor-pointer"
+                  />
+                  <span class="text-sm">{soundPlaybackSpeed()}x</span>
+                </div>
+              </div>
+            </Match>
+
+            {/* Microphone */}
+            <Match when={activeTab() === "microphone"}>
+              <div class="flex flex-col gap-8">
+                <h1 class="text-2xl font-bold mb-4">Microphone</h1>
+
+                <div class="max-w-md">
                   <h2 class="text-lg font-medium mb-1">Microphone Volume</h2>
                   <input
                     type="range"
@@ -127,34 +162,6 @@ export default function Settings() {
                     class="w-full cursor-pointer"
                   />
                   <span class="text-sm">{micPitchPct()} st</span>
-                </div>
-
-                <div class="max-w-md">
-                  <h2 class="text-lg font-medium mb-1">General Volume</h2>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="1"
-                    value={volumePct()}
-                    onInput={handleVolumeSlider}
-                    class="w-full cursor-pointer"
-                  />
-                  <span class="text-sm">{volumePct()}%</span>
-                </div>
-
-                <div class="max-w-md">
-                  <h2 class="text-lg font-medium mb-1">Sound Speed</h2>
-                  <input
-                    type="range"
-                    min="0.5"
-                    max="2.5"
-                    step="0.05"
-                    value={soundPlaybackSpeed()}
-                    onInput={handleAllSoundPlaybackSpeedSlider}
-                    class="w-full cursor-pointer"
-                  />
-                  <span class="text-sm">{soundPlaybackSpeed()}x</span>
                 </div>
               </div>
             </Match>
