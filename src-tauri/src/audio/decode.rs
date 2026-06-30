@@ -193,7 +193,7 @@ pub fn decode_loop(
                     let current_frames = (secs as f64 * cfg.cable_rate as f64) as u64;
                     cfg.frames_progress.store(current_frames, Ordering::Relaxed);
                 }
-                Err(e) => eprintln!("Seek failed: {e}"),
+                Err(e) => log::error!("Seek failed: {e}"),
             }
         }
 

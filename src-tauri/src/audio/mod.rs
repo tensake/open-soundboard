@@ -166,7 +166,7 @@ pub fn play_sound(
             seek_rx,
             state_process,
         ) {
-            eprintln!("Error while processing audio file: {e}");
+            log::error!("Error while processing audio file: {e}");
         }
     });
 

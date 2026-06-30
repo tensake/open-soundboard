@@ -35,6 +35,8 @@ tauri-plugin-dialog = "2"
 uuid = { version = "1.23.3", features = ["v4", "serde"] }
 pitch_shift = "2.1.0"
 tauri-plugin-notification = "2"
+tauri-plugin-log = "2"
+log = "0.4"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 cpal = { version = "0.18", features = ["pipewire"] }

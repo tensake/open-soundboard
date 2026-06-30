@@ -202,7 +202,7 @@ fn microphone_loop(
             // Send mic chunk without awaiting to maintain real-time
             let _ = tx.try_send(pitched);
         },
-        |e| eprintln!("Mic input stream error: {e}"),
+        |e| log::error!("Mic input stream error: {e}"),
         None,
     )?;
     stream.play()?;
@@ -246,7 +246,7 @@ pub fn start_forwarding(
             state_mic,
             pitch_mic,
         ) {
-            eprintln!("Error while forwarding microphone: {e}");
+            log::error!("Error while forwarding microphone: {e}");
         }
     });
 

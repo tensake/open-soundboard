@@ -67,7 +67,7 @@ pub fn forward_app(
     #[cfg(target_os = "windows")]
     std::thread::spawn(move || {
         if let Err(e) = windows::forwarding_loop(id, cable_rate, cable_channels, tx, state_fwd) {
-            eprintln!("Error while forwarding app audio: {e}");
+            log::error!("Error while forwarding app audio: {e}");
         }
     });
 
