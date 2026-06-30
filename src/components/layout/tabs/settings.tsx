@@ -248,7 +248,7 @@ export default function Settings() {
                 <h1 class="text-2xl font-bold mb-4">System Settings</h1>
 
                 <SettingToggle
-                  title="Auto"
+                  title="Auto Start"
                   description="Start the soundboard with system in the background."
                   checked={autoStartSignal()}
                   onInput={(e) => setAutoStart(e.currentTarget.checked)}
