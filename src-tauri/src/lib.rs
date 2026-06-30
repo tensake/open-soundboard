@@ -292,6 +292,8 @@ pub fn run() {
             cmd::save_custom_css,
             cmd::set_autostart,
             cmd::get_autostart,
+            cmd::get_normalize,
+            cmd::set_normalize,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

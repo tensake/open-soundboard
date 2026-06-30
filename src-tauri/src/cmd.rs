@@ -45,12 +45,13 @@ pub fn play_sound(
         .as_ref()
         .ok_or("No output device found")?
         .clone();
+    let normalize = state.cfg.lock().normalize();
     let handle = audio::play_sound(
         &path,
         device,
         volume.unwrap_or(1.0),
         speed.unwrap_or(1.0),
-        true,
+        normalize,
     )
     .map_err(|e| e.to_string())?;
     let id = state.next_id.fetch_add(1, Ordering::Relaxed);
@@ -320,6 +321,24 @@ pub fn onboard(state: State<AppState>) -> Result<(), String> {
 #[tauri::command]
 pub fn is_onboarded(state: State<AppState>) -> bool {
     state.cfg.lock().onboarded()
+}
+
+#[tauri::command]
+pub fn get_normalize(state: State<AppState>) -> bool {
+    state.cfg.lock().normalize()
+}
+
+#[tauri::command]
+pub fn set_normalize(state: State<AppState>, normalize: bool) -> Result<(), String> {
+    log::info!("Setting normalization to {normalize}");
+    let mut cfg = state.cfg.lock();
+    cfg.set_normalize(normalize);
+
+    for (_, h) in state.playing_sounds.lock().iter() {
+        h.set_normalize(normalize);
+    }
+
+    Ok(())
 }
 
 #[tauri::command]

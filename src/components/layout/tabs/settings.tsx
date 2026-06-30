@@ -19,6 +19,8 @@ import {
   setMicPitch,
   micPitchPct,
   setMicPitchPct,
+  normalizationSignal,
+  setNormalization,
 } from "../../../lib";
 import type { HotKeyEntry } from "../../../lib";
 import { For, createSignal, Switch, Match } from "solid-js";
@@ -123,6 +125,17 @@ export default function Settings() {
                     class="w-full cursor-pointer"
                   />
                   <span class="text-sm">{soundPlaybackSpeed()}x</span>
+                </div>
+
+                <div class="max-w-xl flex flex-col gap-2">
+                  <div class="flex items-center justify-between">
+                    <h2 class="text-sm shrink-0">Normalize sound volume</h2>
+                    <input
+                      type="checkbox"
+                      checked={normalizationSignal()}
+                      onInput={(e) => setNormalization(e.currentTarget.checked)}
+                    />
+                  </div>
                 </div>
               </div>
             </Match>
