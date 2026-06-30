@@ -45,8 +45,14 @@ pub fn play_sound(
         .as_ref()
         .ok_or("No output device found")?
         .clone();
-    let handle = audio::play_sound(&path, device, volume.unwrap_or(1.0), speed.unwrap_or(1.0))
-        .map_err(|e| e.to_string())?;
+    let handle = audio::play_sound(
+        &path,
+        device,
+        volume.unwrap_or(1.0),
+        speed.unwrap_or(1.0),
+        true,
+    )
+    .map_err(|e| e.to_string())?;
     let id = state.next_id.fetch_add(1, Ordering::Relaxed);
     state.playing_sounds.lock().insert(id, handle);
     Ok(id)

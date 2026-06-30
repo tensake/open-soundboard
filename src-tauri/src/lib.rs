@@ -88,7 +88,11 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::new()
-                .level(tauri_plugin_log::log::LevelFilter::Info)
+                .level(if cfg!(debug_assertions) {
+                    tauri_plugin_log::log::LevelFilter::Debug
+                } else {
+                    tauri_plugin_log::log::LevelFilter::Info
+                })
                 .targets([
                     tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
                         file_name: None,
