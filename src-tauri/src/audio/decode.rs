@@ -1,7 +1,6 @@
 //! Provides methods for decoding audio file and resampling audio data.
 
 use audioadapter_buffers::direct::InterleavedSlice;
-use ebur128::{EbuR128, Mode};
 use rubato::{
     calculate_cutoff, Async, FixedAsync, Indexing, Resampler, SincInterpolationParameters,
     SincInterpolationType, WindowFunction,
@@ -26,6 +25,7 @@ pub struct DecodeConfig {
     pub frames_progress: Arc<AtomicU64>,
     pub speed: Arc<AtomicU32>,
     pub should_normalize: Arc<AtomicBool>,
+    pub normalization_gain: Arc<AtomicU32>,
 }
 
 /// Resamples a chunk of audio data using the provided resampler.
@@ -79,79 +79,6 @@ pub fn resample_chunk(
     }
 
     Ok(out)
-}
-
-/// Calculates the normalization gain from the audio file.
-///
-/// Fully decodes the file to measure loudness and uses the EBU R128 algorithm to calculate gain.
-/// This is expensive, so always call from a spawned thread.
-fn calculate_normalization_gain(
-    path: &str,
-) -> Result<f32, Box<dyn std::error::Error + Send + Sync>> {
-    let file = std::fs::File::open(path)?;
-    let mss = MediaSourceStream::new(Box::new(file), Default::default());
-
-    let mut hint = Hint::new();
-    if let Some(ext) = std::path::Path::new(path)
-        .extension()
-        .and_then(|e| e.to_str())
-    {
-        hint.with_extension(ext);
-    }
-
-    let probed = symphonia::default::get_probe().format(
-        &hint,
-        mss,
-        &FormatOptions::default(),
-        &MetadataOptions::default(),
-    )?;
-    let mut format = probed.format;
-    let track = format.default_track().ok_or("No default track found")?;
-    let rate = track.codec_params.sample_rate.ok_or("No sample rate")?;
-    let channels = track.codec_params.channels.ok_or("No channels")?.count();
-    let track_id = track.id;
-    let mut decoder =
-        symphonia::default::get_codecs().make(&track.codec_params, &DecoderOptions::default())?;
-
-    let mut analyzer = EbuR128::new(channels as u32, rate, Mode::I)?;
-
-    log::debug!("Starting decoding to normalize: {path}");
-    loop {
-        let packet = match format.next_packet() {
-            Ok(p) => p,
-            Err(symphonia::core::errors::Error::IoError(e))
-                if e.kind() == std::io::ErrorKind::UnexpectedEof =>
-            {
-                break
-            }
-            Err(e) => return Err(format!("Packet read error: {e}").into()),
-        };
-        if packet.track_id() != track_id {
-            continue;
-        }
-
-        let Ok(decoded) = decoder.decode(&packet) else {
-            continue;
-        };
-
-        let mut buf = SampleBuffer::<f32>::new(decoded.capacity() as u64, *decoded.spec());
-        buf.copy_interleaved_ref(decoded);
-
-        analyzer.add_frames_f32(buf.samples())?;
-    }
-
-    let measured_lufs = analyzer.loudness_global()?;
-
-    // Return 1.0 for silent files
-    if !measured_lufs.is_finite() {
-        return Ok(1.0);
-    }
-
-    // Use Spotify's normalization which is -14 LUFS
-    let gain_db = -14.0 - measured_lufs;
-    let gain_linear = 10f64.powf(gain_db / 20.0);
-
-    Ok(gain_linear as f32)
 }
 
 /// Decodes an audio file and sends the resampled chunks to tx.
@@ -234,21 +161,6 @@ pub fn decode_loop(
     if let Some(n) = track.codec_params.n_frames {
         let cable_total = (n as f64 * base_ratio) as u64;
         cfg.frames_total.store(cable_total, Ordering::Relaxed);
-    }
-
-    // Calculate normalization gain
-    let normalization_gain = Arc::new(AtomicU32::new(1.0f32.to_bits()));
-    {
-        log::debug!("Starting calculating normalization gain for {path}");
-        let path_nor = path.to_string();
-        let gain_nor = normalization_gain.clone();
-        std::thread::spawn(move || match calculate_normalization_gain(&path_nor) {
-            Ok(gain) => {
-                log::debug!("Calculated normalization gain for {path_nor}: {gain}");
-                gain_nor.store(gain.to_bits(), Ordering::Relaxed)
-            }
-            Err(e) => log::error!("Normalization gain calculation failed: {e}"),
-        });
     }
 
     // Process audio chunks in a loop
@@ -343,7 +255,7 @@ pub fn decode_loop(
 
         // Normalize if needed
         if cfg.should_normalize.load(Ordering::Relaxed) {
-            let gain = f32::from_bits(normalization_gain.load(Ordering::Relaxed));
+            let gain = f32::from_bits(cfg.normalization_gain.load(Ordering::Relaxed));
             for s in chunk.iter_mut() {
                 *s *= gain;
             }

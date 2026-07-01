@@ -11,6 +11,7 @@ use tauri::{
 use tauri::{Emitter, Manager};
 
 mod audio;
+mod cache;
 mod cmd;
 mod config;
 
@@ -22,6 +23,7 @@ struct AppState {
     mic_handle: Option<audio::mic::MicrophoneHandle>,
     cfg: Mutex<config::Config>,
     hotkey_tx: mpsc::Sender<config::hotkey::HotKeyCmd>,
+    cache: cache::CacheDb,
 
     /// Alerts that are stored before frontend is ready to receive them
     pending_alerts: Mutex<Vec<cmd::Alert>>,
@@ -185,7 +187,15 @@ pub fn run() {
                 .app_data_dir()
                 .expect("Failed to get app data directory");
             log::info!("Loading config from {}", cfg_dir.display());
-            let cfg = config::Config::new(cfg_dir);
+            let cfg = config::Config::new(cfg_dir.clone());
+
+            // Load cache
+            let local_dir = app
+                .path()
+                .app_local_data_dir()
+                .expect("Failed to get local app data directory");
+            log::info!("Loading cache from {}", local_dir.display());
+            let cache = cache::CacheDb::open(&local_dir).expect("Failed to open cache");
 
             // Spawn thread for processing hotkey commands
             log::info!("Starting listening to hotkeys...");
@@ -202,6 +212,7 @@ pub fn run() {
                 mic_handle,
                 cfg: Mutex::new(cfg),
                 hotkey_tx,
+                cache,
                 pending_alerts: Mutex::new(pending_alerts),
             };
             app.manage(app_state);
@@ -294,6 +305,8 @@ pub fn run() {
             cmd::get_autostart,
             cmd::get_normalize,
             cmd::set_normalize,
+            // Cache
+            cmd::clear_all_cache,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

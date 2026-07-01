@@ -9,6 +9,7 @@ mod decode;
 pub mod device;
 pub mod forwarding;
 pub mod mic;
+pub mod normalize;
 mod output;
 
 /// State of the sound playback.
@@ -115,6 +116,7 @@ pub fn play_sound(
     volume: f32,
     speed: f32,
     normalize: bool,
+    normalize_gain: Arc<AtomicU32>,
 ) -> Result<PlaybackHandle, Box<dyn std::error::Error>> {
     let file_path = std::path::Path::new(path);
     if !file_path.exists() {
@@ -154,14 +156,16 @@ pub fn play_sound(
 
     // Spawn audio processing thread
     let path = path.to_owned();
+    let path_process = path.clone();
     let state_process = state.clone();
     let frames_total_process = frames_total.clone();
     let frames_progress_process = frames_progress.clone();
     let speed_process = speed.clone();
     let normalize_process = normalize.clone();
+    let normalization_gain_process = normalize_gain.clone();
     std::thread::spawn(move || {
         if let Err(e) = decode::decode_loop(
-            &path,
+            &path_process,
             decode::DecodeConfig {
                 cable_rate,
                 cable_channels,
@@ -170,6 +174,7 @@ pub fn play_sound(
                 frames_progress: frames_progress_process,
                 speed: speed_process,
                 should_normalize: normalize_process,
+                normalization_gain: normalization_gain_process,
             },
             tx,
             tx_local,
