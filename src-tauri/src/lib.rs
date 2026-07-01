@@ -1,3 +1,4 @@
+use cpal::traits::DeviceTrait;
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU32;
@@ -10,6 +11,7 @@ use tauri::{
 use tauri::{Emitter, Manager};
 
 mod audio;
+mod cache;
 mod cmd;
 mod config;
 
@@ -21,24 +23,32 @@ struct AppState {
     mic_handle: Option<audio::mic::MicrophoneHandle>,
     cfg: Mutex<config::Config>,
     hotkey_tx: mpsc::Sender<config::hotkey::HotKeyCmd>,
+    cache: cache::CacheDb,
 
     /// Alerts that are stored before frontend is ready to receive them
     pending_alerts: Mutex<Vec<cmd::Alert>>,
 }
 
 fn hide_window(app: &tauri::AppHandle, label: &str) {
-    println!("Hiding {label} window");
+    log::info!("Hiding {label} window");
     if let Some(window) = app.get_webview_window(label) {
         let _ = window.hide();
     }
 }
 
 fn show_window(app: &tauri::AppHandle, label: &str) {
-    println!("Showing {label} window");
+    log::info!("Showing {label} window");
     if let Some(window) = app.get_webview_window(label) {
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
+    }
+}
+
+fn log_device(label: &str, device: &cpal::Device) {
+    match device.description() {
+        Ok(desc) => log::info!("Using {label} device: {}", desc.name()),
+        Err(e) => log::warn!("Could not get {label} device description: {e}"),
     }
 }
 
@@ -78,6 +88,22 @@ fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(if cfg!(debug_assertions) {
+                    tauri_plugin_log::log::LevelFilter::Debug
+                } else {
+                    tauri_plugin_log::log::LevelFilter::Info
+                })
+                .targets([
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
+                        file_name: None,
+                    }),
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Webview),
+                ])
+                .build(),
+        )
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             show_window(app, "main");
         }))
@@ -88,6 +114,11 @@ pub fn run() {
             Some(vec!["--hidden"]),
         ))
         .setup(move |app| {
+            log::info!(
+                "Running Open Soundboard v{v}. {args:?}",
+                v = env!("CARGO_PKG_VERSION"),
+                args = std::env::args()
+            );
             // Initialize state
             let playing_sounds = Arc::new(Mutex::new(HashMap::<u32, audio::PlaybackHandle>::new()));
             let forwarding_handles = Arc::new(Mutex::new(HashMap::<
@@ -106,6 +137,10 @@ pub fn run() {
                     });
                 })
                 .ok()
+                .and_then(|d| {
+                    log_device("input", &d);
+                    Some(d)
+                })
                 .map(Arc::new);
             let cable_device = audio::device::get_cable()
                 .map_err(|e| {
@@ -116,6 +151,10 @@ pub fn run() {
                     })
                 })
                 .ok()
+                .and_then(|d| {
+                    log_device("cable", &d);
+                    Some(d)
+                })
                 .map(Arc::new);
 
             // Sound cleanup thread
@@ -130,6 +169,7 @@ pub fn run() {
                 (Some(input), Some(cable)) => {
                     audio::mic::start_forwarding(input.clone(), cable.clone())
                         .map_err(|e| {
+                            log::warn!("Microphone forwarding has failed: {}", e);
                             pending_alerts.push(cmd::Alert {
                                 kind: cmd::AlertKind::Warn,
                                 title: "Microphone forwarding error",
@@ -142,13 +182,23 @@ pub fn run() {
             };
 
             // Load config
-            let cfg = config::Config::new(
-                app.path()
-                    .app_data_dir()
-                    .expect("Failed to get app data directory"),
-            );
+            let cfg_dir = app
+                .path()
+                .app_data_dir()
+                .expect("Failed to get app data directory");
+            log::info!("Loading config from {}", cfg_dir.display());
+            let cfg = config::Config::new(cfg_dir.clone());
+
+            // Load cache
+            let local_dir = app
+                .path()
+                .app_local_data_dir()
+                .expect("Failed to get local app data directory");
+            log::info!("Loading cache from {}", local_dir.display());
+            let cache = cache::CacheDb::open(&local_dir).expect("Failed to open cache");
 
             // Spawn thread for processing hotkey commands
+            log::info!("Starting listening to hotkeys...");
             let (hotkey_tx, hotkey_rx) = mpsc::channel::<config::hotkey::HotKeyCmd>();
             let app_handle = app.handle().clone();
             std::thread::spawn(move || config::hotkey::listen_hotkeys(app_handle, hotkey_rx));
@@ -162,6 +212,7 @@ pub fn run() {
                 mic_handle,
                 cfg: Mutex::new(cfg),
                 hotkey_tx,
+                cache,
                 pending_alerts: Mutex::new(pending_alerts),
             };
             app.manage(app_state);
@@ -173,6 +224,8 @@ pub fn run() {
             if std::env::args().any(|a| a == "--hidden") {
                 hide_window(app.handle(), "main");
             }
+
+            log::info!("Initialized!");
 
             Ok(())
         })
@@ -191,9 +244,10 @@ pub fn run() {
                                 .iter()
                                 .find(|h| h.binding == shortcut.to_string())
                             {
-                                println!(
+                                log::info!(
                                     "Hotkey {0} pressed! Context: {1}",
-                                    hk.binding, hk.context
+                                    hk.binding,
+                                    hk.context
                                 );
                                 let _ = app.emit("hotkey-pressed", hk.clone());
                             }
@@ -232,12 +286,6 @@ pub fn run() {
             cmd::set_forward_volume,
             cmd::stop_forward,
             cmd::forward_app,
-            // Config
-            cmd::get_tabs,
-            cmd::add_tab,
-            cmd::remove_tab,
-            cmd::get_custom_css,
-            cmd::save_custom_css,
             // Hotkeys
             cmd::get_hotkeys,
             cmd::register_hotkey,
@@ -247,9 +295,18 @@ pub fn run() {
             cmd::mark_as_ready,
             cmd::onboard,
             cmd::is_onboarded,
-            // Autostart
+            // Config
+            cmd::get_tabs,
+            cmd::add_tab,
+            cmd::remove_tab,
+            cmd::get_custom_css,
+            cmd::save_custom_css,
             cmd::set_autostart,
             cmd::get_autostart,
+            cmd::get_normalize,
+            cmd::set_normalize,
+            // Cache
+            cmd::clear_all_cache,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

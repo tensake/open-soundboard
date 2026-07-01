@@ -14,6 +14,7 @@ export const TABS = {
 
 export const SETTINGS_TABS = [
   { id: "sound", label: "Sound" },
+  { id: "microphone", label: "Microphone" },
   { id: "appearance", label: "Appearance" },
   { id: "hotkeys", label: "Hotkeys" },
   { id: "system", label: "System" },

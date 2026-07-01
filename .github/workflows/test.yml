@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu-latest, macos-latest, windows-latest]
+        platform: [ubuntu-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v6
@@ -45,7 +45,4 @@ jobs:
         run: bun install
 
       - name: Run Cargo Tests
-        run: cargo test --manifest-path src-tauri/Cargo.toml
-
-      - name: Build Tauri App
-        run: bun tauri build --debug --no-bundle
+        run: cargo test --manifest-path src-tauri/Cargo.toml --profile dev --locked

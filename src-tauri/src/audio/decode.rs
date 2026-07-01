@@ -5,7 +5,7 @@ use rubato::{
     calculate_cutoff, Async, FixedAsync, Indexing, Resampler, SincInterpolationParameters,
     SincInterpolationType, WindowFunction,
 };
-use std::sync::atomic::{AtomicU32, AtomicU64, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, AtomicU8, Ordering};
 use std::sync::mpsc;
 use std::sync::Arc;
 use symphonia::core::formats::{SeekMode, SeekTo};
@@ -24,6 +24,8 @@ pub struct DecodeConfig {
     pub frames_total: Arc<AtomicU64>,
     pub frames_progress: Arc<AtomicU64>,
     pub speed: Arc<AtomicU32>,
+    pub should_normalize: Arc<AtomicBool>,
+    pub normalization_gain: Arc<AtomicU32>,
 }
 
 /// Resamples a chunk of audio data using the provided resampler.
@@ -193,7 +195,7 @@ pub fn decode_loop(
                     let current_frames = (secs as f64 * cfg.cable_rate as f64) as u64;
                     cfg.frames_progress.store(current_frames, Ordering::Relaxed);
                 }
-                Err(e) => eprintln!("Seek failed: {e}"),
+                Err(e) => log::error!("Seek failed: {e}"),
             }
         }
 
@@ -248,6 +250,14 @@ pub fn decode_loop(
             )?;
             if chunk.is_empty() {
                 continue;
+            }
+        }
+
+        // Normalize if needed
+        if cfg.should_normalize.load(Ordering::Relaxed) {
+            let gain = f32::from_bits(cfg.normalization_gain.load(Ordering::Relaxed));
+            for s in chunk.iter_mut() {
+                *s *= gain;
             }
         }
 

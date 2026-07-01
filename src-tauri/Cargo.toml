@@ -1,7 +1,7 @@
 [package]
 name = "open-soundboard"
 version = "0.1.0"
-description = "Soundboard written in Rust"
+description = "A fast, cross-platform and lightweight soundboard built with Rust and Tauri"
 authors = ["tensake"]
 edition = "2021"
 
@@ -13,6 +13,16 @@ edition = "2021"
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
 name = "open_soundboard_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
+
+[profile.dev]
+incremental = true
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -27,6 +37,8 @@ serde_json = "1"
 cpal = "0.18"
 rodio = "0.22.2"
 rubato = "3.0"
+redb = "4.1.0"
+blake3 = "1.8.5"
 ringbuf = "0.4"
 symphonia = { version = "0.5", features = ["mp3", "wav", "flac", "vorbis", "ogg", "isomp4", "aac", "pcm"] }
 audioadapter-buffers = "3.0"
@@ -35,6 +47,9 @@ tauri-plugin-dialog = "2"
 uuid = { version = "1.23.3", features = ["v4", "serde"] }
 pitch_shift = "2.1.0"
 tauri-plugin-notification = "2"
+tauri-plugin-log = "2"
+log = "0.4"
+ebur128 = "0.1.10"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 cpal = { version = "0.18", features = ["pipewire"] }

@@ -67,12 +67,12 @@ pub fn forward_app(
     #[cfg(target_os = "windows")]
     std::thread::spawn(move || {
         if let Err(e) = windows::forwarding_loop(id, cable_rate, cable_channels, tx, state_fwd) {
-            eprintln!("Error while forwarding app audio: {e}");
+            log::error!("Error while forwarding app audio: {e}");
         }
     });
 
     #[cfg(target_os = "linux")]
-    return Err();
+    return Err("App forwarding is not implemented for your OS yet.".into());
 
     crate::audio::output::spawn_stream(
         cable_device,

@@ -21,6 +21,7 @@ pub struct Config {
     tabs: Vec<tab::Tab>,
     hotkeys: HashMap<Uuid, hotkey::HotKeyEntry>,
     onboarded: bool,
+    normalize: bool,
 
     #[serde(skip)]
     path: PathBuf,
@@ -48,6 +49,7 @@ impl Config {
             tabs: Vec::new(),
             hotkeys: HashMap::new(),
             onboarded: false,
+            normalize: false,
             path,
         }
     }
@@ -63,6 +65,15 @@ impl Config {
 
     pub fn onboarded(&self) -> bool {
         self.onboarded
+    }
+
+    pub fn normalize(&self) -> bool {
+        self.normalize
+    }
+
+    pub fn set_normalize(&mut self, n: bool) {
+        self.normalize = n;
+        self.save();
     }
 
     pub fn onboard(&mut self) {
