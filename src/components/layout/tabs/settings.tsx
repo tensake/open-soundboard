@@ -21,6 +21,7 @@ import {
   setMicPitchPct,
   normalizationSignal,
   setNormalization,
+  clearAllCache,
 } from "../../../lib";
 import type { HotKeyEntry } from "../../../lib";
 import { For, createSignal, Switch, Match } from "solid-js";
@@ -244,8 +245,8 @@ export default function Settings() {
 
             {/* System tab */}
             <Match when={activeTab() === "system"}>
-              <div>
-                <h1 class="text-2xl font-bold mb-4">System Settings</h1>
+              <div class="flex flex-col gap-6">
+                <h1 class="text-2xl font-bold">System Settings</h1>
 
                 <SettingToggle
                   title="Auto Start"
@@ -253,6 +254,10 @@ export default function Settings() {
                   checked={autoStartSignal()}
                   onInput={(e) => setAutoStart(e.currentTarget.checked)}
                 />
+
+                <button class="self-start" onClick={clearAllCache}>
+                  Clear Cache
+                </button>
               </div>
             </Match>
           </Switch>

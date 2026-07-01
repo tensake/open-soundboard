@@ -12,3 +12,7 @@ export function formatTime(secs: number): string {
 export async function markAsReady() {
   await invoke("mark_as_ready");
 }
+
+export async function clearAllCache() {
+  await invoke("clear_all_cache");
+}
