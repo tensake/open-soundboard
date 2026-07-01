@@ -20,32 +20,38 @@ customisation.
 ## Preview
 
 | ![Dashboard](https://10ku.net/osb/demo/open-soundboard_v0.1.0-dashboard.jpg) | ![App Forwarding](https://10ku.net/osb/demo/open-soundboard_v0.1.0-app_forwarding.jpg) |
-| --- | --- |
-| ![Settings](https://10ku.net/osb/demo/open-soundboard_v0.1.0-settings.jpg) | _More features coming soon_ |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| ![Settings](https://10ku.net/osb/demo/open-soundboard_v0.1.0-settings.jpg)   | ![Hotkeys](https://10ku.net/osb/demo/open-soundboard_v0.1.0-settings-hotkeys.jpg)      |
 
 ## Features
 
-| Feature | Windows | Linux |
-| --- | --- | --- |
-| Sound Playback | ✅ | ✅ |
-| App forwarding | ✅ | 🔧 |
-| Hotkeys | ✅ | ✅ |
+| Feature                               | Windows | Linux       |
+| ------------------------------------- | ------- | ----------- |
+| App forwarding                        | ✅      | In progress |
+| Hotkeys                               | ✅      | X11 only    |
+| Sound Playback and all other features | ✅      | ✅          |
 
 ## How to install
 
 ### Requirements
 
-- For windows you need to have [VB Virtual Audio Cable](https://vb-audio.com/Cable/) installed (after installation please restart your computer).
+#### Windows
+
+You need to have [VB Virtual Audio Cable](https://vb-audio.com/Cable/) installed (after installation please restart your computer).
 
 ### Steps
 
 1. Download the latest release for your platform from the [releases page](https://github.com/tensake/open-soundboard/releases).
 2. Run the binary to install the app on your system.
-3. Once installed, configure the soundboard, and make sure you pick the virtual cable device as input device in the app you want to use it in. For example, in discord you need to pick `VB Cable` if on windows, or `Open Soundboard` if on linux as an input device in the `Voice and Video` setting in discord. Also disable noise cancelling if you have it by setting `Input Profile` to `Studio`.
-4. For windows, you need to choose your default output audio correctly in the `Windows Settings` as this is the device to which the sound is played to. And also make sure microphone is selected correctly too.
+3. Once installed, configure the soundboard, and make sure you pick the virtual cable device as input device in the app you want to use it in.
+
+   > [!INFO]
+   > For example, in discord you need to pick `VB Cable` if on windows, or `Open Soundboard` if on linux as an input device in the `Voice and Video` setting. Also disable noise cancelling if you have it by setting `Input Profile` to `Studio` so that the sounds you play wont be filtered.
+
+4. Choose your default input and output audio correctly in the system settings as these devices will be used.
 5. Done!
 
-## Build
+## Build from source
 
 ### Steps to build
 
@@ -54,19 +60,19 @@ customisation.
    ```bash
    git clone https://github.com/tensake/open-soundboard.git
    cd open-soundboard
-    ```
+   ```
 
 2. Install dependencies:
 
-    ```bash
-    npm install
-    ```
+   ```bash
+   npm install
+   ```
 
 3. Build the project:
 
-    ```bash
-    npm run tauri build
-    ```
+   ```bash
+   npm run tauri build
+   ```
 
 ## Contributing
 

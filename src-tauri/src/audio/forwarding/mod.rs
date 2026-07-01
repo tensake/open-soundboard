@@ -72,7 +72,7 @@ pub fn forward_app(
     });
 
     #[cfg(target_os = "linux")]
-    return Err();
+    return Err("App forwarding is not implemented for your OS yet.".into());
 
     crate::audio::output::spawn_stream(
         cable_device,
