@@ -11,8 +11,8 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/tensake/open-soundboard)
 
 A fast, cross-platform and lightweight soundboard built with Rust and Tauri.
-Currently, supports Windows and Linux. Has hotkeys support, app forwarding, and
-customisation.
+Currently, supports Windows and Linux. Has hotkeys support, app forwarding,
+customisation and more.
 
 > [!WARNING]
 > The soundboard is still in development and may not work as expected. Please report any issues you encounter.
@@ -20,8 +20,8 @@ customisation.
 ## Preview
 
 | ![Dashboard](https://10ku.net/osb/demo/open-soundboard_v0.1.0-dashboard.jpg) | ![App Forwarding](https://10ku.net/osb/demo/open-soundboard_v0.1.0-app_forwarding.jpg) |
-| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| ![Settings](https://10ku.net/osb/demo/open-soundboard_v0.1.0-settings.jpg)   | ![Hotkeys](https://10ku.net/osb/demo/open-soundboard_v0.1.0-settings-hotkeys.jpg)      |
+| --- | --- |
+| ![Settings](https://10ku.net/osb/demo/open-soundboard_v0.1.0-settings.jpg) | ![Hotkeys](https://10ku.net/osb/demo/open-soundboard_v0.1.0-settings-hotkeys.jpg) |
 
 ## Features
 
