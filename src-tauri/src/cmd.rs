@@ -173,7 +173,7 @@ pub fn get_audio_apps() -> Result<Vec<audio::forwarding::AudioApp>, String> {
 
 #[tauri::command]
 pub fn forward_app(pid: u32, state: tauri::State<AppState>) -> Result<u32, String> {
-    println!("Starting forwarder for app: {pid}");
+    log::info!("Starting forwarder for app: {pid}");
     let cable = state
         .cable_device
         .clone()
@@ -190,7 +190,7 @@ pub fn forward_app(pid: u32, state: tauri::State<AppState>) -> Result<u32, Strin
 
 #[tauri::command]
 pub fn stop_forward(id: u32, state: tauri::State<AppState>) -> Result<(), String> {
-    println!("Stopping forwarder with id: {id}");
+    log::info!("Stopping forwarder with id: {id}");
     if let Some(handle) = state.forwarding_handles.lock().remove(&id) {
         handle.stop();
     }
@@ -258,13 +258,13 @@ pub fn get_tabs(state: tauri::State<AppState>) -> Vec<(config::tab::Tab, Vec<Str
 
 #[tauri::command]
 pub fn add_tab(state: tauri::State<AppState>, name: String, path: String) {
-    println!("Adding tab: {path}");
+    log::info!("Adding tab: {path}");
     state.cfg.lock().add_tab(name, path);
 }
 
 #[tauri::command]
 pub fn remove_tab(state: tauri::State<AppState>, id: String) {
-    println!("Removing tab: {id}");
+    log::info!("Removing tab: {id}");
     state.cfg.lock().remove_tab(id);
 }
 
@@ -280,7 +280,7 @@ pub fn get_custom_css(state: State<AppState>) -> Result<String, String> {
 
 #[tauri::command]
 pub fn save_custom_css(state: State<AppState>, css: String) -> Result<(), String> {
-    println!("Saving custom CSS...");
+    log::info!("Saving custom CSS...");
     state.cfg.lock().save_custom_css(&css)
 }
 
@@ -289,7 +289,7 @@ pub async fn register_hotkey(
     hk: config::hotkey::HotKeyEntry,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
-    println!("Registering hotkey: {hk:?}");
+    log::info!("Registering hotkey: {hk:?}");
     // Send register command
     let (tx, rx) = mpsc::channel();
     let tx_pipe = state.hotkey_tx.clone();
@@ -323,7 +323,7 @@ pub async fn update_hotkey(
 
 #[tauri::command]
 pub async fn unregister_hotkey(id: String, state: State<'_, AppState>) -> Result<(), String> {
-    println!("Unregistering hotkey: {id}");
+    log::info!("Unregistering hotkey: {id}");
     // Send unregister command
     let parsed = Uuid::parse_str(&id).map_err(|e| e.to_string())?;
     let (tx, rx) = mpsc::channel();
@@ -360,8 +360,26 @@ pub fn is_onboarded(state: State<AppState>) -> bool {
 }
 
 #[tauri::command]
+pub fn get_normalize(state: State<AppState>) -> bool {
+    state.cfg.lock().normalize()
+}
+
+#[tauri::command]
+pub fn set_normalize(state: State<AppState>, normalize: bool) -> Result<(), String> {
+    log::info!("Setting normalization to {normalize}");
+    let mut cfg = state.cfg.lock();
+    cfg.set_normalize(normalize);
+
+    for (_, h) in state.playing_sounds.lock().iter() {
+        h.set_normalize(normalize);
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 pub fn set_autostart(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
-    println!("Setting autostart to {enabled}");
+    log::info!("Setting autostart to {enabled}");
     if enabled {
         app.autolaunch().enable().map_err(|e| e.to_string())
     } else {
@@ -372,4 +390,10 @@ pub fn set_autostart(app: tauri::AppHandle, enabled: bool) -> Result<(), String>
 #[tauri::command]
 pub fn get_autostart(app: tauri::AppHandle) -> Result<bool, String> {
     app.autolaunch().is_enabled().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn clear_all_cache(state: State<AppState>) -> Result<(), String> {
+    log::info!("Clearing all cache...");
+    state.cache.clear_all_cache().map_err(|e| e.to_string())
 }
