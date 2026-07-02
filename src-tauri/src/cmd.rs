@@ -49,6 +49,49 @@ pub fn play_sound(
         .map_err(|e| e.to_string())?;
     let id = state.next_id.fetch_add(1, Ordering::Relaxed);
     state.playing_sounds.lock().insert(id, handle);
+<<<<<<< main
+=======
+
+    // Update normalization gain in the background
+    std::thread::spawn(move || {
+        let state = app_handle.state::<AppState>();
+
+        // Calculate normalization gain
+        log::debug!("Getting hash for {path}");
+        let file_hash = match state.cache.get_file_key(&path) {
+            Ok(h) => h,
+            Err(e) => {
+                log::error!("Failed to hash file {path}: {e}");
+                return;
+            }
+        };
+
+        match state.cache.get_normalization_cache(&file_hash) {
+            // Use cached gain if available
+            Ok(Some(gain)) => {
+                log::debug!("Using cached normalization gain for {path}: {gain}");
+                normalization_gain.store(gain.to_bits(), Ordering::Relaxed);
+            }
+
+            // Calculate gain and cache it
+            Ok(None) => {
+                log::debug!("Calculating normalization gain for {path}");
+                match audio::normalize::calculate_gain(&path) {
+                    Ok(gain) => {
+                        log::debug!("Calculated normalization gain for {path}: {gain}");
+                        normalization_gain.store(gain.to_bits(), Ordering::Relaxed);
+                        if let Err(e) = state.cache.set_normalization_cache(&file_hash, gain) {
+                            log::error!("Failed to save normalization cache: {e}");
+                        }
+                    }
+                    Err(e) => log::error!("Normalization gain calculation failed: {e}"),
+                }
+            }
+            Err(e) => log::error!("Failed to read normalization cache: {e}"),
+        }
+    });
+
+>>>>>>> local
     Ok(id)
 }
 
