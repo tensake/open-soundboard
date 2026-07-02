@@ -76,7 +76,7 @@ pub fn spawn_stream(
                 let msg = e.to_string();
                 // Ignore 'Device disconnected' messages on linux
                 if !msg.contains("Device disconnected") {
-                    eprintln!("{e}");
+                    log::error!("{e}");
                 }
             },
             None,

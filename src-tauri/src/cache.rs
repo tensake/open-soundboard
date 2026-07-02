@@ -2,7 +2,7 @@ use parking_lot::Mutex;
 use redb::{Database, Error, ReadableDatabase, TableDefinition};
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{self, BufReader, Read};
+use std::io::{BufReader, Read};
 use std::path::Path;
 use std::time::UNIX_EPOCH;
 
@@ -68,7 +68,7 @@ impl CacheDb {
 
     /// Get a hash of a file from the path provided by its contents.
     #[allow(unused)]
-    pub fn hash_file(&self, path: &str) -> io::Result<String> {
+    pub fn hash_file(&self, path: &str) -> std::io::Result<String> {
         let file = File::open(path)?;
         let mut reader = BufReader::new(file);
         let mut hasher = blake3::Hasher::new();
@@ -84,7 +84,7 @@ impl CacheDb {
     }
 
     /// Get a cache key for a file based on its path and metadata.
-    pub fn get_file_key(&self, path: &str) -> io::Result<String> {
+    pub fn get_file_key(&self, path: &str) -> std::io::Result<String> {
         let meta = std::fs::metadata(path)?;
         let modified = meta
             .modified()?

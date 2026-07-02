@@ -5,7 +5,7 @@ use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc;
 use std::sync::Arc;
-use tauri::{Emitter, State};
+use tauri::{Emitter, Manager, State};
 use tauri_plugin_autostart::ManagerExt;
 use uuid::Uuid;
 
@@ -38,35 +38,45 @@ pub fn play_sound(
     volume: Option<f32>,
     speed: Option<f32>,
     state: State<AppState>,
+    app_handle: tauri::AppHandle,
 ) -> Result<u32, String> {
-    println!("Playing sound {path}");
+    log::info!("Playing sound {path}");
+
     let device = state
         .cable_device
         .as_ref()
         .ok_or("No output device found")?
         .clone();
-    let handle = audio::play_sound(&path, device, volume.unwrap_or(1.0), speed.unwrap_or(1.0))
-        .map_err(|e| e.to_string())?;
+    let normalize = state.cfg.lock().normalize();
+    let normalization_gain: Arc<AtomicU32> = Arc::new(AtomicU32::new(1.0f32.to_bits()));
+    let handle = audio::play_sound(
+        &path,
+        device,
+        volume.unwrap_or(1.0),
+        speed.unwrap_or(1.0),
+        normalize,
+        normalization_gain.clone(),
+    )
+    .map_err(|e| e.to_string())?;
+
     let id = state.next_id.fetch_add(1, Ordering::Relaxed);
     state.playing_sounds.lock().insert(id, handle);
-<<<<<<< main
-=======
 
     // Update normalization gain in the background
     std::thread::spawn(move || {
         let state = app_handle.state::<AppState>();
 
-        // Calculate normalization gain
-        log::debug!("Getting hash for {path}");
-        let file_hash = match state.cache.get_file_key(&path) {
+        // Get file key
+        log::debug!("Getting file key for {path}");
+        let file_key = match state.cache.get_file_key(&path) {
             Ok(h) => h,
             Err(e) => {
-                log::error!("Failed to hash file {path}: {e}");
+                log::error!("Failed to get file key for {path}: {e}");
                 return;
             }
         };
 
-        match state.cache.get_normalization_cache(&file_hash) {
+        match state.cache.get_normalization_cache(&file_key) {
             // Use cached gain if available
             Ok(Some(gain)) => {
                 log::debug!("Using cached normalization gain for {path}: {gain}");
@@ -80,7 +90,7 @@ pub fn play_sound(
                     Ok(gain) => {
                         log::debug!("Calculated normalization gain for {path}: {gain}");
                         normalization_gain.store(gain.to_bits(), Ordering::Relaxed);
-                        if let Err(e) = state.cache.set_normalization_cache(&file_hash, gain) {
+                        if let Err(e) = state.cache.set_normalization_cache(&file_key, gain) {
                             log::error!("Failed to save normalization cache: {e}");
                         }
                     }
@@ -91,7 +101,6 @@ pub fn play_sound(
         }
     });
 
->>>>>>> local
     Ok(id)
 }
 

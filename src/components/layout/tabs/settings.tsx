@@ -19,11 +19,17 @@ import {
   setMicPitch,
   micPitchPct,
   setMicPitchPct,
+  normalizationSignal,
+  setNormalization,
+  clearAllCache,
 } from "../../../lib";
 import type { HotKeyEntry } from "../../../lib";
 import { For, createSignal, Switch, Match } from "solid-js";
 import HotkeyOverlay from "../hotkeyOverlay";
 import HotKeyItem from "../../ui/hotkeys/hotkeyItem";
+import SettingSlider from "../../ui/settings/settingSlider";
+import SettingToggle from "../../ui/settings/settingToggle";
+import SidebarTab from "../../ui/settings/sidebarTab";
 import { Transition } from "solid-transition-group";
 
 export default function Settings() {
@@ -68,22 +74,11 @@ export default function Settings() {
       <nav class="w-48 shrink-0 p-3 flex flex-col gap-0.5 border-r border-surface-0">
         <For each={SETTINGS_TABS}>
           {(tab) => (
-            <div
-              role="button"
-              tabIndex={0}
+            <SidebarTab
+              label={tab.label}
+              active={activeTab() === tab.id}
               onClick={() => setActiveTab(tab.id)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  setActiveTab(tab.id);
-                }
-              }}
-              class={`select-none cursor-pointer px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 hover:bg-primary-400/10 ${
-                activeTab() === tab.id ? "text-primary-400" : "text-subtext-1"
-              }`}
-            >
-              {tab.label}
-            </div>
+            />
           )}
         </For>
       </nav>
@@ -97,65 +92,63 @@ export default function Settings() {
               <div class="flex flex-col gap-8">
                 <h1 class="text-2xl font-bold mb-4">Sound</h1>
 
-                <div class="max-w-md">
-                  <h2 class="text-lg font-medium mb-1">Microphone Volume</h2>
-                  <input
-                    type="range"
-                    min="0"
-                    max="300"
-                    step="1"
-                    value={micVolumePct()}
-                    onInput={handleMicVolumeSlider}
-                    class="w-full cursor-pointer"
-                  />
-                  <span class="text-sm">{micVolumePct()}%</span>
-                </div>
+                <SettingSlider
+                  label="General Volume"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={volumePct()}
+                  onInput={handleVolumeSlider}
+                  valueLabel={`${volumePct()}%`}
+                />
 
-                <div class="max-w-md">
-                  <h2 class="text-lg font-medium mb-1">Mic Pitch</h2>
-                  <input
-                    type="range"
-                    min="-12"
-                    max="12"
-                    step="1"
-                    value={micPitchPct()}
-                    onInput={(e) => {
-                      const v = Number(e.currentTarget.value);
-                      setMicPitchPct(v);
-                      setMicPitch(v);
-                    }}
-                    class="w-full cursor-pointer"
-                  />
-                  <span class="text-sm">{micPitchPct()} st</span>
-                </div>
+                <SettingSlider
+                  label="Sound Speed"
+                  min={0.5}
+                  max={2.5}
+                  step={0.05}
+                  value={soundPlaybackSpeed()}
+                  onInput={handleAllSoundPlaybackSpeedSlider}
+                  valueLabel={`${soundPlaybackSpeed()}x`}
+                />
 
-                <div class="max-w-md">
-                  <h2 class="text-lg font-medium mb-1">General Volume</h2>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="1"
-                    value={volumePct()}
-                    onInput={handleVolumeSlider}
-                    class="w-full cursor-pointer"
-                  />
-                  <span class="text-sm">{volumePct()}%</span>
-                </div>
+                <SettingToggle
+                  title="Normalize sound volume"
+                  description="Make loud sounds quiter and quiter louder so that they sound around the same."
+                  checked={normalizationSignal()}
+                  onInput={(e) => setNormalization(e.currentTarget.checked)}
+                />
+              </div>
+            </Match>
 
-                <div class="max-w-md">
-                  <h2 class="text-lg font-medium mb-1">Sound Speed</h2>
-                  <input
-                    type="range"
-                    min="0.5"
-                    max="2.5"
-                    step="0.05"
-                    value={soundPlaybackSpeed()}
-                    onInput={handleAllSoundPlaybackSpeedSlider}
-                    class="w-full cursor-pointer"
-                  />
-                  <span class="text-sm">{soundPlaybackSpeed()}x</span>
-                </div>
+            {/* Microphone */}
+            <Match when={activeTab() === "microphone"}>
+              <div class="flex flex-col gap-8">
+                <h1 class="text-2xl font-bold mb-4">Microphone</h1>
+
+                <SettingSlider
+                  label="Microphone Volume"
+                  min={0}
+                  max={300}
+                  step={1}
+                  value={micVolumePct()}
+                  onInput={handleMicVolumeSlider}
+                  valueLabel={`${micVolumePct()}%`}
+                />
+
+                <SettingSlider
+                  label="Mic Pitch"
+                  min={-12}
+                  max={12}
+                  step={1}
+                  value={micPitchPct()}
+                  onInput={(e) => {
+                    const v = Number(e.currentTarget.value);
+                    setMicPitchPct(v);
+                    setMicPitch(v);
+                  }}
+                  valueLabel={`${micPitchPct()} st`}
+                />
               </div>
             </Match>
 
@@ -232,8 +225,8 @@ export default function Settings() {
                       each={hotkeys()?.filter((hk) => hk.kind === "Sound")}
                       fallback={
                         <div class="text-sm text-subtext-1">
-                          No hotkeys are registered yet. Use the dashboard to
-                          add one!
+                          No hotkeys are registered yet. Use the sounds
+                          dashboard page to add one!
                         </div>
                       }
                     >
@@ -252,21 +245,19 @@ export default function Settings() {
 
             {/* System tab */}
             <Match when={activeTab() === "system"}>
-              <div>
-                <h1 class="text-2xl font-bold mb-4">System Settings</h1>
+              <div class="flex flex-col gap-6">
+                <h1 class="text-2xl font-bold">System Settings</h1>
 
-                <div class="max-w-xl flex flex-col gap-2">
-                  <div class="flex items-center justify-between">
-                    <h2 class="text-sm shrink-0">
-                      Start the soundboard with system in the background.
-                    </h2>
-                    <input
-                      type="checkbox"
-                      checked={autoStartSignal()}
-                      onInput={(e) => setAutoStart(e.currentTarget.checked)}
-                    />
-                  </div>
-                </div>
+                <SettingToggle
+                  title="Auto Start"
+                  description="Start the soundboard with system in the background."
+                  checked={autoStartSignal()}
+                  onInput={(e) => setAutoStart(e.currentTarget.checked)}
+                />
+
+                <button class="self-start" onClick={clearAllCache}>
+                  Clear Cache
+                </button>
               </div>
             </Match>
           </Switch>
