@@ -121,8 +121,8 @@ export default function Dashboard() {
               <div
                 class={`group flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer rounded-t select-none transition-colors ${
                   isCurrentTab(tab)
-                    ? "bg-surface-0 text-text"
-                    : "bg-mantle text-subtext-0 hover:bg-surface-1 hover:text-subtext-1"
+                    ? "bg-enabled text-primary-400"
+                    : "bg-disabled text-subtext-0 hover:bg-enabled hover:text-subtext-1"
                 }`}
                 onClick={async () => {
                   await refetchTabs();
@@ -132,15 +132,17 @@ export default function Dashboard() {
                 }}
               >
                 <span>{tab.name}</span>
-                <div
-                  class="opacity-0 group-hover:opacity-100 hover:text-red transition-opacity"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeTab(tab.id);
-                  }}
-                >
-                  <Trash2 class="w-3 h-3" />
-                </div>
+                {isCurrentTab(tab) && (
+                  <div
+                    class="opacity-0 group-hover:opacity-100 hover:text-red transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeTab(tab.id);
+                    }}
+                  >
+                    <Trash2 class="w-3 h-3" />
+                  </div>
+                )}
               </div>
             )}
           </For>
