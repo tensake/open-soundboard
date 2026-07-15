@@ -16,6 +16,7 @@ async function fetchTabs(): Promise<[SoundTab, string[]][]> {
 }
 
 export const [tabs, { refetch: refetchTabs }] = createResource(fetchTabs);
+export const [currentTab, setCurrentTab] = createSignal<[SoundTab, string[]] | null>(null);
 export const [customCss, { refetch: refetchCustomCss }] = createResource(() =>
   invoke<string>("get_custom_css"),
 );

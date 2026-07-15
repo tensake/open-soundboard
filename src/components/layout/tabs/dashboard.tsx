@@ -14,6 +14,8 @@ import {
   playlistMode,
   nextPlaylistMode,
   setCurrentTabPaths,
+  currentTab,
+  setCurrentTab,
 } from "../../../lib";
 import type { HotKeyEntry } from "../../../lib";
 import { alerts } from "../../../lib/alert";
@@ -25,9 +27,6 @@ import UpdateNotification from "../../ui/updateNotification";
 
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = createSignal<string | null>(null);
-  const [currentTab, setCurrentTab] = createSignal<[SoundTab, string[]] | null>(
-    null,
-  );
   const [capturingFor, setCapturingFor] = createSignal<string | null>(null);
 
   createEffect(async () => {
@@ -138,6 +137,7 @@ export default function Dashboard() {
                     onClick={(e) => {
                       e.stopPropagation();
                       removeTab(tab.id);
+                      if (isCurrentTab(tab)) setCurrentTab(null);
                     }}
                   >
                     <Trash2 class="w-3 h-3" />
