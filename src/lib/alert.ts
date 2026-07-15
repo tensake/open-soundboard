@@ -5,7 +5,14 @@ import type { Alert } from "./types";
 export const [alerts, setAlerts] = createSignal<Alert[]>([]);
 
 export async function listenAlerts() {
-  return listen<Alert>("alert", (event) => {
+  const unlisten_alert = await listen<Alert>("alert", (event) => {
     setAlerts((prev) => [...prev, event.payload]);
   });
+  const unlisten_dismiss = await listen<string>("alert-dismiss", (event) => {
+    setAlerts((prev) => prev.filter((a) => a.title !== event.payload));
+  });
+  return () => {
+    unlisten_alert();
+    unlisten_dismiss();
+  };
 }
