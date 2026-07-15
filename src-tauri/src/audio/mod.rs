@@ -1,6 +1,6 @@
 //! Audio module that handles playback for sounds, microphone forwarding and app forwarding.
 
-use cpal::traits::{DeviceTrait, HostTrait};
+use cpal::traits::DeviceTrait;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, AtomicU8, Ordering};
 use std::sync::mpsc;
 use std::sync::Arc;
@@ -112,7 +112,8 @@ impl PlaybackHandle {
 /// Returns a handle to control playback.
 pub fn play_sound(
     path: &str,
-    device: Arc<cpal::Device>,
+    cable_device: Arc<cpal::Device>,
+    output_device: Arc<cpal::Device>,
     volume: f32,
     speed: f32,
     normalize: bool,
@@ -128,19 +129,14 @@ pub fn play_sound(
     let normalize = Arc::new(AtomicBool::new(normalize));
 
     // Get cable device info
-    let config = device
+    let config = cable_device
         .default_output_config()
         .map_err(|e| format!("Failed to get output device config: {e}"))?;
     let cable_rate = config.sample_rate();
     let cable_channels = config.channels() as usize;
 
-    // Get local device info
-    let local_device = Arc::new(
-        cpal::default_host()
-            .default_output_device()
-            .ok_or("No default output device found")?,
-    );
-    let local_config = local_device
+    // Get output device info
+    let local_config = output_device
         .default_output_config()
         .map_err(|e| format!("Failed to get local device config: {e}"))?;
     let local_channels = local_config.channels() as usize;
@@ -187,7 +183,7 @@ pub fn play_sound(
 
     // Virtual cable playback
     output::spawn_stream(
-        device,
+        cable_device,
         config,
         rx,
         state.clone(),
@@ -197,7 +193,7 @@ pub fn play_sound(
 
     // Local stream playback
     output::spawn_stream(
-        local_device,
+        output_device,
         local_config,
         rx_local,
         state.clone(),

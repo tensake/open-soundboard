@@ -1,4 +1,3 @@
-use cpal::traits::DeviceTrait;
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU32;
@@ -16,17 +15,17 @@ mod cmd;
 mod config;
 
 struct AppState {
-    cable_device: Option<Arc<cpal::Device>>,
     playing_sounds: Arc<Mutex<HashMap<u32, audio::PlaybackHandle>>>,
     forwarding_handles: Arc<Mutex<HashMap<u32, audio::forwarding::ForwardingHandle>>>,
     next_id: AtomicU32,
-    mic_handle: Option<audio::mic::MicrophoneHandle>,
     cfg: Mutex<config::Config>,
     hotkey_tx: mpsc::Sender<config::hotkey::HotKeyCmd>,
     cache: cache::CacheDb,
 
-    /// Alerts that are stored before frontend is ready to receive them
-    pending_alerts: Mutex<Vec<cmd::Alert>>,
+    mic_handle: Mutex<Option<audio::mic::MicrophoneHandle>>,
+    cable_device: Mutex<Option<Arc<cpal::Device>>>,
+    input_device: Mutex<Option<Arc<cpal::Device>>>,
+    output_device: Mutex<Option<Arc<cpal::Device>>>,
 }
 
 fn hide_window(app: &tauri::AppHandle, label: &str) {
@@ -42,13 +41,6 @@ fn show_window(app: &tauri::AppHandle, label: &str) {
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
-    }
-}
-
-fn log_device(label: &str, device: &cpal::Device) {
-    match device.description() {
-        Ok(desc) => log::info!("Using {label} device: {}", desc.name()),
-        Err(e) => log::warn!("Could not get {label} device description: {e}"),
     }
 }
 
@@ -125,37 +117,6 @@ pub fn run() {
                 u32,
                 audio::forwarding::ForwardingHandle,
             >::new()));
-            let mut pending_alerts = Vec::new();
-
-            // Get audio devices
-            let input_device = audio::device::get_input_device()
-                .map_err(|e| {
-                    pending_alerts.push(cmd::Alert {
-                        kind: cmd::AlertKind::Error,
-                        title: "Input device error",
-                        message: e,
-                    });
-                })
-                .ok()
-                .and_then(|d| {
-                    log_device("input", &d);
-                    Some(d)
-                })
-                .map(Arc::new);
-            let cable_device = audio::device::get_cable()
-                .map_err(|e| {
-                    pending_alerts.push(cmd::Alert {
-                        kind: cmd::AlertKind::Error,
-                        title: "Output device error",
-                        message: e,
-                    })
-                })
-                .ok()
-                .and_then(|d| {
-                    log_device("cable", &d);
-                    Some(d)
-                })
-                .map(Arc::new);
 
             // Sound cleanup thread
             let playing_sounds_cleanup = playing_sounds.clone();
@@ -163,23 +124,6 @@ pub fn run() {
                 std::thread::sleep(std::time::Duration::from_secs(1));
                 playing_sounds_cleanup.lock().retain(|_, h| !h.is_done());
             });
-
-            // Start microphone forwarding
-            let mic_handle = match (&input_device, &cable_device) {
-                (Some(input), Some(cable)) => {
-                    audio::mic::start_forwarding(input.clone(), cable.clone())
-                        .map_err(|e| {
-                            log::warn!("Microphone forwarding has failed: {}", e);
-                            pending_alerts.push(cmd::Alert {
-                                kind: cmd::AlertKind::Warn,
-                                title: "Microphone forwarding error",
-                                message: e.to_string(),
-                            });
-                        })
-                        .ok()
-                }
-                _ => None,
-            };
 
             // Load config
             let cfg_dir = app
@@ -205,17 +149,23 @@ pub fn run() {
 
             // Create app state
             let app_state = AppState {
-                cable_device: cable_device.clone(),
                 playing_sounds: playing_sounds.clone(),
                 forwarding_handles,
                 next_id: AtomicU32::new(0),
-                mic_handle,
                 cfg: Mutex::new(cfg),
                 hotkey_tx,
                 cache,
-                pending_alerts: Mutex::new(pending_alerts),
+
+                mic_handle: Mutex::new(None),
+                cable_device: Mutex::new(None),
+                input_device: Mutex::new(None),
+                output_device: Mutex::new(None),
             };
             app.manage(app_state);
+
+            // Listen to device changes
+            let app_handle = app.handle().clone();
+            std::thread::spawn(move || audio::device::listen_devices(app_handle));
 
             // Setup tray
             setup_tray(app.handle())?;

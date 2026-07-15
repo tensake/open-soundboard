@@ -5,7 +5,7 @@ use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc;
 use std::sync::Arc;
-use tauri::{Emitter, Manager, State};
+use tauri::{Manager, State};
 use tauri_plugin_autostart::ManagerExt;
 use uuid::Uuid;
 
@@ -22,13 +22,14 @@ pub struct Progress {
 #[derive(Serialize, Clone)]
 pub enum AlertKind {
     Error,
+    #[allow(unused)]
     Warn,
 }
 
 #[derive(Serialize, Clone)]
 pub struct Alert {
     pub kind: AlertKind,
-    pub title: &'static str,
+    pub title: String,
     pub message: String,
 }
 
@@ -40,8 +41,15 @@ pub fn play_sound(
     state: State<AppState>,
     app_handle: tauri::AppHandle,
 ) -> Result<u32, String> {
-    let device = state
+    let cable_device = state
         .cable_device
+        .lock()
+        .as_ref()
+        .ok_or("No cable device found")?
+        .clone();
+    let output_device = state
+        .output_device
+        .lock()
         .as_ref()
         .ok_or("No output device found")?
         .clone();
@@ -62,7 +70,8 @@ pub fn play_sound(
 
     let handle = audio::play_sound(
         &path,
-        device,
+        cable_device,
+        output_device,
         volume.unwrap_or(1.0),
         speed.unwrap_or(1.0),
         normalize,
@@ -181,6 +190,7 @@ pub fn forward_app(pid: u32, state: tauri::State<AppState>) -> Result<u32, Strin
     log::info!("Starting forwarder for app: {pid}");
     let cable = state
         .cable_device
+        .lock()
         .clone()
         .ok_or("No cable device available")?;
     let volume = Arc::new(AtomicU32::new(1.0f32.to_bits()));
@@ -216,31 +226,31 @@ pub fn set_forward_volume(
 
 #[tauri::command]
 pub fn get_mic_volume(state: tauri::State<AppState>) -> f32 {
-    state.mic_handle.as_ref().map_or(0.0, |h| h.volume())
+    state.mic_handle.lock().as_ref().map_or(0.0, |h| h.volume())
 }
 
 #[tauri::command]
 pub fn set_mic_volume(volume: f32, state: tauri::State<AppState>) {
-    if let Some(h) = state.mic_handle.as_ref() {
+    if let Some(h) = state.mic_handle.lock().as_ref() {
         h.set_volume(volume)
     }
 }
 
 #[tauri::command]
 pub fn get_mic_pitch(state: tauri::State<AppState>) -> f32 {
-    state.mic_handle.as_ref().map_or(0.0, |h| h.pitch())
+    state.mic_handle.lock().as_ref().map_or(0.0, |h| h.pitch())
 }
 
 #[tauri::command]
 pub fn set_mic_pitch(semitones: f32, state: State<AppState>) {
-    if let Some(h) = state.mic_handle.as_ref() {
+    if let Some(h) = state.mic_handle.lock().as_ref() {
         h.set_pitch(semitones)
     }
 }
 
 #[tauri::command]
 pub fn stop_mic(state: tauri::State<AppState>) {
-    if let Some(h) = state.mic_handle.as_ref() {
+    if let Some(h) = state.mic_handle.lock().as_ref() {
         h.stop()
     }
 }
@@ -344,11 +354,8 @@ pub async fn unregister_hotkey(id: String, state: State<'_, AppState>) -> Result
 }
 
 #[tauri::command]
-pub fn mark_as_ready(app: tauri::AppHandle, state: State<AppState>) -> Result<(), String> {
-    let alerts: Vec<Alert> = state.pending_alerts.lock().drain(..).collect();
-    for alert in alerts {
-        app.emit("alert", alert).map_err(|e| e.to_string())?;
-    }
+pub fn mark_as_ready() -> Result<(), String> {
+    // Will be used later
     Ok(())
 }
 
