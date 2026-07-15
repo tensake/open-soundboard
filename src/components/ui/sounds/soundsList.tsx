@@ -10,6 +10,7 @@ import {
   formatTime,
   SoundEntry,
 } from "../../../lib";
+import ProgressSlider from "../progressSlider";
 
 function SoundRow(props: { path: string; sounds: SoundEntry[] }) {
   const entry = () => props.sounds.find((s) => s.path === props.path)!;
@@ -25,7 +26,7 @@ function SoundRow(props: { path: string; sounds: SoundEntry[] }) {
 
   return (
     <div class="flex items-center gap-3 px-4 py-2 border-b border-surface-0 last:border-b-0">
-      <span class="text-sm truncate w-48 shrink-0 flex items-center gap-1.5">
+      <span class="text-sm truncate w-56 shrink-0 flex items-center gap-1.5">
         {/* Name */}
         <span class="truncate">
           <Show when={entry().count > 1}>
@@ -33,30 +34,29 @@ function SoundRow(props: { path: string; sounds: SoundEntry[] }) {
           </Show>
           {name()}
         </span>
-
-        {/* Playlist mode */}
-        <div
-          class={`shrink-0 cursor-pointer transition-colors ${
-            entry().playlistMode === "disabled"
-              ? "text-subtext-0"
-              : "text-primary-400"
-          }`}
-          onClick={(e) => {
-            e.stopPropagation();
-            nextSoundPlaylistMode(entry().path);
-          }}
-          title={`Playlist: ${entry().playlistMode}`}
-        >
-          <Show
-            when={entry().playlistMode === "shuffle"}
-            fallback={<Repeat class="w-3.5 h-3.5" />}
-          >
-            <Shuffle class="w-3.5 h-3.5" />
-          </Show>
-        </div>
       </span>
 
       {/* Controls */}
+      <div
+        class={`shrink-0 cursor-pointer transition-colors ${
+          entry().playlistMode === "disabled"
+            ? "text-subtext-0"
+            : "text-primary-400"
+        }`}
+        onClick={(e) => {
+          e.stopPropagation();
+          nextSoundPlaylistMode(entry().path);
+        }}
+        title={`Playlist: ${entry().playlistMode}`}
+      >
+        <Show
+          when={entry().playlistMode === "shuffle"}
+          fallback={<Repeat class="w-3.5 h-3.5" />}
+        >
+          <Shuffle class="w-3.5 h-3.5" />
+        </Show>
+      </div>
+
       <div
         class="shrink-0 hover:text-blue transition-colors cursor-pointer"
         onClick={() => handlePauseResume(entry())}
@@ -75,22 +75,22 @@ function SoundRow(props: { path: string; sounds: SoundEntry[] }) {
       <span class="text-xs font-mono tabular-nums shrink-0 text-subtext-0 select-none">
         {formatTime(displayCurrent())}
       </span>
-      <input
-        type="range"
-        min="0"
-        max={entry().total > 0 ? entry().total : 1}
-        step="0.1"
+      <ProgressSlider
         value={displayCurrent()}
-        onPointerDown={() => {
-          setSeeking(true);
-          setLocalCurrent(entry().current);
+        min={0}
+        max={entry().total > 0 ? entry().total : 1}
+        step={0.1}
+        onChange={(v) => setLocalCurrent(v)}
+        inputProps={{
+          onPointerDown: () => {
+            setSeeking(true);
+            setLocalCurrent(entry().current);
+          },
+          onChange: (e) => {
+            handleSeekCommit(entry(), parseFloat(e.currentTarget.value));
+            setSeeking(false);
+          },
         }}
-        onInput={(e) => setLocalCurrent(parseFloat(e.currentTarget.value))}
-        onChange={(e) => {
-          handleSeekCommit(entry(), parseFloat(e.currentTarget.value));
-          setSeeking(false);
-        }}
-        class="flex-1 cursor-pointer"
       />
       <span class="text-xs font-mono tabular-nums shrink-0 text-subtext-0 select-none">
         {formatTime(entry().total)}

@@ -346,3 +346,36 @@ hr {
     padding-bottom: 0;
     transform: translateY(-12px);
 }
+
+.progress-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  background: transparent;
+  color: transparent;
+}
+input[type="range"].progress-slider::-webkit-slider-runnable-track {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+input[type="range"].progress-slider::-moz-range-track {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+.progress-slider::-webkit-slider-thumb {
+  opacity: 0;
+}
+.progress-slider::-moz-range-thumb {
+  opacity: 0;
+}
+.progress-slider-thumb-visible::-webkit-slider-thumb {
+  opacity: 1;
+}
+.progress-slider-thumb-visible::-moz-range-thumb {
+  opacity: 1;
+}
