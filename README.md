@@ -32,10 +32,14 @@ speed & pitch settings and more.
 
 You need to have [VB Virtual Audio Cable](https://vb-audio.com/Cable/) installed (after installation please restart your computer).
 
+#### Linux
+
+PipeWire or PulseAudio is required (this is installed on most Linux distros by default).
+
 ### Steps
 
 1. Download the latest release for your platform from the [releases page](https://github.com/tensake/open-soundboard/releases).
-2. Run the binary to install the app on your system.
+2. Run the downloaded setup binary to install the app on your system.
 3. Once installed, configure the soundboard, and make sure you pick the virtual cable device as input device in the app you want to use it in.
 
    > For example, in discord, go to Settings > `Voice and Video` and pick `VB Cable` or `Open Soundboard` as an input device. Also disable noise cancelling if you have it by setting `Input Profile` to `Studio` so that the sounds you play wont be filtered.
@@ -53,6 +57,11 @@ You need to have [VB Virtual Audio Cable](https://vb-audio.com/Cable/) installed
 
 ## Build from source
 
+### Requirements
+
+- [bun](https://bun.sh/) (or [npm](https://nodejs.org/en/download))
+- [cargo](https://rustup.rs/)
+
 ### Steps to build
 
 1. Clone the repository:
@@ -65,13 +74,13 @@ You need to have [VB Virtual Audio Cable](https://vb-audio.com/Cable/) installed
 2. Install dependencies:
 
    ```bash
-   npm install
+   bun install
    ```
 
 3. Build the project:
 
    ```bash
-   npm run tauri build
+   bun tauri build
    ```
 
 ## Contributing
