@@ -2,6 +2,12 @@
   "name": "open-soundboard",
   "version": "0.1.1",
   "description": "Soundboard written in Rust",
+  "author": "tensake",
+  "homepage": "https://github.com/tensake/open-soundboard",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tensake/open-soundboard"
+  },
   "type": "module",
   "scripts": {
     "start": "vite",
@@ -10,7 +16,7 @@
     "serve": "vite preview",
     "tauri": "tauri"
   },
-  "license": "MIT",
+  "license": "GPL-3.0",
   "dependencies": {
     "@lucide/lab": "^0.1.2",
     "@tauri-apps/api": "^2",
