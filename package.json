@@ -1,6 +1,6 @@
 {
   "name": "open-soundboard",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Soundboard written in Rust",
   "type": "module",
   "scripts": {

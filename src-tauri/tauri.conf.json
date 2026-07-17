@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "open-soundboard",
-  "version": "0.1.0",
-  "identifier": "net.tenku.open-soundboard",
+  "version": "0.1.1",
+  "identifier": "io.github.tensake.open-soundboard",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
