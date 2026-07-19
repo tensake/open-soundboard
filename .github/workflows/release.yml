@@ -71,4 +71,4 @@ jobs:
           prerelease: false
           generateReleaseNotes: true
           args: ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
-          assetNamePattern: "[name]-v[version]_${{ matrix.name }}[ext]"
+          releaseAssetNamePattern: "[name]-v[version]_${{ matrix.name }}[ext]"
