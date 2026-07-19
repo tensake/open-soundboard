@@ -20,9 +20,9 @@ speed & pitch settings and more.
 
 ## Preview
 
-| ![Dashboard](https://10ku.net/osb/demo/open-soundboard_v0.1.0-dashboard.jpg) | ![App Forwarding](https://10ku.net/osb/demo/open-soundboard_v0.1.0-app_forwarding.jpg) |
+| ![Dashboard](https://10ku.net/osb/demo/open-soundboard_dashboard.jpg) | ![App Forwarding](https://10ku.net/osb/demo/open-soundboard_app-forwarding.jpg) |
 | --- | --- |
-| ![Settings](https://10ku.net/osb/demo/open-soundboard_v0.1.0-settings.jpg) | ![Hotkeys](https://10ku.net/osb/demo/open-soundboard_v0.1.0-settings-hotkeys.jpg) |
+| ![Settings](https://10ku.net/osb/demo/open-soundboard_settings-sound.jpg) | ![Hotkeys](https://10ku.net/osb/demo/open-soundboard_settings-hotkeys.jpg) |
 
 ## How to install
 
