@@ -59,7 +59,7 @@ jobs:
       - name: Tauri Info
         run: bun tauri info
 
-      - uses: tauri-apps/tauri-action@v0
+      - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -71,4 +71,4 @@ jobs:
           prerelease: false
           generateReleaseNotes: true
           args: ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
-          assetNamePattern: "[name]-v[version]_${{ matrix.name }}[ext]"
+          releaseAssetNamePattern: "[name]-v[version]_${{ matrix.name }}[ext]"
