@@ -35,7 +35,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 cpal = "0.18"
 rodio = "0.22.2"
-rubato = "3.0"
+rubato = "4.0"
 redb = "4.1.0"
 blake3 = "1.8.5"
 ringbuf = "0.5"
