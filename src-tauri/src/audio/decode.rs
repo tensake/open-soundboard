@@ -2,17 +2,20 @@
 
 use audioadapter_buffers::direct::InterleavedSlice;
 use rubato::{
-    calculate_cutoff, Async, FixedAsync, Indexing, Resampler, SincInterpolationParameters,
-    SincInterpolationType, WindowFunction,
+    Async, FixedAsync, Indexing, Resampler, SincInterpolationParameters, SincInterpolationType,
+    WindowFunction, calculate_cutoff,
 };
-use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, AtomicU8, Ordering};
-use std::sync::mpsc;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, AtomicU64, Ordering};
+use std::sync::mpsc;
+use symphonia::core::formats::TrackType;
 use symphonia::core::formats::{SeekMode, SeekTo};
 use symphonia::core::units::Time;
 use symphonia::core::{
-    audio::SampleBuffer, codecs::DecoderOptions, formats::FormatOptions, io::MediaSourceStream,
-    meta::MetadataOptions, probe::Hint,
+    codecs::audio::AudioDecoderOptions,
+    formats::{FormatOptions, probe::Hint},
+    io::MediaSourceStream,
+    meta::MetadataOptions,
 };
 
 use crate::audio::PlaybackState;
@@ -105,27 +108,32 @@ pub fn decode_loop(
     {
         hint.with_extension(ext);
     }
-    let probed = symphonia::default::get_probe()
-        .format(
+    let mut format = symphonia::default::get_probe()
+        .probe(
             &hint,
             mss,
-            &FormatOptions::default(),
-            &MetadataOptions::default(),
+            FormatOptions::default(),
+            MetadataOptions::default(),
         )
         .map_err(|e| format!("Unsupported audio format: {path}: {e}"))?;
-    let mut format = probed.format;
-    let track = format.default_track().ok_or("No default track found")?;
-    let audio_rate = track
+    let track = format
+        .default_track(TrackType::Audio)
+        .ok_or("No default track found")?;
+    let codec_params = track
         .codec_params
+        .as_ref()
+        .and_then(|p| p.audio())
+        .ok_or("No audio codec parameters")?;
+    let audio_rate = codec_params
         .sample_rate
         .ok_or("Sample rate not found in audio file")?;
-    let audio_channels = track
-        .codec_params
+    let audio_channels = codec_params
         .channels
+        .clone()
         .ok_or("Channel count not found in audio file")?
         .count();
     let mut decoder = symphonia::default::get_codecs()
-        .make(&track.codec_params, &DecoderOptions::default())
+        .make_audio_decoder(codec_params, &AudioDecoderOptions::default())
         .map_err(|e| format!("Failed to create decoder: {path}: {e}"))?;
     let track_id = track.id;
 
@@ -158,7 +166,7 @@ pub fn decode_loop(
     );
 
     // Set total frame count
-    if let Some(n) = track.codec_params.n_frames {
+    if let Some(n) = track.num_frames {
         let cable_total = (n as f64 * base_ratio) as u64;
         cfg.frames_total.store(cable_total, Ordering::Relaxed);
     }
@@ -179,7 +187,7 @@ pub fn decode_loop(
             match format.seek(
                 SeekMode::Accurate,
                 SeekTo::Time {
-                    time: Time::from(secs),
+                    time: Time::try_from_secs_f64(secs as f64).unwrap_or(Time::ZERO),
                     track_id: Some(track_id),
                 },
             ) {
@@ -201,15 +209,11 @@ pub fn decode_loop(
 
         // Read the next packet and verify track id
         let packet = match format.next_packet() {
-            Ok(p) => p,
-            Err(symphonia::core::errors::Error::IoError(e))
-                if e.kind() == std::io::ErrorKind::UnexpectedEof =>
-            {
-                break
-            }
+            Ok(Some(p)) => p,
+            Ok(None) => break,
             Err(e) => return Err(format!("Packet read error: {e}").into()),
         };
-        if packet.track_id() != track_id {
+        if packet.track_id != track_id {
             continue;
         }
 
@@ -219,9 +223,12 @@ pub fn decode_loop(
         };
 
         // Convert to interleaved
-        let mut buf = SampleBuffer::new(decoded.capacity() as u64, *decoded.spec());
-        buf.copy_interleaved_ref(decoded);
-        let mut chunk = buf.samples().to_vec();
+        let mut bytes = vec![0u8; decoded.frames() * decoded.spec().channels().count() * 4];
+        decoded.copy_bytes_interleaved_as::<f32, _>(&mut bytes);
+        let mut chunk: Vec<f32> = bytes
+            .chunks_exact(4)
+            .map(|b| f32::from_le_bytes(b.try_into().unwrap()))
+            .collect();
 
         // Downmix for cable if needed
         if audio_channels == 2 && cfg.cable_channels == 1 {
