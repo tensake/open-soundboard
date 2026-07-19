@@ -1,9 +1,9 @@
 //! Audio module that handles playback for sounds, microphone forwarding and app forwarding.
 
 use cpal::traits::DeviceTrait;
-use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, AtomicU8, Ordering};
-use std::sync::mpsc;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, AtomicU64, Ordering};
+use std::sync::mpsc;
 
 mod decode;
 pub mod device;

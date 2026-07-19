@@ -1,17 +1,17 @@
 //! Commands for interacting with the Tauri application for frontend.
 
 use serde::Serialize;
+use std::sync::Arc;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc;
-use std::sync::Arc;
 use tauri::{Manager, State};
 use tauri_plugin_autostart::ManagerExt;
 use uuid::Uuid;
 
+use crate::AppState;
 use crate::audio;
 use crate::config;
-use crate::AppState;
 
 #[derive(Serialize)]
 pub struct Progress {

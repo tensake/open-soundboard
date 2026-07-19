@@ -1,13 +1,13 @@
 use parking_lot::Mutex;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::sync::atomic::AtomicU32;
 use std::sync::mpsc;
-use std::sync::Arc;
+use tauri::{Emitter, Manager};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
 };
-use tauri::{Emitter, Manager};
 
 mod audio;
 mod cache;
@@ -120,9 +120,11 @@ pub fn run() {
 
             // Sound cleanup thread
             let playing_sounds_cleanup = playing_sounds.clone();
-            std::thread::spawn(move || loop {
-                std::thread::sleep(std::time::Duration::from_secs(1));
-                playing_sounds_cleanup.lock().retain(|_, h| !h.is_done());
+            std::thread::spawn(move || {
+                loop {
+                    std::thread::sleep(std::time::Duration::from_secs(1));
+                    playing_sounds_cleanup.lock().retain(|_, h| !h.is_done());
+                }
             });
 
             // Load config

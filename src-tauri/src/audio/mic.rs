@@ -3,15 +3,15 @@
 use cpal::traits::{DeviceTrait, StreamTrait};
 use pitch_shift::{Shifter, TOTAL_F32};
 use rubato::{
-    calculate_cutoff, Async, FixedAsync, SincInterpolationParameters, SincInterpolationType,
-    WindowFunction,
+    Async, FixedAsync, SincInterpolationParameters, SincInterpolationType, WindowFunction,
+    calculate_cutoff,
 };
 use std::convert::TryInto;
-use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
-use std::sync::mpsc;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU8, AtomicU32, Ordering};
+use std::sync::mpsc;
 
-use crate::audio::{decode, output, PlaybackState};
+use crate::audio::{PlaybackState, decode, output};
 
 type PitchState = Box<[f32; TOTAL_F32]>;
 
