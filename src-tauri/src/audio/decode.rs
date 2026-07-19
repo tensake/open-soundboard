@@ -1,6 +1,7 @@
 //! Provides methods for decoding audio file and resampling audio data.
 
-use audioadapter_buffers::direct::InterleavedSlice;
+use rubato::Adjustable;
+use rubato::audioadapter_buffers::direct::InterleavedSlice;
 use rubato::{
     Async, FixedAsync, Indexing, Resampler, SincInterpolationParameters, SincInterpolationType,
     WindowFunction, calculate_cutoff,
@@ -140,7 +141,7 @@ pub fn decode_loop(
     // Configure resampler
     let params = SincInterpolationParameters {
         sinc_len: 64,
-        f_cutoff: calculate_cutoff(64, WindowFunction::Blackman2),
+        f_cutoff: Some(calculate_cutoff::<f32>(64, WindowFunction::Blackman2)),
         interpolation: SincInterpolationType::Linear,
         oversampling_factor: 128,
         window: WindowFunction::Blackman2,
