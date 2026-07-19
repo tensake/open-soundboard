@@ -7,16 +7,16 @@
 use std::collections::{HashSet, VecDeque};
 use std::error::Error;
 use std::sync::atomic::{AtomicU8, Ordering};
-use std::sync::{mpsc, Arc};
+use std::sync::{Arc, mpsc};
 use sysinfo::{Pid, ProcessRefreshKind, RefreshKind, System};
 use wasapi::{
-    initialize_mta, AudioClient, DeviceEnumerator, Direction, SampleType, SessionState, StreamMode,
-    WaveFormat,
+    AudioClient, DeviceEnumerator, Direction, SampleType, SessionState, StreamMode, WaveFormat,
+    initialize_mta,
 };
 use windows_icons::get_icon_base64_by_process_id;
 
-use crate::audio::forwarding::AudioApp;
 use crate::audio::PlaybackState;
+use crate::audio::forwarding::AudioApp;
 
 /// Resolve the parent process ID for the given child process ID.
 fn resolve_target_pid(pid: u32) -> u32 {

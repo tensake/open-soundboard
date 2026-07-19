@@ -1,7 +1,7 @@
 //! Logic for writing audio to the device.
 
 use cpal::traits::{DeviceTrait, StreamTrait};
-use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicU8, AtomicU32, Ordering};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 

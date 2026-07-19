@@ -1,9 +1,9 @@
 //! Logic for getting the virtual cable device on Windows or
 //! creating a null sink on Linux as well as listening for device changes.
 
+use crate::AppState;
 use crate::audio;
 use crate::cmd;
-use crate::AppState;
 use cpal::traits::{DeviceTrait, HostTrait};
 use parking_lot::Mutex;
 use std::sync::Arc;

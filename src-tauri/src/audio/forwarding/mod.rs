@@ -2,8 +2,8 @@
 
 use crate::audio::PlaybackState;
 use cpal::traits::DeviceTrait;
-use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
-use std::sync::{mpsc, Arc};
+use std::sync::atomic::{AtomicU8, AtomicU32, Ordering};
+use std::sync::{Arc, mpsc};
 
 #[cfg(target_os = "windows")]
 pub mod windows;
