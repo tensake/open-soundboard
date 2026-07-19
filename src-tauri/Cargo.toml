@@ -40,7 +40,7 @@ redb = "4.1.0"
 blake3 = "1.8.5"
 ringbuf = "0.5"
 symphonia = { version = "0.6", features = ["mp3", "wav", "flac", "vorbis", "ogg", "isomp4", "aac", "pcm"] }
-audioadapter-buffers = "3.0"
+audioadapter-buffers = "4.0"
 parking_lot = "0.12.5"
 tauri-plugin-dialog = "2"
 uuid = { version = "1.23.3", features = ["v4", "serde"] }
