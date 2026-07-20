@@ -8,7 +8,6 @@
       "description": "Automerge minor updates in a group",
       "matchPackagePatterns": ["*"],
       "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "all minor and patch dependencies",
       "automerge": true,
       "automergeType": "pr"
     },
