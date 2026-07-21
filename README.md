@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="https://10ku.net/osb/logo.png" alt="Open SoundBoard logo" height="300" />
+  <img 
+    src="https://10ku.net/osb/thumbnail.png" 
+    alt="Open SoundBoard thumbnail" 
+    height="300" 
+    style="border-radius: 32px;" />
 </p>
 
 [![Tauri](https://img.shields.io/badge/Tauri-24C8D8?logo=tauri&logoColor=fff)](https://tauri.app/)
@@ -9,11 +13,6 @@
 [![Build Status](https://img.shields.io/github/actions/workflow/status/tensake/open-soundboard/test.yml)](https://github.com/tensake/open-soundboard/actions)
 [![Release](https://img.shields.io/github/v/release/tensake/open-soundboard)](https://github.com/tensake/open-soundboard/releases)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/tensake/open-soundboard)
-
-A fast, cross-platform and lightweight soundboard built with Rust and Tauri.
-
-Has hotkeys support, app forwarding, customisation, sound normalization, 
-speed & pitch settings and more.
 
 > [!WARNING]
 > The soundboard is still in development and may not work as expected. Please report any issues you encounter.
