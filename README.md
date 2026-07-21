@@ -1,9 +1,9 @@
 <p align="center">
   <img 
-    src="https://10ku.net/osb/thumbnail.png" 
+    src="https://10ku.net/osb/thumbnail-rounded.png" 
     alt="Open SoundBoard thumbnail" 
-    height="300" 
-    style="border-radius: 32px;" />
+    width="800"
+  />
 </p>
 
 [![Tauri](https://img.shields.io/badge/Tauri-24C8D8?logo=tauri&logoColor=fff)](https://tauri.app/)
