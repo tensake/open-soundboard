@@ -23,6 +23,13 @@ export default function SoundItem(props: {
         {props.sound.path.split(/[\\/]/).pop()}
       </span>
 
+      {/* Binding */}
+      <Show when={props.registered}>
+        {(hk) => (
+          <span class="text-xs text-subtext-0 shrink-0">{hk().binding}</span>
+        )}
+      </Show>
+
       {/* Metadata */}
       <div class="flex items-center gap-3 text-xs text-subtext-0 truncate shrink-0">
         <span class="w-32 text-right">{readableDate(props.sound.datetime)}</span>
@@ -34,27 +41,20 @@ export default function SoundItem(props: {
         when={props.registered}
         fallback={
           <div
-            class="opacity-0 group-hover:opacity-100 hover:text-blue transition-opacity ml-auto shrink-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              props.onStartCapture();
-            }}
+            class="opacity-0 group-hover:opacity-100 hover:text-blue transition-opacity shrink-0"
+            onClick={(e) => { e.stopPropagation(); props.onStartCapture(); }}
             title="Click to register hotkey"
           >
             <Keyboard class="w-3.5 h-3.5" />
           </div>
         }
       >
-        {(hk) => (
+        {(_) => (
           <div
-            class="opacity-0 group-hover:opacity-100 hover:text-red transition-opacity ml-auto shrink-0 flex items-center gap-1"
-            onClick={(e) => {
-              e.stopPropagation();
-              props.onUnregister(e);
-            }}
+            class="opacity-0 group-hover:opacity-100 hover:text-red transition-opacity shrink-0"
+            onClick={(e) => { e.stopPropagation(); props.onUnregister(e); }}
             title="Click to unregister hotkey"
           >
-            <span class="text-xs text-subtext-0">{hk().binding}</span>
             <KeyboardOff class="w-3.5 h-3.5" />
           </div>
         )}
