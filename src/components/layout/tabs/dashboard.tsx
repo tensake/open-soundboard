@@ -17,7 +17,7 @@ import {
   currentTab,
   setCurrentTab,
 } from "../../../lib";
-import type { HotKeyEntry } from "../../../lib";
+import type { HotKeyEntry, SoundFile } from "../../../lib";
 import { alerts } from "../../../lib/alert";
 import { SoundTab } from "../../../lib/types";
 import HotkeyOverlay from "../hotkeyOverlay";
@@ -54,7 +54,7 @@ export default function Dashboard() {
 
   // Update current sounds from tab for playlist
   createEffect(() => {
-    setCurrentTabPaths(currentTab()?.[1] ?? []);
+    setCurrentTabPaths(currentTab()?.[1].map((s) => s.path) ?? []);
   });
 
   const handleAddTab = async () => {
@@ -92,7 +92,7 @@ export default function Dashboard() {
     const sounds = currentTab()?.[1] ?? [];
     const q = searchQuery()?.toLowerCase();
     return q
-      ? sounds.filter((s) => s.split(/[\\/]/).pop()!.toLowerCase().includes(q))
+      ? sounds.filter((s) => s.path.split(/[\\/]/).pop()!.toLowerCase().includes(q))
       : sounds;
   };
 
@@ -116,7 +116,7 @@ export default function Dashboard() {
       <div class="flex items-center gap-px bg-crust px-2 pt-2 shrink-0">
         <Show when={tabs()}>
           <For each={tabs()}>
-            {([tab, sounds]: [SoundTab, string[]]) => (
+            {([tab, sounds]: [SoundTab, SoundFile[]]) => (
               <div
                 class={`group flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer rounded-t select-none transition-colors ${
                   isCurrentTab(tab)
@@ -161,12 +161,12 @@ export default function Dashboard() {
         <input
           type="text"
           class="w-full bg-base text-sm truncate"
-          placeholder="Enter a sound name to search..."
+          placeholder="Start typing here to search..."
           value={searchQuery() ?? ""}
           onInput={(e) => setSearchQuery(e.currentTarget.value || null)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              const first = filteredSounds()[0];
+              const first = filteredSounds()[0].path;
               if (first) playSoundTabMode(first);
             }
           }}
@@ -215,10 +215,10 @@ export default function Dashboard() {
               <SoundItem
                 sound={sound}
                 odd={i() % 2 !== 0}
-                registered={findHotkeyForSound(sound)}
-                onPlay={() => playSoundTabMode(sound)}
-                onStartCapture={() => setCapturingFor(sound)}
-                onUnregister={(e) => handleUnregister(e, sound)}
+                registered={findHotkeyForSound(sound.path)}
+                onPlay={() => playSoundTabMode(sound.path)}
+                onStartCapture={() => setCapturingFor(sound.path)}
+                onUnregister={(e) => handleUnregister(e, sound.path)}
               />
             )}
           </For>

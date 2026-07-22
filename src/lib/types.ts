@@ -33,6 +33,12 @@ export type SoundTab = {
   path: string;
 };
 
+export interface SoundFile {
+  path: string;
+  size: number;
+  datetime: number;
+}
+
 export interface SoundEntry {
   ids: number[];
   path: string;

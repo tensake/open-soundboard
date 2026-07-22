@@ -256,19 +256,11 @@ pub fn stop_mic(state: tauri::State<AppState>) {
 }
 
 #[tauri::command]
-pub fn get_tabs(state: tauri::State<AppState>) -> Vec<(config::tab::Tab, Vec<String>)> {
+pub fn get_tabs(
+    state: tauri::State<AppState>,
+) -> Vec<(config::tab::Tab, Vec<config::tab::SoundFile>)> {
     let tabs = state.cfg.lock().get_tabs();
-    tabs.iter()
-        .map(|t| {
-            (
-                t.clone(),
-                t.list_sounds()
-                    .into_iter()
-                    .map(|p| p.to_string_lossy().to_string())
-                    .collect::<Vec<_>>(),
-            )
-        })
-        .collect()
+    tabs.iter().map(|t| (t.clone(), t.list_sounds())).collect()
 }
 
 #[tauri::command]

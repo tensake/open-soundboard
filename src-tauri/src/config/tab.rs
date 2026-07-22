@@ -16,9 +16,17 @@ pub struct Tab {
     path: String,
 }
 
+/// Represents a sound file in a tab.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SoundFile {
+    path: String,
+    size: u64,
+    datetime: u64,
+}
+
 impl Tab {
     /// Lists all sounds in the tab's path that are sound files.
-    pub fn list_sounds(&self) -> Vec<PathBuf> {
+    pub fn list_sounds(&self) -> Vec<SoundFile> {
         config::list_path(PathBuf::from(&self.path))
             .unwrap_or_default()
             .into_iter()
@@ -27,6 +35,19 @@ impl Tab {
                     .and_then(|e| e.to_str())
                     .map(|e| ALLOWED_FILE_EXT.contains(&e.to_lowercase().as_str()))
                     .unwrap_or(false)
+            })
+            .map(|p| {
+                let meta = p.metadata().ok();
+                SoundFile {
+                    path: p.to_string_lossy().into_owned(),
+                    size: meta.as_ref().map(|m| m.len()).unwrap_or(0),
+                    datetime: meta
+                        .as_ref()
+                        .and_then(|m| m.modified().ok())
+                        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                        .map(|d| d.as_secs())
+                        .unwrap_or(0),
+                }
             })
             .collect()
     }
