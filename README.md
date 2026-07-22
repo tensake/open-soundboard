@@ -29,30 +29,28 @@
 
 #### Windows
 
-You need to have [VB Virtual Audio Cable](https://vb-audio.com/Cable/) installed (after installation please restart your computer).
+[VB Virtual Audio Cable](https://vb-audio.com/Cable/) (after installation please restart your computer).
 
 #### Linux
 
-PipeWire or PulseAudio is required (this is installed on most Linux distros by default).
+PipeWire (recommended) or PulseAudio.
 
 ### Steps
 
-1. Download the latest release for your platform from the [releases page](https://github.com/tensake/open-soundboard/releases).
-2. Run the downloaded setup binary to install the app on your system.
-3. Once installed, configure the soundboard, and make sure you pick the virtual cable device as input device in the app you want to use it in.
+0. Make sure your default input and output devices are correctly configured in your system settings, as they will be used by the soundboard.
+1. Download and run the latest release for your platform from the [releases page](https://github.com/tensake/open-soundboard/releases) to install the app.
+2. Once installed, configure the soundboard, and make sure you pick the virtual cable device as input device in the app you want to use it in.
 
    > For example, in discord, go to Settings > `Voice and Video` and pick `VB Cable` or `Open Soundboard` as an input device. Also disable noise cancelling if you have it by setting `Input Profile` to `Studio` so that the sounds you play wont be filtered.
-
-4. Choose your default input and output audio correctly in the system settings as these devices will be used.
-5. Done!
+3. Done!
 
 ## Features
 
-| Feature                               | Windows | Linux       |
-| ------------------------------------- | ------- | ----------- |
-| App forwarding                        | ✅      | In progress |
-| Hotkeys                               | ✅      | X11 only    |
-| Sound Playback and all other features | ✅      | ✅          |
+| Feature                               | Windows | Linux          |
+| ------------------------------------- | ------- | -------------  |
+| App forwarding                        | ✅      | ❌ (WIP)       |
+| Hotkeys                               | ✅      | ✅ (X11 only)  |
+| Sound Playback and all other features | ✅      | ✅             |
 
 ## Build from source
 
