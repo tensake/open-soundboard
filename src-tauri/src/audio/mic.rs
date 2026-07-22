@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU8, AtomicU32, Ordering};
 use std::sync::mpsc;
 
-use crate::audio::{PlaybackState, decode, output};
+use crate::audio::{PlaybackState, helpers, output};
 
 type PitchState = Box<[f32; TOTAL_F32]>;
 
@@ -132,7 +132,7 @@ fn microphone_loop(
 
             // Resample if needed
             if let Some(r) = &mut resampler {
-                match decode::resample_chunk(
+                match helpers::resample_chunk(
                     &mut leftover,
                     &chunk,
                     r,

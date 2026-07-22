@@ -1,23 +1,15 @@
-//! Provides methods for decoding audio file and resampling audio data.
+//! Provides methods for decoding an audio file.
 
-use rubato::Adjustable;
-use rubato::audioadapter_buffers::direct::InterleavedSlice;
+use crate::audio::helpers;
 use rubato::{
-    Async, FixedAsync, Indexing, Resampler, SincInterpolationParameters, SincInterpolationType,
+    Async, FixedAsync, Resampler, SincInterpolationParameters, SincInterpolationType,
     WindowFunction, calculate_cutoff,
 };
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, AtomicU64, Ordering};
 use std::sync::mpsc;
-use symphonia::core::formats::TrackType;
 use symphonia::core::formats::{SeekMode, SeekTo};
 use symphonia::core::units::Time;
-use symphonia::core::{
-    codecs::audio::AudioDecoderOptions,
-    formats::{FormatOptions, probe::Hint},
-    io::MediaSourceStream,
-    meta::MetadataOptions,
-};
 
 use crate::audio::PlaybackState;
 
@@ -32,59 +24,6 @@ pub struct DecodeConfig {
     pub normalization_gain: Arc<AtomicU32>,
 }
 
-/// Resamples a chunk of audio data using the provided resampler.
-pub fn resample_chunk(
-    leftover: &mut Vec<f32>,
-    chunk: &[f32],
-    resampler: &mut Async<f32>,
-    channels: usize,
-    base_ratio: f64,
-    speed: f64,
-) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
-    leftover.extend_from_slice(chunk);
-
-    // Calculate and set resample ratio
-    resampler
-        .set_resample_ratio(base_ratio * (1.0 / speed.max(0.01)), false)
-        .map_err(|e| format!("Failed to set resample ratio: {e}"))?;
-
-    // Get required samples for each iteration
-    let needed_frames = resampler.input_frames_next();
-    let needed_samples = needed_frames * channels;
-
-    let mut out = Vec::new();
-
-    // Process all full samples
-    while leftover.len() >= needed_samples {
-        let input: Vec<f32> = leftover.drain(..needed_samples).collect();
-        let capacity = resampler.output_frames_max();
-        let mut buf_out = vec![0.0f32; capacity * channels];
-
-        let input_slice = InterleavedSlice::new(&input, channels, needed_frames)
-            .map_err(|e| format!("Failed to create interleaved input slice: {e:?}"))?;
-        let mut output_slice = InterleavedSlice::new_mut(&mut buf_out, channels, capacity)
-            .map_err(|e| format!("Failed to create interleaved output slice: {e:?}"))?;
-        let idx = Indexing {
-            input_offset: 0,
-            output_offset: 0,
-            active_channels_mask: None,
-            partial_len: None,
-        };
-
-        // Resample
-        let (_, produced_frames) = resampler
-            .process_into_buffer(&input_slice, &mut output_slice, Some(&idx))
-            .map_err(|e| format!("Resample failed: {e}"))?;
-
-        buf_out.truncate(produced_frames * channels);
-
-        // Add resampled chunk to output
-        out.extend(buf_out);
-    }
-
-    Ok(out)
-}
-
 /// Decodes an audio file and sends the resampled chunks to tx.
 ///
 /// This function is blocking and should be run in a separate thread.
@@ -96,47 +35,7 @@ pub fn decode_loop(
     rx_seek: mpsc::Receiver<f32>,
     state: Arc<AtomicU8>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // Decode audio file
-    let file =
-        std::fs::File::open(path).map_err(|e| format!("Cannot open audio file: {path}: {e}"))?;
-    let mss = MediaSourceStream::new(Box::new(file), Default::default());
-
-    // Probe the media source
-    let mut hint = Hint::new();
-    if let Some(ext) = std::path::Path::new(path)
-        .extension()
-        .and_then(|e| e.to_str())
-    {
-        hint.with_extension(ext);
-    }
-    let mut format = symphonia::default::get_probe()
-        .probe(
-            &hint,
-            mss,
-            FormatOptions::default(),
-            MetadataOptions::default(),
-        )
-        .map_err(|e| format!("Unsupported audio format: {path}: {e}"))?;
-    let track = format
-        .default_track(TrackType::Audio)
-        .ok_or("No default track found")?;
-    let codec_params = track
-        .codec_params
-        .as_ref()
-        .and_then(|p| p.audio())
-        .ok_or("No audio codec parameters")?;
-    let audio_rate = codec_params
-        .sample_rate
-        .ok_or("Sample rate not found in audio file")?;
-    let audio_channels = codec_params
-        .channels
-        .clone()
-        .ok_or("Channel count not found in audio file")?
-        .count();
-    let mut decoder = symphonia::default::get_codecs()
-        .make_audio_decoder(codec_params, &AudioDecoderOptions::default())
-        .map_err(|e| format!("Failed to create decoder: {path}: {e}"))?;
-    let track_id = track.id;
+    let mut audio_params = helpers::probe_audio_file(path)?;
 
     // Configure resampler
     let params = SincInterpolationParameters {
@@ -146,11 +45,11 @@ pub fn decode_loop(
         oversampling_factor: 128,
         window: WindowFunction::Blackman2,
     };
-    let base_ratio = cfg.cable_rate as f64 / audio_rate as f64;
-    let resample_channels = if audio_channels == 2 && cfg.cable_channels == 1 {
+    let base_ratio = cfg.cable_rate as f64 / audio_params.rate as f64;
+    let resample_channels = if audio_params.channels == 2 && cfg.cable_channels == 1 {
         1
     } else {
-        audio_channels
+        audio_params.channels
     };
 
     // Initialize resampler
@@ -167,7 +66,7 @@ pub fn decode_loop(
     );
 
     // Set total frame count
-    if let Some(n) = track.num_frames {
+    if let Some(n) = audio_params.num_frames {
         let cable_total = (n as f64 * base_ratio) as u64;
         cfg.frames_total.store(cable_total, Ordering::Relaxed);
     }
@@ -185,16 +84,16 @@ pub fn decode_loop(
 
         // Check for seek
         if let Ok(secs) = rx_seek.try_recv() {
-            match format.seek(
+            match audio_params.format.seek(
                 SeekMode::Accurate,
                 SeekTo::Time {
                     time: Time::try_from_secs_f64(secs as f64).unwrap_or(Time::ZERO),
-                    track_id: Some(track_id),
+                    track_id: Some(audio_params.track_id),
                 },
             ) {
                 Ok(_) => {
                     // Reset decoder
-                    decoder.reset();
+                    audio_params.decoder.reset();
                     if let Some(r) = &mut resampler {
                         r.reset();
                     }
@@ -209,17 +108,17 @@ pub fn decode_loop(
         }
 
         // Read the next packet and verify track id
-        let packet = match format.next_packet() {
+        let packet = match audio_params.format.next_packet() {
             Ok(Some(p)) => p,
             Ok(None) => break,
             Err(e) => return Err(format!("Packet read error: {e}").into()),
         };
-        if packet.track_id != track_id {
+        if packet.track_id != audio_params.track_id {
             continue;
         }
 
         // Decode packet
-        let Ok(decoded) = decoder.decode(&packet) else {
+        let Ok(decoded) = audio_params.decoder.decode(&packet) else {
             continue;
         };
 
@@ -232,7 +131,7 @@ pub fn decode_loop(
             .collect();
 
         // Downmix for cable if needed
-        if audio_channels == 2 && cfg.cable_channels == 1 {
+        if audio_params.channels == 2 && cfg.cable_channels == 1 {
             chunk = chunk
                 .chunks_exact(2)
                 .map(|c| (c[0] + c[1]) * 0.707)
@@ -248,7 +147,7 @@ pub fn decode_loop(
         // Resample to match cable sample rate if needed
         if let Some(r) = &mut resampler {
             let current_speed = f32::from_bits(cfg.speed.load(Ordering::Relaxed)) as f64;
-            chunk = resample_chunk(
+            chunk = helpers::resample_chunk(
                 &mut leftover,
                 &chunk,
                 r,
