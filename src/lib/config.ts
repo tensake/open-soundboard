@@ -11,15 +11,19 @@ getAutoStart().then(setAutoStartSignal);
 isOnboarded().then(setOnboarded);
 getNormalization().then(setNormalizationSignal);
 
-async function fetchTabs(): Promise<[SoundTab, SoundFile[]][]> {
-  return invoke<[SoundTab, SoundFile[]][]>("get_tabs");
-}
-
-export const [tabs, { refetch: refetchTabs }] = createResource(fetchTabs);
+export const [tabs, { refetch: refetchTabs }] = createResource(getTabs);
 export const [currentTab, setCurrentTab] = createSignal<[SoundTab, SoundFile[]] | null>(null);
 export const [customCss, { refetch: refetchCustomCss }] = createResource(() =>
   invoke<string>("get_custom_css"),
 );
+
+async function getTabs(): Promise<[SoundTab, SoundFile[]][]> {
+  return invoke<[SoundTab, SoundFile[]][]>("get_tabs");
+}
+
+export async function getTab(id: string): Promise<[SoundTab, SoundFile[]] | null> {
+  return invoke<[SoundTab, SoundFile[]] | null>("get_tab", { id });
+}
 
 export async function addTab(name: string, path: string) {
   await invoke("add_tab", { name, path });

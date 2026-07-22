@@ -4,6 +4,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import {
   tabs,
   refetchTabs,
+  getTab,
   addTab,
   removeTab,
   moveTab,
@@ -38,15 +39,16 @@ export default function Dashboard() {
     }
   });
 
-  // Refresh tabs every 5 seconds
+  // Refresh current tab every 5 seconds
   createEffect(() => {
     const interval = setInterval(async () => {
-      await refetchTabs();
-      const activeTab = currentTab()?.[0];
-      if (activeTab) {
-        const updatedTab = tabs()?.find(([t]) => t.id === activeTab.id);
-        if (updatedTab) {
-          setCurrentTab(updatedTab);
+      const active = currentTab();
+      if (active) {
+        const newTab = await getTab(active[0].id);
+        if (newTab && (newTab[1].length !== active[1].length
+          || newTab[1].some((sound, i) => sound.path !== active[1][i]?.path))
+        ) {
+          setCurrentTab(newTab);
         }
       }
     }, 5000);

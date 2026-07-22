@@ -264,6 +264,18 @@ pub fn get_tabs(
 }
 
 #[tauri::command]
+pub fn get_tab(
+    state: tauri::State<AppState>,
+    id: String,
+) -> Option<(config::tab::Tab, Vec<config::tab::SoundFile>)> {
+    state
+        .cfg
+        .lock()
+        .get_tab(id)
+        .map(|t| (t.clone(), t.list_sounds()))
+}
+
+#[tauri::command]
 pub fn add_tab(state: tauri::State<AppState>, name: String, path: String) {
     log::info!("Adding tab: {path}");
     state.cfg.lock().add_tab(name, path);

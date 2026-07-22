@@ -73,6 +73,10 @@ impl config::Config {
         self.tabs.clone()
     }
 
+    pub fn get_tab(&self, id: String) -> Option<Tab> {
+        self.tabs.iter().find(|t| t.id == id).cloned()
+    }
+
     pub fn move_tab(&mut self, id: String, idx: usize) {
         if let Some(index) = self.tabs.iter().position(|t| t.id == id) {
             let tab = self.tabs.remove(index);
