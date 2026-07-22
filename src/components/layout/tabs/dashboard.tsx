@@ -1,5 +1,5 @@
 import { createEffect, createSignal, For, Show, onCleanup } from "solid-js";
-import { Plus, Trash2, Repeat, Shuffle } from "lucide-solid";
+import { Plus, Folder, FolderOpen, X, Repeat, Shuffle } from "lucide-solid";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   tabs,
@@ -113,42 +113,56 @@ export default function Dashboard() {
       <For each={alerts()}>{(alert) => <AlertItem alert={alert} />}</For>
 
       {/* Tabs */}
-      <div class="flex items-center gap-px bg-crust px-2 pt-2 shrink-0">
-        <Show when={tabs()}>
-          <For each={tabs()}>
-            {([tab, sounds]: [SoundTab, SoundFile[]]) => (
-              <div
-                class={`group flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer rounded-t select-none transition-colors ${
-                  isCurrentTab(tab)
-                    ? "bg-enabled text-primary-400"
-                    : "bg-disabled text-subtext-0 hover:bg-enabled hover:text-subtext-1"
-                }`}
-                onClick={async () => {
-                  await refetchTabs();
-                  const recentTab = tabs()?.find(([t]) => t.id === tab.id);
-                  setCurrentTab(recentTab ?? [tab, sounds]);
-                  setSearchQuery(null);
-                }}
-              >
-                <span>{tab.name}</span>
-                {isCurrentTab(tab) && (
-                  <div
-                    class="opacity-0 group-hover:opacity-100 hover:text-red transition-opacity"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeTab(tab.id);
-                      if (isCurrentTab(tab)) setCurrentTab(null);
-                    }}
-                  >
-                    <Trash2 class="w-3 h-3" />
-                  </div>
-                )}
-              </div>
-            )}
-          </For>
-        </Show>
+      <div class="flex items-center bg-crust px-2 pt-2 shrink-0 min-w-0">
         <div
-          class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-subtext-0 hover:text-text cursor-pointer rounded-t select-none transition-colors"
+          class="flex items-center gap-px min-w-0 overflow-x-auto flex-1"
+          style={{ "scrollbar-width": "none" }}
+          onWheel={(e) => {
+            // Make vertical scroll horizontal
+            e.preventDefault();
+            e.currentTarget.scrollLeft += e.deltaY;
+          }}
+        >
+          <Show when={tabs()}>
+            <For each={tabs()}>
+              {([tab, sounds]: [SoundTab, SoundFile[]]) => (
+                <div
+                  class={`group flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer rounded-t select-none transition-colors shrink-0 w-36 ${
+                    isCurrentTab(tab)
+                      ? "bg-enabled text-primary-400"
+                      : "bg-disabled text-subtext-0 hover:bg-enabled hover:text-subtext-1"
+                  }`}
+                  onClick={async () => {
+                    await refetchTabs();
+                    const recentTab = tabs()?.find(([t]) => t.id === tab.id);
+                    setCurrentTab(recentTab ?? [tab, sounds]);
+                    setSearchQuery(null);
+                  }}
+                >
+                  {isCurrentTab(tab)
+                    ? <FolderOpen class="w-3.5 h-3.5 shrink-0" />
+                    : <Folder class="w-3.5 h-3.5 shrink-0" />
+                  }
+                  <span class="truncate flex-1">{tab.name}</span>
+                  {isCurrentTab(tab) && (
+                    <div
+                      class="opacity-0 group-hover:opacity-100 hover:text-red transition-opacity shrink-0 ml-auto"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeTab(tab.id);
+                        if (isCurrentTab(tab)) setCurrentTab(null);
+                      }}
+                    >
+                      <X class="w-3 h-3" />
+                    </div>
+                  )}
+                </div>
+              )}
+            </For>
+          </Show>
+        </div>
+        <div
+          class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-subtext-0 hover:text-text cursor-pointer rounded-t select-none transition-colors shrink-0"
           onClick={handleAddTab}
         >
           <Plus class="w-3.5 h-3.5" />
