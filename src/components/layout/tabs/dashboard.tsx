@@ -112,109 +112,124 @@ export default function Dashboard() {
       {/* Alerts */}
       <For each={alerts()}>{(alert) => <AlertItem alert={alert} />}</For>
 
-      {/* Tabs */}
-      <div class="flex items-center bg-crust px-2 pt-2 shrink-0 min-w-0">
-        <div
-          class="flex items-center gap-px min-w-0 overflow-x-auto flex-1"
-          style={{ "scrollbar-width": "none" }}
-          onWheel={(e) => {
-            // Make vertical scroll horizontal
-            e.preventDefault();
-            e.currentTarget.scrollLeft += e.deltaY;
-          }}
-        >
-          <Show when={tabs()}>
-            <For each={tabs()}>
-              {([tab, sounds]: [SoundTab, SoundFile[]]) => (
-                <div
-                  class={`group flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer rounded-t select-none transition-colors shrink-0 w-36 ${
-                    isCurrentTab(tab)
-                      ? "bg-enabled text-primary-400"
-                      : "bg-disabled text-subtext-0 hover:bg-enabled hover:text-subtext-1"
-                  }`}
-                  onClick={async () => {
-                    await refetchTabs();
-                    const recentTab = tabs()?.find(([t]) => t.id === tab.id);
-                    setCurrentTab(recentTab ?? [tab, sounds]);
-                    setSearchQuery(null);
-                  }}
-                >
-                  {isCurrentTab(tab)
-                    ? <FolderOpen class="w-3.5 h-3.5 shrink-0" />
-                    : <Folder class="w-3.5 h-3.5 shrink-0" />
-                  }
-                  <span class="truncate flex-1">{tab.name}</span>
-                  {isCurrentTab(tab) && (
+      <Show when={(tabs()?.length ?? 0) > 0}>
+        {/* Tabs */}
+        <div class="flex items-center bg-crust px-2 pt-2 shrink-0 min-w-0">
+          <div
+            class="flex items-center gap-px min-w-0 overflow-x-auto flex-1"
+            style={{ "scrollbar-width": "none" }}
+            onWheel={(e) => {
+              // Make vertical scroll horizontal
+              e.preventDefault();
+              e.currentTarget.scrollLeft += e.deltaY;
+            }}
+          >
+            <Show when={(tabs()?.length ?? 0) > 0}>
+              <For each={tabs()}>
+                {([tab, sounds]: [SoundTab, SoundFile[]]) => (
+                  <div
+                    class={`group flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer rounded-t select-none transition-colors shrink-0 w-36 ${
+                      isCurrentTab(tab)
+                        ? "bg-enabled text-primary-400"
+                        : "bg-disabled text-subtext-0 hover:bg-enabled hover:text-subtext-1"
+                    }`}
+                    onClick={async () => {
+                      await refetchTabs();
+                      const recentTab = tabs()?.find(([t]) => t.id === tab.id);
+                      setCurrentTab(recentTab ?? [tab, sounds]);
+                      setSearchQuery(null);
+                    }}
+                  >
+                    {isCurrentTab(tab)
+                      ? <FolderOpen class="w-3.5 h-3.5 shrink-0" />
+                      : <Folder class="w-3.5 h-3.5 shrink-0" />
+                    }
+                    <span class="truncate flex-1">{tab.name}</span>
                     <div
-                      class="opacity-0 group-hover:opacity-100 hover:text-red transition-opacity shrink-0 ml-auto"
-                      onClick={(e) => {
+                      class="hover:text-red transition-opacity shrink-0 ml-auto"
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        removeTab(tab.id);
-                        if (isCurrentTab(tab)) setCurrentTab(null);
+                        await removeTab(tab.id);
+                        await refetchTabs();
+
+                        // Clear search query and current tab if no tabs remain
+                        if (isCurrentTab(tab)) {
+                          setSearchQuery(null);
+                          setCurrentTab(null);
+                        };
                       }}
                     >
                       <X class="w-3 h-3" />
                     </div>
-                  )}
-                </div>
-              )}
-            </For>
-          </Show>
+                  </div>
+                )}
+              </For>
+            </Show>
+            <div
+              class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-subtext-0 hover:text-text cursor-pointer rounded-t select-none transition-colors shrink-0"
+              onClick={handleAddTab}
+            >
+              <Plus class="w-3.5 h-3.5" />
+            </div>
+          </div>
         </div>
-        <div
-          class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-subtext-0 hover:text-text cursor-pointer rounded-t select-none transition-colors shrink-0"
-          onClick={handleAddTab}
-        >
-          <Plus class="w-3.5 h-3.5" />
-          <span>Add tab</span>
-        </div>
-      </div>
 
-      {/* Search */}
-      <div class="bg-mantle px-2 py-1.5 shrink-0 flex items-center gap-2 border-t border-surface-0 border-l border-b rounded-t-md pr-2">
-        <input
-          type="text"
-          class="w-full bg-base text-sm truncate"
-          placeholder="Start typing here to search..."
-          value={searchQuery() ?? ""}
-          onInput={(e) => setSearchQuery(e.currentTarget.value || null)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              const first = filteredSounds()[0].path;
-              if (first) playSoundTabMode(first);
-            }
-          }}
-        />
+        {/* Search */}
+        <div class="bg-mantle px-2 py-1.5 shrink-0 flex items-center gap-2 border-t border-surface-0 border-l border-b rounded-t-md pr-2">
+          <input
+            type="text"
+            class="w-full bg-base text-sm truncate"
+            placeholder="Start typing here to search..."
+            value={searchQuery() ?? ""}
+            onInput={(e) => setSearchQuery(e.currentTarget.value || null)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const first = filteredSounds()[0].path;
+                if (first) playSoundTabMode(first);
+              }
+            }}
+          />
 
-        {/* Playlist mode */}
-        <div
-          class={`shrink-0 flex items-center justify-center cursor-pointer transition-colors px-2 ${
-            playlistMode() === "disabled"
-              ? "text-subtext-0"
-              : "text-primary-400"
-          }`}
-          onClick={nextPlaylistMode}
-          title={`Playlist mode: ${playlistMode()}`}
-        >
-          <Show
-            when={playlistMode() === "shuffle"}
-            fallback={<Repeat class="w-4 h-4" />}
+          {/* Playlist mode */}
+          <div
+            class={`shrink-0 flex items-center justify-center cursor-pointer transition-colors px-2 ${
+              playlistMode() === "disabled"
+                ? "text-subtext-0"
+                : "text-primary-400"
+            }`}
+            onClick={nextPlaylistMode}
+            title={`Playlist mode: ${playlistMode()}`}
           >
-            <Shuffle class="w-4 h-4" />
-          </Show>
+            <Show
+              when={playlistMode() === "shuffle"}
+              fallback={<Repeat class="w-4 h-4" />}
+            >
+              <Shuffle class="w-4 h-4" />
+            </Show>
+          </div>
         </div>
-      </div>
+      </Show>
 
       {/* Sounds list */}
       <div class="flex-1 overflow-y-auto bg-base">
         <Show
           when={currentTab()}
           fallback={
-            <p class="text-sm text-subtext-0 p-4">
-              {tabs()?.length === 0
-                ? "No tabs are created yet. Use a button above to add one."
-                : "Loading..."}
-            </p>
+            <div class="flex min-h-50 flex-col items-center justify-center p-8 text-center text-sm text-subtext-0">
+              {tabs()?.length === 0 ? (
+                <div class="flex flex-col items-center gap-3">
+                  <h1>No tabs are created yet. Click to add one!</h1>
+                  <button
+                    class="rounded-md bg-primary px-4 py-2 text-white transition hover:bg-primary/90"
+                    onClick={handleAddTab}
+                  >
+                    Add Tab
+                  </button>
+                </div>
+              ) : (
+                "Loading..."
+              )}
+            </div>
           }
         >
           <For
