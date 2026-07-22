@@ -6,6 +6,7 @@ import {
   refetchTabs,
   addTab,
   removeTab,
+  moveTab,
   refetchHotkeys,
   registerHotkey,
   unregisterHotkey,
@@ -28,6 +29,7 @@ import UpdateNotification from "../../ui/updateNotification";
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = createSignal<string | null>(null);
   const [capturingFor, setCapturingFor] = createSignal<string | null>(null);
+  const [draggedTabId, setDraggedTabId] = createSignal<string | null>(null);
 
   createEffect(async () => {
     const loadedTabs = tabs();
@@ -128,6 +130,7 @@ export default function Dashboard() {
               <For each={tabs()}>
                 {([tab, sounds]: [SoundTab, SoundFile[]]) => (
                   <div
+                    draggable={true}
                     class={`group flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer rounded-t select-none transition-colors shrink-0 w-36 ${
                       isCurrentTab(tab)
                         ? "bg-enabled text-primary-400"
@@ -138,6 +141,18 @@ export default function Dashboard() {
                       const recentTab = tabs()?.find(([t]) => t.id === tab.id);
                       setCurrentTab(recentTab ?? [tab, sounds]);
                       setSearchQuery(null);
+                    }}
+                    onMouseDown={() => setDraggedTabId(tab.id)}
+                    onMouseEnter={async () => {
+                      const dragged = draggedTabId();
+                      if (!dragged || dragged === tab.id) return;
+
+                      await moveTab(
+                        dragged,
+                        tabs()!.findIndex(([t]) => t.id === tab.id),
+                      );
+                      await refetchTabs();
+                      setDraggedTabId(null);
                     }}
                   >
                     {isCurrentTab(tab)

@@ -72,4 +72,12 @@ impl config::Config {
     pub fn get_tabs(&self) -> Vec<Tab> {
         self.tabs.clone()
     }
+
+    pub fn move_tab(&mut self, id: String, idx: usize) {
+        if let Some(index) = self.tabs.iter().position(|t| t.id == id) {
+            let tab = self.tabs.remove(index);
+            self.tabs.insert(idx, tab);
+            self.save();
+        }
+    }
 }

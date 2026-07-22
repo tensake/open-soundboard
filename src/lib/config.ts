@@ -31,6 +31,11 @@ export async function removeTab(id: string) {
   refetchTabs();
 }
 
+export async function moveTab(id: string, idx: number) {
+  await invoke("move_tab", { id, idx });
+  refetchTabs();
+}
+
 export function applyCustomCss(css: string) {
   const existing = document.getElementById("custom-css");
   if (existing) existing.remove();

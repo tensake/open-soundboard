@@ -276,6 +276,12 @@ pub fn remove_tab(state: tauri::State<AppState>, id: String) {
 }
 
 #[tauri::command]
+pub fn move_tab(state: tauri::State<AppState>, id: String, idx: usize) {
+    log::info!("Moving tab: {id} to index: {idx}");
+    state.cfg.lock().move_tab(id, idx);
+}
+
+#[tauri::command]
 pub fn get_hotkeys(state: State<AppState>) -> Vec<config::hotkey::HotKeyEntry> {
     state.cfg.lock().get_hotkeys()
 }
