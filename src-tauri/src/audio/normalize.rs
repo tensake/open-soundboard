@@ -1,71 +1,30 @@
 //! Get normalization gain from an audio file.
 
 use ebur128::{EbuR128, Mode};
-use symphonia::core::formats::TrackType;
-use symphonia::core::{
-    codecs::audio::AudioDecoderOptions,
-    formats::{FormatOptions, probe::Hint},
-    io::MediaSourceStream,
-    meta::MetadataOptions,
-};
+
+use crate::audio::helpers;
 
 /// Calculates the normalization gain from the audio file.
 ///
 /// Fully decodes the file to measure loudness and uses the EBU R128 algorithm to calculate gain.
 /// This is expensive, so always call from a spawned thread.
-pub fn calculate_gain(path: &str) -> Result<f32, Box<dyn std::error::Error + Send + Sync>> {
-    let file = std::fs::File::open(path)?;
-    let mss = MediaSourceStream::new(Box::new(file), Default::default());
+pub fn calculate_gain(path: &str) -> Result<f32, Box<dyn std::error::Error>> {
+    let mut audio_params = helpers::probe_audio_file(path)?;
 
-    let mut hint = Hint::new();
-    if let Some(ext) = std::path::Path::new(path)
-        .extension()
-        .and_then(|e| e.to_str())
-    {
-        hint.with_extension(ext);
-    }
-
-    let mut format = symphonia::default::get_probe().probe(
-        &hint,
-        mss,
-        FormatOptions::default(),
-        MetadataOptions::default(),
-    )?;
-    let track = format
-        .default_track(TrackType::Audio)
-        .ok_or("No default track found")?;
-    let codec_params = track
-        .codec_params
-        .as_ref()
-        .and_then(|p| p.audio())
-        .ok_or("No audio codec parameters")?;
-    let rate = codec_params
-        .sample_rate
-        .ok_or("Sample rate not found in audio file")?;
-    let channels = codec_params
-        .channels
-        .clone()
-        .ok_or("Channel count not found in audio file")?
-        .count();
-    let track_id = track.id;
-    let mut decoder = symphonia::default::get_codecs()
-        .make_audio_decoder(codec_params, &AudioDecoderOptions::default())
-        .map_err(|e| format!("Failed to create decoder: {path}: {e}"))?;
-
-    let mut analyzer = EbuR128::new(channels as u32, rate, Mode::I)?;
+    let mut analyzer = EbuR128::new(audio_params.channels as u32, audio_params.rate, Mode::I)?;
 
     log::debug!("Starting decoding to normalize: {path}");
     loop {
-        let packet = match format.next_packet() {
+        let packet = match audio_params.format.next_packet() {
             Ok(Some(p)) => p,
             Ok(None) => break,
             Err(e) => return Err(format!("Packet read error: {e}").into()),
         };
-        if packet.track_id != track_id {
+        if packet.track_id != audio_params.track_id {
             continue;
         }
 
-        let Ok(decoded) = decoder.decode(&packet) else {
+        let Ok(decoded) = audio_params.decoder.decode(&packet) else {
             continue;
         };
 

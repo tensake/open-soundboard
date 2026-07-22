@@ -8,6 +8,7 @@ use std::sync::mpsc;
 mod decode;
 pub mod device;
 pub mod forwarding;
+pub mod helpers;
 pub mod mic;
 pub mod normalize;
 mod output;

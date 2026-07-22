@@ -256,19 +256,23 @@ pub fn stop_mic(state: tauri::State<AppState>) {
 }
 
 #[tauri::command]
-pub fn get_tabs(state: tauri::State<AppState>) -> Vec<(config::tab::Tab, Vec<String>)> {
+pub fn get_tabs(
+    state: tauri::State<AppState>,
+) -> Vec<(config::tab::Tab, Vec<config::tab::SoundFile>)> {
     let tabs = state.cfg.lock().get_tabs();
-    tabs.iter()
-        .map(|t| {
-            (
-                t.clone(),
-                t.list_sounds()
-                    .into_iter()
-                    .map(|p| p.to_string_lossy().to_string())
-                    .collect::<Vec<_>>(),
-            )
-        })
-        .collect()
+    tabs.iter().map(|t| (t.clone(), t.list_sounds())).collect()
+}
+
+#[tauri::command]
+pub fn get_tab(
+    state: tauri::State<AppState>,
+    id: String,
+) -> Option<(config::tab::Tab, Vec<config::tab::SoundFile>)> {
+    state
+        .cfg
+        .lock()
+        .get_tab(id)
+        .map(|t| (t.clone(), t.list_sounds()))
 }
 
 #[tauri::command]
@@ -281,6 +285,12 @@ pub fn add_tab(state: tauri::State<AppState>, name: String, path: String) {
 pub fn remove_tab(state: tauri::State<AppState>, id: String) {
     log::info!("Removing tab: {id}");
     state.cfg.lock().remove_tab(id);
+}
+
+#[tauri::command]
+pub fn move_tab(state: tauri::State<AppState>, id: String, idx: usize) {
+    log::info!("Moving tab: {id} to index: {idx}");
+    state.cfg.lock().move_tab(id, idx);
 }
 
 #[tauri::command]

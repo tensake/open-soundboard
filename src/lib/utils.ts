@@ -16,3 +16,21 @@ export async function markAsReady() {
 export async function clearAllCache() {
   await invoke("clear_all_cache");
 }
+
+export function readableBytes(bytes: number): string {
+  if (bytes === 0) return "0 bytes";
+  const units = ["bytes", "KB", "MB", "GB", "TB"];
+  let unitIndex = 0;
+  while (bytes >= 1024 && unitIndex < units.length - 1) {
+    bytes /= 1024;
+    unitIndex++;
+  }
+  return `${bytes.toFixed(2)} ${units[unitIndex]}`;
+}
+
+export function readableDate(unix: number): string {
+  return new Date(unix * 1000).toLocaleString(undefined, {
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+}

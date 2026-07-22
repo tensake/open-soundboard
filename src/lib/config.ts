@@ -1,6 +1,6 @@
 import { createResource, createSignal } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
-import { SoundTab } from "./types";
+import { SoundFile, SoundTab } from "./types";
 
 export const [autoStartSignal, setAutoStartSignal] = createSignal(false);
 export const [onboardedSignal, setOnboarded] = createSignal(true);
@@ -11,15 +11,19 @@ getAutoStart().then(setAutoStartSignal);
 isOnboarded().then(setOnboarded);
 getNormalization().then(setNormalizationSignal);
 
-async function fetchTabs(): Promise<[SoundTab, string[]][]> {
-  return invoke<[SoundTab, string[]][]>("get_tabs");
-}
-
-export const [tabs, { refetch: refetchTabs }] = createResource(fetchTabs);
-export const [currentTab, setCurrentTab] = createSignal<[SoundTab, string[]] | null>(null);
+export const [tabs, { refetch: refetchTabs }] = createResource(getTabs);
+export const [currentTab, setCurrentTab] = createSignal<[SoundTab, SoundFile[]] | null>(null);
 export const [customCss, { refetch: refetchCustomCss }] = createResource(() =>
   invoke<string>("get_custom_css"),
 );
+
+async function getTabs(): Promise<[SoundTab, SoundFile[]][]> {
+  return invoke<[SoundTab, SoundFile[]][]>("get_tabs");
+}
+
+export async function getTab(id: string): Promise<[SoundTab, SoundFile[]] | null> {
+  return invoke<[SoundTab, SoundFile[]] | null>("get_tab", { id });
+}
 
 export async function addTab(name: string, path: string) {
   await invoke("add_tab", { name, path });
@@ -28,6 +32,11 @@ export async function addTab(name: string, path: string) {
 
 export async function removeTab(id: string) {
   await invoke("remove_tab", { id });
+  refetchTabs();
+}
+
+export async function moveTab(id: string, idx: number) {
+  await invoke("move_tab", { id, idx });
   refetchTabs();
 }
 

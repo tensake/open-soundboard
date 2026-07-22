@@ -249,8 +249,10 @@ pub fn run() {
             cmd::is_onboarded,
             // Config
             cmd::get_tabs,
+            cmd::get_tab,
             cmd::add_tab,
             cmd::remove_tab,
+            cmd::move_tab,
             cmd::get_custom_css,
             cmd::save_custom_css,
             cmd::set_autostart,
