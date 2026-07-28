@@ -44,6 +44,22 @@ fn show_window(app: &tauri::AppHandle, label: &str) {
     }
 }
 
+/// Check if the system uses tiling window manager.
+fn is_tiling_wm() -> bool {
+    let wms = ["sway", "i3", "hyprland"];
+    if let Ok(d) = std::env::var("XDG_CURRENT_DESKTOP") {
+        if wms.iter().any(|wm| d.to_lowercase().contains(wm)) {
+            return true;
+        }
+    }
+
+    // Fallback for hyprland
+    if std::env::var("HYPRLAND_INSTANCE_SIGNATURE").is_ok() {
+        return true;
+    }
+    false
+}
+
 fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
     // Setup tray menu
     let show = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
@@ -117,6 +133,12 @@ pub fn run() {
                 u32,
                 audio::forwarding::ForwardingHandle,
             >::new()));
+
+            // Configure window style
+            if is_tiling_wm() {
+                let window = app.get_webview_window("main").unwrap();
+                window.set_decorations(false)?;
+            }
 
             // Sound cleanup thread
             let playing_sounds_cleanup = playing_sounds.clone();
