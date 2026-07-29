@@ -11,7 +11,7 @@ pub mod windows;
 #[cfg(target_os = "linux")]
 pub mod linux;
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, Clone)]
 pub struct AudioApp {
     pub id: u32,
     pub name: String,
@@ -45,7 +45,7 @@ pub fn get_audio_apps() -> Result<Vec<AudioApp>, Box<dyn std::error::Error>> {
 
     #[cfg(target_os = "linux")]
     {
-        Err("App forwarding is not implemented for your OS yet.".into())
+        linux::list_applications()
     }
 }
 
@@ -59,20 +59,28 @@ pub fn forward_app(
     let config = cable_device
         .default_output_config()
         .map_err(|e| format!("Failed to get cable device config: {e}"))?;
-
+    let state_fwd = state.clone();
     let cable_rate = config.sample_rate();
     let cable_channels = config.channels() as usize;
 
-    let state_fwd = state.clone();
     #[cfg(target_os = "windows")]
-    std::thread::spawn(move || {
-        if let Err(e) = windows::forwarding_loop(id, cable_rate, cable_channels, tx, state_fwd) {
-            log::error!("Error while forwarding app audio: {e}");
-        }
-    });
+    {
+        std::thread::spawn(move || {
+            if let Err(e) = windows::forwarding_loop(id, cable_rate, cable_channels, tx, state_fwd)
+            {
+                log::error!("Error while forwarding app audio: {e}");
+            }
+        });
+    }
 
     #[cfg(target_os = "linux")]
-    return Err("App forwarding is not implemented for your OS yet.".into());
+    {
+        std::thread::spawn(move || {
+            if let Err(e) = linux::start_forwarding(id, cable_rate, cable_channels, tx, state_fwd) {
+                eprintln!("Error while forwarding app audio: {e}");
+            }
+        });
+    }
 
     crate::audio::output::spawn_stream(
         cable_device,
