@@ -3494,6 +3494,7 @@ dependencies = [
  "ebur128",
  "log",
  "parking_lot",
+ "pipewire",
  "pitch_shift",
  "redb",
  "ringbuf",
