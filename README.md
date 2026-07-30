@@ -48,7 +48,7 @@ PipeWire (recommended) or PulseAudio.
 
 | Feature                               | Windows | Linux          |
 | ------------------------------------- | ------- | -------------  |
-| App forwarding                        | ✅      | ❌ (WIP)       |
+| App forwarding                        | ✅      | ✅ (PipeWire)  |
 | Hotkeys                               | ✅      | ✅ (X11 only)  |
 | Sound Playback and all other features | ✅      | ✅             |
 
