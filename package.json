@@ -18,7 +18,7 @@
   },
   "license": "GPL-3.0",
   "dependencies": {
-    "@lucide/lab": "^0.1.2",
+    "@lucide/lab": "^0.2.0",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-autostart": "~2.5.1",
     "@tauri-apps/plugin-cli": "~2.4.1",
