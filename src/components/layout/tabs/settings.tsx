@@ -14,15 +14,19 @@ import {
   saveCustomCss,
   setAutoStart,
   autoStartSignal,
-  handleAllSoundPlaybackSpeedSlider,
   soundPlaybackSpeed,
   setMicPitch,
-  micPitchPct,
-  setMicPitchPct,
+  setSounds,
+  sounds,
+  setSoundPlaybackSpeed,
+  setPlaybackSpeed,
+  micPitchSignal,
+  setMicPitchSignal,
   normalizationSignal,
   setNormalization,
   clearAllCache,
 } from "../../../lib";
+import { produce } from "solid-js/store";
 import type { HotKeyEntry } from "../../../lib";
 import { For, createSignal, Switch, Match } from "solid-js";
 import HotkeyOverlay from "../hotkeyOverlay";
@@ -37,6 +41,26 @@ export default function Settings() {
   const [draftCss, setDraftCss] = createSignal("");
   const [capturingHotkey, setCapturingHotkey] =
     createSignal<HotKeyEntry | null>(null);
+
+  function handleAllSoundPlaybackSpeedSlider(e: Event) {
+    const value = parseFloat((e.currentTarget as HTMLInputElement).value);
+    setSoundPlaybackSpeed(value);
+
+    // Update registered sounds
+    setSounds(
+      produce((s) => {
+        s.forEach((entry) => {
+          entry.speed = value;
+        });
+      }),
+    );
+
+    // Update backend sounds
+    for (const sound of sounds) {
+      const latestId = sound.ids[sound.ids.length - 1];
+      setPlaybackSpeed(latestId, value);
+    }
+  }
 
   const handleCapture = async (binding: string) => {
     const current = capturingHotkey();
@@ -141,13 +165,13 @@ export default function Settings() {
                   min={-12}
                   max={12}
                   step={1}
-                  value={micPitchPct()}
+                  value={micPitchSignal()}
                   onInput={(e) => {
                     const v = Number(e.currentTarget.value);
-                    setMicPitchPct(v);
+                    setMicPitchSignal(v);
                     setMicPitch(v);
                   }}
-                  valueLabel={`${micPitchPct()} st`}
+                  valueLabel={`${micPitchSignal()} st`}
                 />
               </div>
             </Match>

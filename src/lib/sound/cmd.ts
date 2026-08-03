@@ -1,70 +1,17 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Progress, PlaylistMode } from "./types";
-import { createSignal, createEffect } from "solid-js";
-import { createStore, produce } from "solid-js/store";
-import { ControlAction, SoundEntry } from "./types";
-import { PLAYLIST_ORDER } from "./constants";
-import { showNotification } from "./notifications";
-
-export const [soundVolumeSignal, setSoundVolumeSignal] = createSignal(100);
-export const [micVolumeSignal, setMicVolumeSignal] = createSignal(100);
-export const [micPitchPct, setMicPitchPct] = createSignal(0);
-export const [soundPlaybackSpeed, setSoundPlaybackSpeed] = createSignal(1.0);
-export const [muted, setMuted] = createSignal(0);
-export const [micMuted, setMicMuted] = createSignal(0);
-export const [paused, setPaused] = createSignal(false);
-export const [sounds, setSounds] = createStore<SoundEntry[]>([]);
-export const [playlistMode, setPlaylistMode] =
-  createSignal<PlaylistMode>("disabled");
-export const [currentTabPaths, setCurrentTabPaths] = createSignal<string[]>([]);
-export const [finishedPlaylistSound, setFinishedPlaylistSound] = createSignal<{
-  path: string;
-  mode: PlaylistMode;
-} | null>(null);
-
-export async function initConfig() {
-  setSoundVolumeSignal(Math.round(await getVolume() * 100));
-  setMicVolumeSignal(Math.round(await getMicVolume() * 100));
-}
-
-export function nextPlaylistMode() {
-  const idx = PLAYLIST_ORDER.indexOf(playlistMode());
-  setPlaylistMode(PLAYLIST_ORDER[(idx + 1) % PLAYLIST_ORDER.length]);
-}
-export function nextSoundPlaylistMode(path: string) {
-  const i = sounds.findIndex((s) => s.path === path);
-  if (i === -1) return;
-  const idx = PLAYLIST_ORDER.indexOf(sounds[i].playlistMode);
-  setSounds(
-    i,
-    "playlistMode",
-    PLAYLIST_ORDER[(idx + 1) % PLAYLIST_ORDER.length],
-  );
-}
-
-createEffect(() => {
-  const finished = finishedPlaylistSound();
-  if (!finished) return;
-  setFinishedPlaylistSound(null);
-
-  if (finished.mode === "repeat") {
-    playSoundTagged(finished.path, "repeat");
-    return;
-  }
-
-  if (finished.mode === "shuffle") {
-    const tabSounds = currentTabPaths();
-    if (tabSounds.length === 0) return;
-
-    let next = finished.path;
-    if (tabSounds.length > 1) {
-      do {
-        next = tabSounds[Math.floor(Math.random() * tabSounds.length)];
-      } while (next === finished.path);
-    }
-    playSoundTagged(next, "shuffle");
-  }
-});
+import { produce } from "solid-js/store";
+import { SoundEntry, Progress, PlaylistMode } from "../types";
+import { showNotification } from "../notifications";
+import {
+  playlistMode,
+  sounds,
+  setSounds,
+  setFinishedPlaylistSound,
+  setMicVolumeSignal,
+  setSoundVolumeSignal,
+  soundVolumeSignal,
+  soundPlaybackSpeed,
+} from "./state";
 
 export function registerSound(
   id: number,
@@ -156,56 +103,6 @@ export const _updateProgressInterval = setInterval(async () => {
   );
 }, 100);
 
-export const controlActions: Record<ControlAction, () => void | Promise<void>> =
-  {
-    Mute: () => {
-      if (muted() > 0 && soundVolumeSignal() === 0) {
-        setSoundVolumeSignal(muted());
-        setGeneralVolume(muted() / 100);
-        setMuted(0);
-      } else {
-        setMuted(soundVolumeSignal());
-        setSoundVolumeSignal(0);
-        setGeneralVolume(0);
-      }
-    },
-    MicMute: () => {
-      if (micMuted() > 0 && micVolumeSignal() === 0) {
-        setMicVolumeSignal(micMuted());
-        setMicVolume(micMuted() / 100);
-        setMicMuted(0);
-      } else {
-        setMicMuted(micVolumeSignal());
-        setMicVolumeSignal(0);
-        setMicVolume(0);
-      }
-    },
-    StopAll: () => {
-      stopAllSounds();
-      setFinishedPlaylistSound(null);
-      setSounds([]);
-    },
-    PauseResumeAll: async () => {
-      const ids = await getActiveSounds();
-      const newPaused = !paused();
-
-      if (newPaused) {
-        ids.forEach(pauseSound);
-      } else {
-        ids.forEach(resumeSound);
-      }
-
-      setPaused(newPaused);
-      setSounds(
-        produce((s) => {
-          s.forEach((entry) => {
-            entry.paused = newPaused;
-          });
-        }),
-      );
-    },
-  };
-
 export async function playSoundCmd(
   path: string,
   volume: number,
@@ -275,24 +172,4 @@ export function handleMicVolumeSlider(e: Event) {
   const value = parseFloat((e.currentTarget as HTMLInputElement).value);
   setMicVolumeSignal(value);
   setMicVolume(value / 100);
-}
-
-export function handleAllSoundPlaybackSpeedSlider(e: Event) {
-  const value = parseFloat((e.currentTarget as HTMLInputElement).value);
-  setSoundPlaybackSpeed(value);
-
-  // Update registered sounds
-  setSounds(
-    produce((s) => {
-      s.forEach((entry) => {
-        entry.speed = value;
-      });
-    }),
-  );
-
-  // Update backend sounds
-  for (const sound of sounds) {
-    const latestId = sound.ids[sound.ids.length - 1];
-    setPlaybackSpeed(latestId, value);
-  }
 }
