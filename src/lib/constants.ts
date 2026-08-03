@@ -5,6 +5,7 @@ import { Tab, PlaylistMode } from "./types";
 
 export const CONTROL_ACTIONS = ["Mute", "MicMute", "StopAll", "PauseResumeAll"];
 export const PLAYLIST_ORDER: PlaylistMode[] = ["disabled", "repeat", "shuffle"];
+export const SORT_ORDER = ["Default", "Size", "Date", "Duration"];
 
 export const TABS = {
   [Tab.Dashboard]: { icon: DashboardIcon },

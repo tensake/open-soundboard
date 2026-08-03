@@ -1,5 +1,5 @@
 import { createEffect, createSignal, For, Show, onCleanup } from "solid-js";
-import { Repeat, Shuffle } from "lucide-solid";
+import { Repeat, Shuffle, Funnel } from "lucide-solid";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   tabs,
@@ -15,6 +15,7 @@ import {
   setCurrentTabPaths,
   currentTab,
   setCurrentTab,
+  SORT_ORDER,
 } from "../../../lib";
 import type { HotKeyEntry } from "../../../lib";
 import { alerts } from "../../../lib/alert";
@@ -23,9 +24,11 @@ import AlertItem from "../../ui/alert";
 import SoundItem from "../../ui/sounds/soundItem";
 import UpdateNotification from "../../ui/updateNotification";
 import TabGroup from "../../ui/tab/tabGroup";
+import { SortOrder } from "../../../lib";
 
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = createSignal<string | null>(null);
+  const [sortOrder, setSortOrder] = createSignal<SortOrder>("Default");
   const [capturingFor, setCapturingFor] = createSignal<string | null>(null);
 
   createEffect(async () => {
@@ -96,6 +99,20 @@ export default function Dashboard() {
       : sounds;
   };
 
+  const sortedSounds = () => {
+    const sounds = filteredSounds();
+    switch (sortOrder()) {
+      case "Size":
+        return [...sounds].sort((a, b) => b.size - a.size);
+      case "Date":
+        return [...sounds].sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime());
+      case "Duration":
+        return [...sounds].sort((a, b) => b.duration - a.duration);
+      default:
+        return sounds;
+    }
+  };
+
   return (
     <div class="flex flex-col h-full overflow-hidden bg-crust">
       <HotkeyOverlay
@@ -135,6 +152,23 @@ export default function Dashboard() {
               }
             }}
           />
+
+          {/* Sort order */}
+          <div class="relative flex items-center w-28 mx-2" title="Click to change sort order">
+            <Funnel class="absolute left-2 size-3.5 text-subtext-0 pointer-events-none z-10" />
+            <select
+              value={sortOrder()}
+              class="appearance-none pl-7! text-subtext-0"
+              onChange={(e) => setSortOrder(e.currentTarget.value as SortOrder)}
+            >
+              <For each={SORT_ORDER}>
+                {(order) => <option value={order}>{order}</option>}
+              </For>
+            </select>
+          </div>
+
+          {/* Separator */}
+          <div class="w-0.5 h-full bg-surface-1" />
 
           {/* Playlist mode */}
           <div
@@ -179,7 +213,7 @@ export default function Dashboard() {
           }
         >
           <For
-            each={filteredSounds()}
+            each={sortedSounds()}
             fallback={
               <p class="text-sm text-subtext-0 p-4">
                 No sound files are found in this folder.
