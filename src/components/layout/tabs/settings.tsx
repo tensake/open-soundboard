@@ -3,11 +3,7 @@ import {
   refetchHotkeys,
   updateHotkey,
   registerHotkey,
-  soundVolumeSignal,
-  micVolumeSignal,
   CONTROL_ACTIONS,
-  handleMicVolumeSlider,
-  handleVolumeSlider,
   SETTINGS_TABS,
   customCss,
   applyCustomCss,
@@ -37,7 +33,7 @@ import SidebarTab from "../../ui/settings/sidebarTab";
 import { Transition } from "solid-transition-group";
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = createSignal("sound");
+  const [activeTab, setActiveTab] = createSignal("audio");
   const [draftCss, setDraftCss] = createSignal("");
   const [capturingHotkey, setCapturingHotkey] =
     createSignal<HotKeyEntry | null>(null);
@@ -111,67 +107,44 @@ export default function Settings() {
       <div class="flex-1 overflow-y-auto p-6">
         <Transition name="fade" mode="outin">
           <Switch>
-            {/* Sound tab */}
-            <Match when={activeTab() === "sound"}>
-              <div class="flex flex-col gap-8">
-                <h1 class="text-2xl font-bold mb-4">Sound</h1>
+            {/* Audio tab */}
+            <Match when={activeTab() === "audio"}>
+              <div class="flex flex-col gap-4">
+                <h1 class="text-2xl font-bold mb-4">Audio</h1>
 
-                <SettingSlider
-                  label="General Volume"
-                  min={0}
-                  max={100}
-                  step={1}
-                  value={soundVolumeSignal()}
-                  onInput={handleVolumeSlider}
-                  valueLabel={`${soundVolumeSignal()}%`}
-                />
+                <div class="flex flex-col gap-4">
+                  <h2 class="text-lg font-medium">Effects</h2>
 
-                <SettingSlider
-                  label="Sound Speed"
-                  min={0.5}
-                  max={2.5}
-                  step={0.05}
-                  value={soundPlaybackSpeed()}
-                  onInput={handleAllSoundPlaybackSpeedSlider}
-                  valueLabel={`${soundPlaybackSpeed()}x`}
-                />
+                  <SettingSlider
+                    label="Sound Speed"
+                    min={0.5}
+                    max={2.5}
+                    step={0.05}
+                    value={soundPlaybackSpeed()}
+                    onInput={handleAllSoundPlaybackSpeedSlider}
+                    valueLabel={`${soundPlaybackSpeed()}x`}
+                  />
+
+                  <SettingSlider
+                    label="Microphone Pitch"
+                    min={-12}
+                    max={12}
+                    step={1}
+                    value={micPitchSignal()}
+                    onInput={(e) => {
+                      const v = Number(e.currentTarget.value);
+                      setMicPitchSignal(v);
+                      setMicPitch(v);
+                    }}
+                    valueLabel={`${micPitchSignal()} st`}
+                  />
+                </div>
 
                 <SettingToggle
                   title="Normalize sound volume"
                   description="Normalize sound volume, so that loud sounds are quieter and quiet sounds are louder."
                   checked={normalizationSignal()}
                   onInput={(e) => setNormalization(e.currentTarget.checked)}
-                />
-              </div>
-            </Match>
-
-            {/* Microphone */}
-            <Match when={activeTab() === "microphone"}>
-              <div class="flex flex-col gap-8">
-                <h1 class="text-2xl font-bold mb-4">Microphone</h1>
-
-                <SettingSlider
-                  label="Microphone Volume"
-                  min={0}
-                  max={300}
-                  step={1}
-                  value={micVolumeSignal()}
-                  onInput={handleMicVolumeSlider}
-                  valueLabel={`${micVolumeSignal()}%`}
-                />
-
-                <SettingSlider
-                  label="Mic Pitch"
-                  min={-12}
-                  max={12}
-                  step={1}
-                  value={micPitchSignal()}
-                  onInput={(e) => {
-                    const v = Number(e.currentTarget.value);
-                    setMicPitchSignal(v);
-                    setMicPitch(v);
-                  }}
-                  valueLabel={`${micPitchSignal()} st`}
                 />
               </div>
             </Match>

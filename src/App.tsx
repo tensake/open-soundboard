@@ -30,8 +30,8 @@ import {
   initConfig,
 } from "./lib";
 import Dashboard from "./components/layout/tabs/dashboard";
+import Audio from "./components/layout/tabs/audio";
 import Settings from "./components/layout/tabs/settings";
-import Forwarding from "./components/layout/tabs/forwarding";
 import SoundsList from "./components/ui/sounds/soundsList";
 import OnboardingScreen from "./components/layout/onboardingScreen";
 import { Transition } from "solid-transition-group";
@@ -119,8 +119,8 @@ export default function App() {
                 <Match when={activeTab() === Tab.Dashboard}>
                   <Dashboard />
                 </Match>
-                <Match when={activeTab() === Tab.Forwarding}>
-                  <Forwarding />
+                <Match when={activeTab() === Tab.Audio}>
+                  <Audio />
                 </Match>
                 <Match when={activeTab() === Tab.Settings}>
                   <Settings />
