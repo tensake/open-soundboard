@@ -11,7 +11,7 @@ import {
   handleMicVolumeSlider,
   handleVolumeSlider,
 } from "../../../lib";
-import { Square, SquareChevronRight, AudioLines, Mic } from "lucide-solid";
+import { Square, SquareChevronRight, Volume2, Mic } from "lucide-solid";
 import { TransitionGroup } from "solid-transition-group";
 import SettingSlider from "../../ui/settings/settingSlider";
 
@@ -102,7 +102,7 @@ export default function Audio() {
     <div class="flex h-full flex-col gap-4 p-4 overflow-y-auto">
       <div class="grid grid-cols-2 gap-4">
         <div class="rounded-xl bg-mantle p-4 flex items-center gap-4">
-          <AudioLines class="w-6 h-6 text-primary-400 shrink-0" />
+          <Volume2 class="w-6 h-6 text-primary-400 shrink-0" />
           <div class="flex flex-col gap-2 flex-1 min-w-0">
             <SettingSlider
               label="Sound volume"
