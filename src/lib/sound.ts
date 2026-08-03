@@ -6,12 +6,8 @@ import { ControlAction, SoundEntry } from "./types";
 import { PLAYLIST_ORDER } from "./constants";
 import { showNotification } from "./notifications";
 
-export const [volumePct, setVolumePct] = createSignal(
-  Number(localStorage.getItem("volumePct") ?? 100),
-);
-export const [micVolumePct, setMicVolumePct] = createSignal(
-  Number(localStorage.getItem("micVolumePct") ?? 100),
-);
+export const [soundVolumeSignal, setSoundVolumeSignal] = createSignal(100);
+export const [micVolumeSignal, setMicVolumeSignal] = createSignal(100);
 export const [micPitchPct, setMicPitchPct] = createSignal(0);
 export const [soundPlaybackSpeed, setSoundPlaybackSpeed] = createSignal(1.0);
 export const [muted, setMuted] = createSignal(0);
@@ -25,6 +21,11 @@ export const [finishedPlaylistSound, setFinishedPlaylistSound] = createSignal<{
   path: string;
   mode: PlaylistMode;
 } | null>(null);
+
+export async function initConfig() {
+  setSoundVolumeSignal(Math.round(await getVolume() * 100));
+  setMicVolumeSignal(Math.round(await getMicVolume() * 100));
+}
 
 export function nextPlaylistMode() {
   const idx = PLAYLIST_ORDER.indexOf(playlistMode());
@@ -63,11 +64,6 @@ createEffect(() => {
     }
     playSoundTagged(next, "shuffle");
   }
-});
-
-createEffect(() => {
-  localStorage.setItem("volumePct", String(volumePct()));
-  localStorage.setItem("micVolumePct", String(micVolumePct()));
 });
 
 export function registerSound(
@@ -163,24 +159,24 @@ export const _updateProgressInterval = setInterval(async () => {
 export const controlActions: Record<ControlAction, () => void | Promise<void>> =
   {
     Mute: () => {
-      if (muted() > 0 && volumePct() === 0) {
-        setVolumePct(muted());
+      if (muted() > 0 && soundVolumeSignal() === 0) {
+        setSoundVolumeSignal(muted());
         setGeneralVolume(muted() / 100);
         setMuted(0);
       } else {
-        setMuted(volumePct());
-        setVolumePct(0);
+        setMuted(soundVolumeSignal());
+        setSoundVolumeSignal(0);
         setGeneralVolume(0);
       }
     },
     MicMute: () => {
-      if (micMuted() > 0 && micVolumePct() === 0) {
-        setMicVolumePct(micMuted());
+      if (micMuted() > 0 && micVolumeSignal() === 0) {
+        setMicVolumeSignal(micMuted());
         setMicVolume(micMuted() / 100);
         setMicMuted(0);
       } else {
-        setMicMuted(micVolumePct());
-        setMicVolumePct(0);
+        setMicMuted(micVolumeSignal());
+        setMicVolumeSignal(0);
         setMicVolume(0);
       }
     },
@@ -224,7 +220,7 @@ export async function playSoundCmd(
 }
 
 export async function playSoundTagged(path: string, mode: PlaylistMode) {
-  const id = await playSoundCmd(path, volumePct() / 100, soundPlaybackSpeed());
+  const id = await playSoundCmd(path, soundVolumeSignal() / 100, soundPlaybackSpeed());
   if (id === undefined) return;
 
   registerSound(id, path, mode, soundPlaybackSpeed());
@@ -252,6 +248,7 @@ export const seekSound = (id: number, secs: number) =>
 export const setGeneralVolume = (volume: number) =>
   invoke("set_general_volume", { volume });
 
+export const getVolume = () => invoke<number>("get_volume");
 export const getProgress = (id: number) =>
   invoke<Progress | null>("get_progress", { id });
 
@@ -270,13 +267,13 @@ export const setPlaybackSpeed = (id: number, speed: number) =>
 
 export function handleVolumeSlider(e: Event) {
   const value = parseFloat((e.currentTarget as HTMLInputElement).value);
-  setVolumePct(value);
+  setSoundVolumeSignal(value);
   setGeneralVolume(value / 100);
 }
 
 export function handleMicVolumeSlider(e: Event) {
   const value = parseFloat((e.currentTarget as HTMLInputElement).value);
-  setMicVolumePct(value);
+  setMicVolumeSignal(value);
   setMicVolume(value / 100);
 }
 

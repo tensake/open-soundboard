@@ -27,6 +27,7 @@ import {
   applyCustomCss,
   onboardedSignal,
   onboard,
+  initConfig,
 } from "./lib";
 import Dashboard from "./components/layout/tabs/dashboard";
 import Settings from "./components/layout/tabs/settings";
@@ -73,6 +74,9 @@ export default function App() {
 
     // Mark frontend as ready
     await markAsReady();
+
+    // Initialize from config
+    await initConfig();
 
     // Check for update
     await checkForUpdate();

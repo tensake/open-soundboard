@@ -3,8 +3,8 @@ import {
   refetchHotkeys,
   updateHotkey,
   registerHotkey,
-  volumePct,
-  micVolumePct,
+  soundVolumeSignal,
+  micVolumeSignal,
   CONTROL_ACTIONS,
   handleMicVolumeSlider,
   handleVolumeSlider,
@@ -97,9 +97,9 @@ export default function Settings() {
                   min={0}
                   max={100}
                   step={1}
-                  value={volumePct()}
+                  value={soundVolumeSignal()}
                   onInput={handleVolumeSlider}
-                  valueLabel={`${volumePct()}%`}
+                  valueLabel={`${soundVolumeSignal()}%`}
                 />
 
                 <SettingSlider
@@ -114,7 +114,7 @@ export default function Settings() {
 
                 <SettingToggle
                   title="Normalize sound volume"
-                  description="Make loud sounds quiter and quiter louder so that they sound around the same."
+                  description="Normalize sound volume, so that loud sounds are quieter and quiet sounds are louder."
                   checked={normalizationSignal()}
                   onInput={(e) => setNormalization(e.currentTarget.checked)}
                 />
@@ -131,9 +131,9 @@ export default function Settings() {
                   min={0}
                   max={300}
                   step={1}
-                  value={micVolumePct()}
+                  value={micVolumeSignal()}
                   onInput={handleMicVolumeSlider}
-                  valueLabel={`${micVolumePct()}%`}
+                  valueLabel={`${micVolumeSignal()}%`}
                 />
 
                 <SettingSlider

@@ -93,6 +93,21 @@ fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
+fn config_watcher(app_handle: tauri::AppHandle) {
+    let mut prev_cfg: Option<config::Config> = None;
+    loop {
+        std::thread::sleep(std::time::Duration::from_secs(1));
+        if let Some(state) = app_handle.try_state::<AppState>() {
+            let cfg = state.cfg.lock().clone();
+            if prev_cfg.as_ref() != Some(&cfg) {
+                log::debug!("Config state has changed, saving...");
+                cfg.save();
+                prev_cfg = Some(cfg);
+            }
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -170,6 +185,12 @@ pub fn run() {
             let (hotkey_tx, hotkey_rx) = mpsc::channel::<config::hotkey::HotKeyCmd>();
             let app_handle = app.handle().clone();
             std::thread::spawn(move || config::hotkey::listen_hotkeys(app_handle, hotkey_rx));
+
+            // Spawn a thread for saving config on changes
+            let app_handle = app.handle().clone();
+            std::thread::spawn(move || {
+                config_watcher(app_handle);
+            });
 
             // Create app state
             let app_state = AppState {
@@ -281,6 +302,8 @@ pub fn run() {
             cmd::get_autostart,
             cmd::get_normalize,
             cmd::set_normalize,
+            cmd::get_volume,
+            cmd::get_mic_volume,
             // Cache
             cmd::clear_all_cache,
         ])

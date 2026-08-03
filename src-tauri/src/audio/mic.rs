@@ -223,12 +223,13 @@ fn microphone_loop(
 pub fn start_forwarding(
     input_device: Arc<cpal::Device>,
     cable_device: Arc<cpal::Device>,
+    volume: f32,
 ) -> Result<MicrophoneHandle, Box<dyn std::error::Error>> {
     // Initialize
     let (tx, rx) = mpsc::sync_channel::<Vec<f32>>(8);
     let state = Arc::new(AtomicU8::new(PlaybackState::Playing as u8));
     let (ready_tx, ready_rx) = mpsc::sync_channel::<Result<(), String>>(1);
-    let volume = Arc::new(AtomicU32::new(1.0f32.to_bits()));
+    let volume = Arc::new(AtomicU32::new(volume.to_bits()));
     let pitch = Arc::new(AtomicU32::new(0.0f32.to_bits()));
     let config = cable_device
         .default_output_config()

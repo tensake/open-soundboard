@@ -108,8 +108,9 @@ fn start_mic_forwarding(state: &AppState) {
 
     let input = state.input_device.lock();
     let cable = state.cable_device.lock();
+    let volume = state.cfg.lock().mic_volume;
     if let (Some(input_dev), Some(cable_dev)) = (input.as_ref(), cable.as_ref()) {
-        match audio::mic::start_forwarding(input_dev.clone(), cable_dev.clone()) {
+        match audio::mic::start_forwarding(input_dev.clone(), cable_dev.clone(), volume) {
             Ok(handle) => {
                 log::info!("Mic forwarding restarted with new device");
                 *mic = Some(handle);

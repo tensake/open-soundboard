@@ -53,7 +53,7 @@ pub fn play_sound(
         .as_ref()
         .ok_or("No output device found")?
         .clone();
-    let normalize = state.cfg.lock().normalize();
+    let normalize = state.cfg.lock().normalize;
     let file_key = state.cache.get_file_key(&path).ok();
     log::info!("Playing sound {path} and using key {file_key:?}");
 
@@ -142,6 +142,7 @@ pub fn set_general_volume(volume: f32, state: State<AppState>) {
     for (_, h) in state.playing_sounds.lock().iter() {
         h.set_volume(volume);
     }
+    state.cfg.lock().volume = volume;
 }
 
 #[tauri::command]
@@ -187,7 +188,7 @@ pub fn get_audio_apps() -> Result<Vec<audio::forwarding::AudioApp>, String> {
 
 #[tauri::command]
 pub fn forward_app(pid: u32, state: tauri::State<AppState>) -> Result<u32, String> {
-    log::info!("Starting forwarder for app: {pid}");
+    log::debug!("Starting forwarder for app: {pid}");
     let cable = state
         .cable_device
         .lock()
@@ -205,7 +206,7 @@ pub fn forward_app(pid: u32, state: tauri::State<AppState>) -> Result<u32, Strin
 
 #[tauri::command]
 pub fn stop_forward(id: u32, state: tauri::State<AppState>) -> Result<(), String> {
-    log::info!("Stopping forwarder with id: {id}");
+    log::debug!("Stopping forwarder with id: {id}");
     if let Some(handle) = state.forwarding_handles.lock().remove(&id) {
         handle.stop();
     }
@@ -225,15 +226,11 @@ pub fn set_forward_volume(
 }
 
 #[tauri::command]
-pub fn get_mic_volume(state: tauri::State<AppState>) -> f32 {
-    state.mic_handle.lock().as_ref().map_or(0.0, |h| h.volume())
-}
-
-#[tauri::command]
 pub fn set_mic_volume(volume: f32, state: tauri::State<AppState>) {
     if let Some(h) = state.mic_handle.lock().as_ref() {
         h.set_volume(volume)
     }
+    state.cfg.lock().mic_volume = volume;
 }
 
 #[tauri::command]
@@ -277,19 +274,19 @@ pub fn get_tab(
 
 #[tauri::command]
 pub fn add_tab(state: tauri::State<AppState>, name: String, path: String) {
-    log::info!("Adding tab: {path}");
+    log::debug!("Adding tab: {path}");
     state.cfg.lock().add_tab(name, path);
 }
 
 #[tauri::command]
 pub fn remove_tab(state: tauri::State<AppState>, id: String) {
-    log::info!("Removing tab: {id}");
+    log::debug!("Removing tab: {id}");
     state.cfg.lock().remove_tab(id);
 }
 
 #[tauri::command]
 pub fn move_tab(state: tauri::State<AppState>, id: String, idx: usize) {
-    log::info!("Moving tab: {id} to index: {idx}");
+    log::debug!("Moving tab: {id} to index: {idx}");
     state.cfg.lock().move_tab(id, idx);
 }
 
@@ -305,7 +302,7 @@ pub fn get_custom_css(state: State<AppState>) -> Result<String, String> {
 
 #[tauri::command]
 pub fn save_custom_css(state: State<AppState>, css: String) -> Result<(), String> {
-    log::info!("Saving custom CSS...");
+    log::debug!("Saving custom CSS...");
     state.cfg.lock().save_custom_css(&css)
 }
 
@@ -314,7 +311,7 @@ pub async fn register_hotkey(
     hk: config::hotkey::HotKeyEntry,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
-    log::info!("Registering hotkey: {hk:?}");
+    log::debug!("Registering hotkey: {hk:?}");
     // Send register command
     let (tx, rx) = mpsc::channel();
     let tx_pipe = state.hotkey_tx.clone();
@@ -348,7 +345,7 @@ pub async fn update_hotkey(
 
 #[tauri::command]
 pub async fn unregister_hotkey(id: String, state: State<'_, AppState>) -> Result<(), String> {
-    log::info!("Unregistering hotkey: {id}");
+    log::debug!("Unregistering hotkey: {id}");
     // Send unregister command
     let parsed = Uuid::parse_str(&id).map_err(|e| e.to_string())?;
     let (tx, rx) = mpsc::channel();
@@ -370,27 +367,35 @@ pub fn mark_as_ready() -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn get_volume(state: State<AppState>) -> f32 {
+    state.cfg.lock().volume
+}
+
+#[tauri::command]
+pub fn get_mic_volume(state: State<AppState>) -> f32 {
+    state.mic_handle.lock().as_ref().map_or(0.0, |h| h.volume())
+}
+
+#[tauri::command]
 pub fn onboard(state: State<AppState>) -> Result<(), String> {
-    let mut cfg = state.cfg.lock();
-    cfg.onboard();
+    state.cfg.lock().onboarded = true;
     Ok(())
 }
 
 #[tauri::command]
 pub fn is_onboarded(state: State<AppState>) -> bool {
-    state.cfg.lock().onboarded()
+    state.cfg.lock().onboarded
 }
 
 #[tauri::command]
 pub fn get_normalize(state: State<AppState>) -> bool {
-    state.cfg.lock().normalize()
+    state.cfg.lock().normalize
 }
 
 #[tauri::command]
 pub fn set_normalize(state: State<AppState>, normalize: bool) -> Result<(), String> {
-    log::info!("Setting normalization to {normalize}");
-    let mut cfg = state.cfg.lock();
-    cfg.set_normalize(normalize);
+    log::debug!("Setting normalization to {normalize}");
+    state.cfg.lock().normalize = normalize;
 
     for (_, h) in state.playing_sounds.lock().iter() {
         h.set_normalize(normalize);
