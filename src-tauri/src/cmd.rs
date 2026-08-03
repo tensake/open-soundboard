@@ -257,7 +257,10 @@ pub fn get_tabs(
     state: tauri::State<AppState>,
 ) -> Vec<(config::tab::Tab, Vec<config::tab::SoundFile>)> {
     let tabs = state.cfg.lock().get_tabs();
-    tabs.iter().map(|t| (t.clone(), t.list_sounds())).collect()
+    let cache = &state.cache;
+    tabs.iter()
+        .map(|t| (t.clone(), t.list_sounds(cache)))
+        .collect()
 }
 
 #[tauri::command]
@@ -265,11 +268,12 @@ pub fn get_tab(
     state: tauri::State<AppState>,
     id: String,
 ) -> Option<(config::tab::Tab, Vec<config::tab::SoundFile>)> {
+    let cache = &state.cache;
     state
         .cfg
         .lock()
         .get_tab(id)
-        .map(|t| (t.clone(), t.list_sounds()))
+        .map(|t| (t.clone(), t.list_sounds(cache)))
 }
 
 #[tauri::command]

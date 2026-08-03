@@ -8,6 +8,7 @@ export type AlertKind = "Warn" | "Error";
 export type HotKeyKind = "Sound" | "Control";
 export type ControlAction = "Mute" | "MicMute" | "StopAll" | "PauseResumeAll";
 export type PlaylistMode = "disabled" | "repeat" | "shuffle";
+export type SortOrder = "Default" | "Size" | "Date" | "Duration";
 
 export interface Alert {
   kind: AlertKind;
@@ -37,6 +38,7 @@ export interface SoundFile {
   path: string;
   size: number;
   datetime: number;
+  duration: number;
 }
 
 export interface SoundEntry {

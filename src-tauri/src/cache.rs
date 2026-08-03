@@ -8,10 +8,12 @@ use std::time::UNIX_EPOCH;
 
 const CACHE_FILE_NAME: &str = "cache";
 const NORMALIZATION_TABLE: TableDefinition<&str, f32> = TableDefinition::new("normalization");
+const DURATION_TABLE: TableDefinition<&str, u64> = TableDefinition::new("duration");
 
 pub struct CacheDb {
     db: Database,
-    normalization_memory: Mutex<HashMap<String, f32>>,
+    normalization: Mutex<HashMap<String, f32>>,
+    duration: Mutex<HashMap<String, u64>>,
 }
 
 impl CacheDb {
@@ -19,22 +21,25 @@ impl CacheDb {
         let db = Database::create(path.join(CACHE_FILE_NAME))?;
         Ok(Self {
             db,
-            normalization_memory: Mutex::new(HashMap::new()),
+            normalization: Mutex::new(HashMap::new()),
+            duration: Mutex::new(HashMap::new()),
         })
     }
 
     pub fn clear_all_cache(&self) -> Result<(), Error> {
         let txn = self.db.begin_write()?;
         txn.delete_table(NORMALIZATION_TABLE)?;
+        txn.delete_table(DURATION_TABLE)?;
         txn.commit()?;
-        self.normalization_memory.lock().clear();
+        self.normalization.lock().clear();
+        self.duration.lock().clear();
         Ok(())
     }
 
     /// Get optional cached normalization gain for a file by its hash.
     pub fn get_normalization_cache(&self, hash: &str) -> Result<Option<f32>, Error> {
         // Check memory cache first
-        if let Some(&gain) = self.normalization_memory.lock().get(hash) {
+        if let Some(&gain) = self.normalization.lock().get(hash) {
             return Ok(Some(gain));
         }
 
@@ -46,7 +51,7 @@ impl CacheDb {
 
                 // Add to memory for faster lookup time
                 if let Some(g) = gain {
-                    self.normalization_memory.lock().insert(hash.to_string(), g);
+                    self.normalization.lock().insert(hash.to_string(), g);
                 }
                 Ok(gain)
             }
@@ -57,11 +62,40 @@ impl CacheDb {
 
     /// Cache the normalization gain for a file by its hash.
     pub fn set_normalization_cache(&self, hash: &str, gain: f32) -> Result<(), Error> {
-        self.normalization_memory
-            .lock()
-            .insert(hash.to_string(), gain);
+        self.normalization.lock().insert(hash.to_string(), gain);
         let txn = self.db.begin_write()?;
         txn.open_table(NORMALIZATION_TABLE)?.insert(hash, gain)?;
+        txn.commit()?;
+        Ok(())
+    }
+
+    pub fn get_duration_cache(&self, hash: &str) -> Result<Option<u64>, Error> {
+        // Check memory cache first
+        if let Some(&duration) = self.duration.lock().get(hash) {
+            return Ok(Some(duration));
+        }
+
+        // Check database cache
+        let txn = self.db.begin_read()?;
+        match txn.open_table(DURATION_TABLE) {
+            Ok(table) => {
+                let duration = table.get(hash)?.map(|v| v.value());
+
+                // Add to memory for faster lookup time
+                if let Some(d) = duration {
+                    self.duration.lock().insert(hash.to_string(), d);
+                }
+                Ok(duration)
+            }
+            Err(redb::TableError::TableDoesNotExist(_)) => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    pub fn set_duration_cache(&self, hash: &str, duration: u64) -> Result<(), Error> {
+        self.duration.lock().insert(hash.to_string(), duration);
+        let txn = self.db.begin_write()?;
+        txn.open_table(DURATION_TABLE)?.insert(hash, duration)?;
         txn.commit()?;
         Ok(())
     }

@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
 import { Play, Keyboard, KeyboardOff } from "lucide-solid";
-import { HotKeyEntry, SoundFile, readableBytes, readableDate } from "../../../lib";
+import { HotKeyEntry, SoundFile, readableBytes, readableDate, readableMilisecs } from "../../../lib";
 
 export default function SoundItem(props: {
   sound: SoundFile;
@@ -34,6 +34,7 @@ export default function SoundItem(props: {
       <div class="flex items-center gap-3 text-xs text-subtext-0 truncate shrink-0">
         <span class="w-32 text-right">{readableDate(props.sound.datetime)}</span>
         <span class="w-16 text-right">{readableBytes(props.sound.size)}</span>
+        <span class="w-8 text-right">{readableMilisecs(props.sound.duration)}</span>
       </div>
 
       {/* Register/Unregister button */}
