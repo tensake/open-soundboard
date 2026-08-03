@@ -16,12 +16,15 @@ const CSS_FILE: &str = "style.css";
 /// Represents the application configuration.
 ///
 /// The config is taken from a JSON file and is saved on changes.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Config {
     tabs: Vec<tab::Tab>,
     hotkeys: HashMap<Uuid, hotkey::HotKeyEntry>,
-    onboarded: bool,
-    normalize: bool,
+
+    pub onboarded: bool,
+    pub normalize: bool,
+    pub volume: f32,
+    pub mic_volume: f32,
 
     #[serde(skip)]
     path: PathBuf,
@@ -50,35 +53,19 @@ impl Config {
             hotkeys: HashMap::new(),
             onboarded: false,
             normalize: false,
+            volume: 1.0,
+            mic_volume: 1.0,
             path,
         }
     }
 
-    fn save(&self) {
+    pub fn save(&self) {
         // Ensure directory exists
         fs::create_dir_all(&self.path).expect("Failed to create config directory");
 
         // Write config
         let contents = serde_json::to_string_pretty(self).expect("Failed to serialize config");
         fs::write(self.path.join(DATA_FILE), contents).expect("Failed to write config file");
-    }
-
-    pub fn onboarded(&self) -> bool {
-        self.onboarded
-    }
-
-    pub fn normalize(&self) -> bool {
-        self.normalize
-    }
-
-    pub fn set_normalize(&mut self, n: bool) {
-        self.normalize = n;
-        self.save();
-    }
-
-    pub fn onboard(&mut self) {
-        self.onboarded = true;
-        self.save();
     }
 }
 

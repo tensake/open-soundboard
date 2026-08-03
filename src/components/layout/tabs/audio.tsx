@@ -6,16 +6,20 @@ import {
   stopForward,
   setForwardVolume,
   AudioApp,
+  soundVolumeSignal,
+  micVolumeSignal,
+  handleMicVolumeSlider,
+  handleVolumeSlider,
 } from "../../../lib";
-import { Square, SquareChevronRight } from "lucide-solid";
+import { Square, SquareChevronRight, Volume2, Mic } from "lucide-solid";
 import { TransitionGroup } from "solid-transition-group";
+import SettingSlider from "../../ui/settings/settingSlider";
 
 function ForwardItem({ app }: { app: AudioApp }) {
   const forwarded = () => forwardedApps().find((a) => a.pid === app.id);
   return (
-    <div class="flex items-center justify-between gap-4 rounded p-2 transition-colors duration-200 hover:bg-primary-400/10">
+    <div class="flex items-center justify-between gap-4 rounded-xl p-2 transition-colors duration-200 hover:bg-primary-400/10">
       <div class="flex items-center gap-3">
-        {/* App Icon */}
         <Show
           when={app.icon}
           fallback={
@@ -31,7 +35,6 @@ function ForwardItem({ app }: { app: AudioApp }) {
           />
         </Show>
 
-        {/* Name */}
         <div class="flex flex-col">
           <span class="font-medium text-sm">
             {app.name || "Unknown Process"}
@@ -40,7 +43,6 @@ function ForwardItem({ app }: { app: AudioApp }) {
         </div>
       </div>
 
-      {/* Controls */}
       <div class="flex items-center gap-2 select-none">
         <Show when={forwarded()}>
           {(fw) => (
@@ -59,7 +61,7 @@ function ForwardItem({ app }: { app: AudioApp }) {
 
               <button
                 type="button"
-                class="cursor-pointer text-sm text-red-500 hover:text-red-400 bg-transparent border-none px-2 py-1 font-medium"
+                class="cursor-pointer text-sm bg-transparent border-none px-2 py-1 font-medium"
                 onClick={() => stopForward(fw().id)}
               >
                 <Square class="w-4 h-4" />
@@ -83,15 +85,13 @@ function ForwardItem({ app }: { app: AudioApp }) {
   );
 }
 
-export default function Forwarding() {
+export default function Audio() {
   const [apps, { refetch }] = createResource(refreshAudioApps);
 
-  // Refresh apps every 5 seconds
   onMount(() => {
     const interval = setInterval(() => {
       if (!apps.loading && !apps.error) {
         refetch();
-        console.log("Apps refreshed");
       }
     }, 5000);
 
@@ -99,35 +99,63 @@ export default function Forwarding() {
   });
 
   return (
-    <div class="flex h-full flex-col gap-2 p-4 overflow-y-auto">
-      {/* Header */}
-      <div class="flex flex-col mb-8 select-none">
-        <h1 class="text-2xl font-bold mb-1">App forwarding</h1>
-        <p class="text-sm text-subtext-1">
-          Forward all outgoing audio from a specific app to virtual cable
-        </p>
-      </div>
-      <Show when={apps.error}>
-        <span class="text-sm text-warn">{String(apps.error)}</span>
-      </Show>
+    <div class="flex h-full flex-col gap-4 p-4 overflow-y-auto">
+      <div class="grid grid-cols-2 gap-4">
+        <div class="rounded-xl bg-mantle p-4 flex items-center gap-4">
+          <Volume2 class="w-6 h-6 text-primary-400 shrink-0" />
+          <div class="flex flex-col gap-2 flex-1 min-w-0">
+            <SettingSlider
+              label="Sound volume"
+              min={0}
+              max={100}
+              step={1}
+              value={soundVolumeSignal()}
+              onInput={handleVolumeSlider}
+              valueLabel={`${soundVolumeSignal()}%`}
+            />
+          </div>
+        </div>
 
-      {/* Apps List */}
-      <Show when={!apps.error}>
-        <Show when={!apps.loading && apps()?.length === 0}>
-          <div class="text-sm text-subtext-1">
-            Could not find any apps that are currently playing any audio.
+        <div class="rounded-xl bg-mantle p-4 flex items-center gap-4">
+          <Mic class="w-6 h-6 text-primary-400 shrink-0" />
+          <div class="flex flex-col gap-2 flex-1 min-w-0">
+            <SettingSlider
+              label="Microphone volume"
+              min={0}
+              max={300}
+              step={1}
+              value={micVolumeSignal()}
+              onInput={handleMicVolumeSlider}
+              valueLabel={`${micVolumeSignal()}%`}
+            />
           </div>
+        </div>
+      </div>
+
+      <div class="rounded-xl bg-mantle p-4 flex flex-col gap-2">
+        <div class="mb-2 select-none">
+          <span class="text-md font-medium text-subtext-1">Application sound forwarding</span>
+        </div>
+
+        <Show when={apps.error}>
+          <span class="text-sm text-warn">{String(apps.error)}</span>
         </Show>
-        <TransitionGroup name="slide-down" appear>
-          <div class="flex flex-col gap-1">
-            <For each={apps()}>
-              {(app) => {
-                return <ForwardItem app={app} />;
-              }}
-            </For>
-          </div>
-        </TransitionGroup>
-      </Show>
+
+        <Show when={!apps.error}>
+          <Show when={!apps.loading && apps()?.length === 0}>
+            <div class="text-sm text-subtext-1">
+              Could not find any apps that are currently playing any audio.
+            </div>
+          </Show>
+          <TransitionGroup name="slide-down" appear>
+            <div class="flex flex-col gap-1">
+              <For each={apps()}>
+                {(app) => <ForwardItem app={app} />}
+              </For>
+            </div>
+          </TransitionGroup>
+        </Show>
+      </div>
     </div>
   );
 }

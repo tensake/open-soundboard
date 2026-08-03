@@ -10,7 +10,7 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
 use uuid::Uuid;
 
 /// Hotkey kind
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum HotKeyKind {
     /// For playing a sound
     Sound,
@@ -24,7 +24,7 @@ pub enum HotKeyCmd {
 }
 
 /// Represents a hotkey entry.
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct HotKeyEntry {
     pub id: Uuid,
     pub binding: String,
@@ -101,14 +101,9 @@ impl config::Config {
 
     pub fn insert_hotkey(&mut self, hk: HotKeyEntry) {
         self.hotkeys.insert(hk.id, hk);
-        self.save();
     }
 
     pub fn remove_hotkey(&mut self, id: Uuid) -> Option<HotKeyEntry> {
-        let removed = self.hotkeys.remove(&id);
-        if removed.is_some() {
-            self.save();
-        }
-        removed
+        self.hotkeys.remove(&id)
     }
 }

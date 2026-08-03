@@ -9,7 +9,7 @@ const ALLOWED_FILE_EXT: [&str; 8] = [
 ];
 
 /// Represents a tab in the dashboard tab.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Tab {
     id: String,
     name: String,
@@ -61,12 +61,10 @@ impl config::Config {
             path,
         };
         self.tabs.push(tab);
-        self.save();
     }
 
     pub fn remove_tab(&mut self, id: String) {
         self.tabs.retain(|t| t.id != id);
-        self.save();
     }
 
     pub fn get_tabs(&self) -> Vec<Tab> {
@@ -81,7 +79,6 @@ impl config::Config {
         if let Some(index) = self.tabs.iter().position(|t| t.id == id) {
             let tab = self.tabs.remove(index);
             self.tabs.insert(idx, tab);
-            self.save();
         }
     }
 }

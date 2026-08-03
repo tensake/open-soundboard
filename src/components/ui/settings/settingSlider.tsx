@@ -12,7 +12,7 @@ interface SettingSliderProps {
 export default function SettingSlider(props: SettingSliderProps) {
   return (
     <div class={props.maxWidth ?? "max-w-md"}>
-      <h2 class="text-lg font-medium mb-1">{props.label}</h2>
+      <h2 class="text-md font-medium mb-1">{props.label}</h2>
       <input
         type="range"
         min={props.min}
@@ -22,7 +22,7 @@ export default function SettingSlider(props: SettingSliderProps) {
         onInput={props.onInput}
         class="w-full cursor-pointer"
       />
-      <span class="text-sm">{props.valueLabel}</span>
+      <span class="text-sm text-subtext-0">{props.valueLabel}</span>
     </div>
   );
 }
