@@ -1,6 +1,5 @@
 import DashboardIcon from "../components/ui/icons/dashboardIcon";
 import { AudioLines, SettingsIcon } from "lucide-solid";
-
 import { Tab, PlaylistMode } from "./types";
 
 export const CONTROL_ACTIONS = ["Mute", "MicMute", "StopAll", "PauseResumeAll"];

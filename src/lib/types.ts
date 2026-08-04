@@ -41,13 +41,17 @@ export interface SoundFile {
   duration: number;
 }
 
+// Represents all sounds bound to a single file.
+//
+// For example, if same sound is played multiple times,
+// all their ids will be represented as one SoundEntry.
+// Progress and pause state reflect the latest instance only.
 export interface SoundEntry {
   ids: number[];
   path: string;
   current: number;
   total: number;
   paused: boolean;
-  count: number;
   speed: number;
   playlistMode: PlaylistMode;
 }

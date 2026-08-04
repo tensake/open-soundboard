@@ -9,20 +9,16 @@ import {
   applyCustomCss,
   saveCustomCss,
   setAutoStart,
-  autoStartSignal,
-  soundPlaybackSpeed,
   setMicPitch,
-  setSounds,
-  sounds,
-  setSoundPlaybackSpeed,
-  setPlaybackSpeed,
-  micPitchSignal,
-  setMicPitchSignal,
-  normalizationSignal,
   setNormalization,
   clearAllCache,
+  autoStart,
+  soundState,
+  micState,
+  setMicState,
+  normalization,
+  setAllSoundPlaybackSpeed,
 } from "../../../lib";
-import { produce } from "solid-js/store";
 import type { HotKeyEntry } from "../../../lib";
 import { For, createSignal, Switch, Match } from "solid-js";
 import HotkeyOverlay from "../hotkeyOverlay";
@@ -38,24 +34,9 @@ export default function Settings() {
   const [capturingHotkey, setCapturingHotkey] =
     createSignal<HotKeyEntry | null>(null);
 
-  function handleAllSoundPlaybackSpeedSlider(e: Event) {
+  function handleSpeedSlider(e: Event) {
     const value = parseFloat((e.currentTarget as HTMLInputElement).value);
-    setSoundPlaybackSpeed(value);
-
-    // Update registered sounds
-    setSounds(
-      produce((s) => {
-        s.forEach((entry) => {
-          entry.speed = value;
-        });
-      }),
-    );
-
-    // Update backend sounds
-    for (const sound of sounds) {
-      const latestId = sound.ids[sound.ids.length - 1];
-      setPlaybackSpeed(latestId, value);
-    }
+    setAllSoundPlaybackSpeed(value);
   }
 
   const handleCapture = async (binding: string) => {
@@ -120,9 +101,9 @@ export default function Settings() {
                     min={0.5}
                     max={2.5}
                     step={0.05}
-                    value={soundPlaybackSpeed()}
-                    onInput={handleAllSoundPlaybackSpeedSlider}
-                    valueLabel={`${soundPlaybackSpeed()}x`}
+                    value={soundState.speed}
+                    onInput={handleSpeedSlider}
+                    valueLabel={`${soundState.speed}x`}
                   />
 
                   <SettingSlider
@@ -130,20 +111,20 @@ export default function Settings() {
                     min={-12}
                     max={12}
                     step={1}
-                    value={micPitchSignal()}
+                    value={micState.pitch}
                     onInput={(e) => {
                       const v = Number(e.currentTarget.value);
-                      setMicPitchSignal(v);
+                      setMicState({ pitch: v });
                       setMicPitch(v);
                     }}
-                    valueLabel={`${micPitchSignal()} st`}
+                    valueLabel={`${micState.pitch} st`}
                   />
                 </div>
 
                 <SettingToggle
                   title="Normalize sound volume"
                   description="Normalize sound volume, so that loud sounds are quieter and quiet sounds are louder."
-                  checked={normalizationSignal()}
+                  checked={normalization() ?? false}
                   onInput={(e) => setNormalization(e.currentTarget.checked)}
                 />
               </div>
@@ -248,7 +229,7 @@ export default function Settings() {
                 <SettingToggle
                   title="Auto Start"
                   description="Start the soundboard with system in the background."
-                  checked={autoStartSignal()}
+                  checked={autoStart() ?? false}
                   onInput={(e) => setAutoStart(e.currentTarget.checked)}
                 />
 

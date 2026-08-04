@@ -6,10 +6,10 @@ import {
   stopForward,
   setForwardVolume,
   AudioApp,
-  soundVolumeSignal,
-  micVolumeSignal,
   handleMicVolumeSlider,
   handleVolumeSlider,
+  soundState,
+  micState,
 } from "../../../lib";
 import { Square, SquareChevronRight, Volume2, Mic } from "lucide-solid";
 import { TransitionGroup } from "solid-transition-group";
@@ -109,9 +109,9 @@ export default function Audio() {
               min={0}
               max={100}
               step={1}
-              value={soundVolumeSignal()}
+              value={soundState.volume}
               onInput={handleVolumeSlider}
-              valueLabel={`${soundVolumeSignal()}%`}
+              valueLabel={`${soundState.volume}%`}
             />
           </div>
         </div>
@@ -124,9 +124,9 @@ export default function Audio() {
               min={0}
               max={300}
               step={1}
-              value={micVolumeSignal()}
+              value={micState.volume}
               onInput={handleMicVolumeSlider}
-              valueLabel={`${micVolumeSignal()}%`}
+              valueLabel={`${micState.volume}%`}
             />
           </div>
         </div>

@@ -12,7 +12,6 @@ import {
   playSoundTabMode,
   playlistMode,
   nextPlaylistMode,
-  setCurrentTabPaths,
   currentTab,
   setCurrentTab,
   sounds,
@@ -54,11 +53,6 @@ export default function Dashboard() {
     }, 5000);
 
     onCleanup(() => clearInterval(interval));
-  });
-
-  // Update current sounds from tab for playlist
-  createEffect(() => {
-    setCurrentTabPaths(currentTab()?.[1].map((s) => s.path) ?? []);
   });
 
   const handleAddTab = async () => {

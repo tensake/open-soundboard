@@ -29,8 +29,8 @@ function SoundRow(props: { path: string; sounds: SoundEntry[] }) {
       <span class="text-sm truncate w-56 shrink-0 flex items-center gap-1.5">
         {/* Name */}
         <span class="truncate">
-          <Show when={entry().count > 1}>
-            <span class="text-subtext-0 mr-1">{entry().count}x</span>
+          <Show when={entry().ids.length > 1}>
+            <span class="text-subtext-0 mr-1">{entry().ids.length}x</span>
           </Show>
           {name()}
         </span>

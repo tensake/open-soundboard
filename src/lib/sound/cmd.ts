@@ -6,12 +6,13 @@ import {
   playlistMode,
   sounds,
   setSounds,
-  setFinishedPlaylistSound,
-  setMicVolumeSignal,
-  setSoundVolumeSignal,
-  soundVolumeSignal,
-  soundPlaybackSpeed,
+  setSoundState,
+  setMicState,
+  soundState,
 } from "./state";
+import { handleSoundFinished } from "./playlist";
+
+let progressInterval: ReturnType<typeof setInterval> | null = null;
 
 export function registerSound(
   id: number,
@@ -26,7 +27,6 @@ export function registerSound(
       produce((s) => {
         const entry = s.splice(existing, 1)[0];
         entry.ids.push(id);
-        entry.count += 1;
         entry.current = 0;
         entry.paused = false;
         entry.playlistMode = mode;
@@ -43,9 +43,8 @@ export function registerSound(
           current: 0,
           total: 0,
           paused: false,
-          count: 1,
           playlistMode: mode,
-          speed: 1.0,
+          speed: speed,
         });
       }),
     );
@@ -74,6 +73,7 @@ export function handleStop(entry: SoundEntry) {
   removeSound(entry.path);
 }
 
+// Seek sound to a specific position (updates only latest id)
 export function handleSeekCommit(entry: SoundEntry, value: number) {
   const latestId = entry.ids[entry.ids.length - 1];
   seekSound(latestId, value);
@@ -81,27 +81,37 @@ export function handleSeekCommit(entry: SoundEntry, value: number) {
   if (i !== -1) setSounds(i, "current", value);
 }
 
-export const _updateProgressInterval = setInterval(async () => {
-  if (!sounds.length) return;
+export function startProgressPolling() {
+  if (progressInterval) return;
+  progressInterval = setInterval(async () => {
+    if (!sounds.length) return;
 
-  await Promise.all(
-    sounds.map(async (s, i) => {
-      if (s.paused) return;
+    await Promise.all(
+      sounds.map(async (s, i) => {
+        if (s.paused) return;
 
-      const latestId = s.ids[s.ids.length - 1];
-      const progress = await getProgress(latestId);
-      if (!progress) {
-        if (s.playlistMode !== "disabled") {
-          setFinishedPlaylistSound({ path: s.path, mode: s.playlistMode });
+        const results = await Promise.all(s.ids.map((id) => getProgress(id)));
+        const activeIds = s.ids.filter((_, j) => !!results[j]);
+
+        if (activeIds.length === 0) {
+          if (s.playlistMode !== "disabled")
+            handleSoundFinished(s.path, s.playlistMode);
+          removeSound(s.path);
+        } else {
+          const latestProgress = results[s.ids.indexOf(activeIds[activeIds.length - 1])];
+          setSounds(i, "ids", activeIds);
+          setSounds(i, "current", latestProgress!.current);
+          setSounds(i, "total", latestProgress!.total);
         }
-        removeSound(s.path);
-      } else {
-        setSounds(i, "current", progress.current);
-        setSounds(i, "total", progress.total);
-      }
-    }),
-  );
-}, 100);
+      }),
+    );
+  }, 100);
+}
+
+export function stopProgressPolling() {
+  if (progressInterval) clearInterval(progressInterval);
+  progressInterval = null;
+}
 
 export async function playSoundCmd(
   path: string,
@@ -117,10 +127,10 @@ export async function playSoundCmd(
 }
 
 export async function playSoundTagged(path: string, mode: PlaylistMode) {
-  const id = await playSoundCmd(path, soundVolumeSignal() / 100, soundPlaybackSpeed());
+  const id = await playSoundCmd(path, soundState.volume / 100, soundState.speed);
   if (id === undefined) return;
 
-  registerSound(id, path, mode, soundPlaybackSpeed());
+  registerSound(id, path, mode, soundState.speed);
 }
 export async function playSoundTabMode(path: string) {
   return playSoundTagged(path, playlistMode());
@@ -159,17 +169,25 @@ export const setMicPitch = (semitones: number) =>
 
 export const getMicPitch = () => invoke<number>("get_mic_pitch");
 
-export const setPlaybackSpeed = (id: number, speed: number) =>
+export const setSoundPlaybackSpeed = (id: number, speed: number) =>
   invoke("set_playback_speed", { id, speed });
+
+export const setAllSoundPlaybackSpeed = async (speed: number) => {
+  await Promise.all(
+    sounds.flatMap((sound) =>
+      sound.ids.map((id) => setSoundPlaybackSpeed(id, speed)))
+  );
+  setSounds(produce((s) => s.forEach((entry) => { entry.speed = speed; })));
+};
 
 export function handleVolumeSlider(e: Event) {
   const value = parseFloat((e.currentTarget as HTMLInputElement).value);
-  setSoundVolumeSignal(value);
+  setSoundState({ volume: value });
   setGeneralVolume(value / 100);
 }
 
 export function handleMicVolumeSlider(e: Event) {
   const value = parseFloat((e.currentTarget as HTMLInputElement).value);
-  setMicVolumeSignal(value);
+  setMicState({ volume: value });
   setMicVolume(value / 100);
 }
