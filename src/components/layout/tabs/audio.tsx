@@ -16,7 +16,7 @@ import { TransitionGroup } from "solid-transition-group";
 import SettingSlider from "../../ui/settings/settingSlider";
 
 function ForwardItem({ app }: { app: AudioApp }) {
-  const forwarded = () => forwardedApps().find((a) => a.pid === app.id);
+  const forwarded = () => forwardedApps.find((a) => a.pid === app.id);
   return (
     <div class="flex items-center justify-between gap-4 rounded-xl p-2 transition-colors duration-200 hover:bg-primary-400/10">
       <div class="flex items-center gap-3">
