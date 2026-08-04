@@ -13,6 +13,7 @@ import {
 import { handleSoundFinished } from "./playlist";
 
 let progressInterval: ReturnType<typeof setInterval> | null = null;
+let polling = false;
 
 export function registerSound(
   id: number,
@@ -84,27 +85,40 @@ export function handleSeekCommit(entry: SoundEntry, value: number) {
 export function startProgressPolling() {
   if (progressInterval) return;
   progressInterval = setInterval(async () => {
-    if (!sounds.length) return;
+    if (!sounds.length || polling) return;
+    polling = true;
+    try {
+      // Get snapshot of all sounds in async before processing
+      const snapshots = await Promise.all(
+        sounds.map(async (s) => ({
+          path: s.path,
+          playlistMode: s.playlistMode,
+          progresses: await Promise.all(s.ids.map((id) => getProgress(id))),
+          ids: s.ids,
+        }))
+      );
 
-    await Promise.all(
-      sounds.map(async (s, i) => {
-        if (s.paused) return;
+      // Process synchronously each sound snapshot while they cant be changed
+      for (const { path, playlistMode, progresses, ids } of snapshots) {
+        const activeIds = ids.filter((_: number, j: number) => !!progresses[j]);
+        const i = sounds.findIndex((s) => s.path === path);
+        if (i === -1) continue;
 
-        const results = await Promise.all(s.ids.map((id) => getProgress(id)));
-        const activeIds = s.ids.filter((_, j) => !!results[j]);
-
+        // Handle sounds for path finished
         if (activeIds.length === 0) {
-          if (s.playlistMode !== "disabled")
-            handleSoundFinished(s.path, s.playlistMode);
-          removeSound(s.path);
+          if (playlistMode !== "disabled") handleSoundFinished(path, playlistMode);
+          removeSound(path);
         } else {
-          const latestProgress = results[s.ids.indexOf(activeIds[activeIds.length - 1])];
+          // Update progress for active ids
+          const latestProgress = progresses[ids.indexOf(activeIds[activeIds.length - 1])];
           setSounds(i, "ids", activeIds);
           setSounds(i, "current", latestProgress!.current);
           setSounds(i, "total", latestProgress!.total);
         }
-      }),
-    );
+      }
+    } finally {
+      polling = false;
+    }
   }, 100);
 }
 
