@@ -15,6 +15,7 @@ import {
   setCurrentTabPaths,
   currentTab,
   setCurrentTab,
+  sounds,
   SORT_ORDER,
 } from "../../../lib";
 import type { HotKeyEntry } from "../../../lib";
@@ -222,6 +223,7 @@ export default function Dashboard() {
           >
             {(sound, i) => (
               <SoundItem
+                isPlaying={sounds.some(s => s.path === sound.path && !s.paused)}
                 sound={sound}
                 odd={i() % 2 !== 0}
                 registered={findHotkeyForSound(sound.path)}

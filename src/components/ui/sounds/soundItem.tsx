@@ -1,8 +1,11 @@
 import { Show } from "solid-js";
 import { Play, Keyboard, KeyboardOff } from "lucide-solid";
 import { HotKeyEntry, SoundFile, readableBytes, readableDate, readableMilisecs } from "../../../lib";
+import { waveform } from 'ldrs';
+waveform.register();
 
 export default function SoundItem(props: {
+  isPlaying: boolean;
   sound: SoundFile;
   odd: boolean;
   registered: HotKeyEntry | undefined;
@@ -10,6 +13,13 @@ export default function SoundItem(props: {
   onStartCapture: () => void;
   onUnregister: (e: MouseEvent) => void | Promise<void>;
 }) {
+  const Playing = () => (
+    <l-waveform size="12" color="var(--color-primary-400)" stroke={2} />
+  );
+
+  const Idle = () => (
+    <Play class="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+  );
   return (
     <div
       class={`group flex items-center gap-2 px-3 py-1 cursor-pointer transition-colors border-l border-surface-0 ${
@@ -18,7 +28,9 @@ export default function SoundItem(props: {
       onClick={props.onPlay}
     >
       {/* Name */}
-      <Play class="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+      <Show when={props.isPlaying} fallback={<Idle />}>
+        <Playing />
+      </Show>
       <span class="text-sm truncate flex-1">
         {props.sound.path.split(/[\\/]/).pop()}
       </span>
