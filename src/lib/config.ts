@@ -2,7 +2,8 @@ import { createResource, createSignal, createMemo } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { SoundFile, SoundTab } from "./types";
 
-export const [autoStart, { mutate: mutateAutoStart, refetch: refetchAutoStart }] = createResource(() => invoke<boolean>("get_auto_start"));
+export const [autoStart, { mutate: mutateAutoStart, refetch: refetchAutoStart }] =
+  createResource(() => invoke<boolean>("get_autostart"));
 export const [onboarded, { mutate: mutateOnboarded, refetch: refetchOnboarded }] =
   createResource(() => invoke<boolean>("is_onboarded"));
 export const [normalization, { mutate: mutateNormalization, refetch: refetchNormalization }] =

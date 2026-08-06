@@ -17,7 +17,7 @@ import {
   micState,
   setMicState,
   normalization,
-  setAllSoundPlaybackSpeed,
+  handleSpeedSlider,
 } from "../../../lib";
 import type { HotKeyEntry } from "../../../lib";
 import { For, createSignal, Switch, Match } from "solid-js";
@@ -33,11 +33,6 @@ export default function Settings() {
   const [draftCss, setDraftCss] = createSignal("");
   const [capturingHotkey, setCapturingHotkey] =
     createSignal<HotKeyEntry | null>(null);
-
-  function handleSpeedSlider(e: Event) {
-    const value = parseFloat((e.currentTarget as HTMLInputElement).value);
-    setAllSoundPlaybackSpeed(value);
-  }
 
   const handleCapture = async (binding: string) => {
     const current = capturingHotkey();

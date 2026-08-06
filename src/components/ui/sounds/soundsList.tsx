@@ -8,12 +8,11 @@ import {
   handleSeekCommit,
   nextSoundPlaylistMode,
   formatTime,
-  SoundEntry,
 } from "../../../lib";
 import ProgressSlider from "../progressSlider";
 
-function SoundRow(props: { path: string; sounds: SoundEntry[] }) {
-  const entry = () => props.sounds.find((s) => s.path === props.path)!;
+function SoundRow(props: { path: string }) {
+  const entry = () => sounds.find((s) => s.path === props.path)!;
 
   const [seeking, setSeeking] = createSignal(false);
   const [localCurrent, setLocalCurrent] = createSignal(0);
@@ -114,7 +113,7 @@ export default function SoundsList() {
         appear
       >
         <For each={reversedPaths()} fallback={null}>
-          {(path) => <SoundRow path={path} sounds={sounds} />}
+          {(path) => <SoundRow path={path} />}
         </For>
       </TransitionGroup>
     </div>

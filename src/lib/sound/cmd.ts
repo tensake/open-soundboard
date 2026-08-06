@@ -187,6 +187,7 @@ export const setSoundPlaybackSpeed = (id: number, speed: number) =>
   invoke("set_playback_speed", { id, speed });
 
 export const setAllSoundPlaybackSpeed = async (speed: number) => {
+  setSoundState({ speed });
   await Promise.all(
     sounds.flatMap((sound) =>
       sound.ids.map((id) => setSoundPlaybackSpeed(id, speed)))
@@ -198,6 +199,12 @@ export function handleVolumeSlider(e: Event) {
   const value = parseFloat((e.currentTarget as HTMLInputElement).value);
   setSoundState({ volume: value });
   setGeneralVolume(value / 100);
+}
+
+export function handleSpeedSlider(e: Event) {
+  const value = parseFloat((e.currentTarget as HTMLInputElement).value);
+  setSoundState({ speed: value });
+  setAllSoundPlaybackSpeed(value);
 }
 
 export function handleMicVolumeSlider(e: Event) {
