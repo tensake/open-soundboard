@@ -29,9 +29,7 @@ pub struct SoundFile {
 }
 
 fn get_duration(cache: &CacheDb, path: &PathBuf) -> u64 {
-    let hash = cache
-        .get_file_key(&path.to_string_lossy())
-        .unwrap_or_default();
+    let hash = crate::cache::get_file_key(&path.to_string_lossy()).unwrap_or_default();
 
     // Check cache first
     if let Ok(Some(duration)) = cache.get_duration(&hash) {

@@ -1,11 +1,12 @@
 import { Show } from "solid-js";
-import { Play, Keyboard, KeyboardOff } from "lucide-solid";
+import { Play, Keyboard, KeyboardOff, Clock } from "lucide-solid";
 import { HotKeyEntry, SoundFile, readableBytes, readableDate, readableMilisecs } from "../../../lib";
 import { waveform } from 'ldrs';
 waveform.register();
 
 export default function SoundItem(props: {
   isPlaying: boolean;
+  isRecent: boolean;
   sound: SoundFile;
   odd: boolean;
   registered: HotKeyEntry | undefined;
@@ -17,9 +18,14 @@ export default function SoundItem(props: {
     <l-waveform size="12" color="var(--color-primary-400)" stroke={2} />
   );
 
+  const Recent = () => (
+    <Clock class="w-3 h-3 inline-block" />
+  );
+
   const Idle = () => (
     <Play class="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
   );
+
   return (
     <div
       class={`group flex items-center gap-2 px-3 py-1 cursor-pointer transition-colors border-l border-surface-0 ${
@@ -28,7 +34,17 @@ export default function SoundItem(props: {
       onClick={props.onPlay}
     >
       {/* Name */}
-      <Show when={props.isPlaying} fallback={<Idle />}>
+      <Show
+        when={props.isPlaying}
+        fallback={
+          <Show
+            when={props.isRecent}
+            fallback={<Idle />}
+          >
+            <Recent />
+          </Show>
+        }
+      >
         <Playing />
       </Show>
       <span class="text-sm truncate flex-1">

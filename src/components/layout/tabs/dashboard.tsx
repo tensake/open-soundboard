@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, Show, onCleanup } from "solid-js";
+import { createEffect, createSignal, For, Show, onCleanup, createResource } from "solid-js";
 import { Repeat, Shuffle, Funnel } from "lucide-solid";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
@@ -16,6 +16,7 @@ import {
   setCurrentTab,
   sounds,
   SORT_ORDER,
+  getSoundsHistory,
 } from "../../../lib";
 import type { HotKeyEntry } from "../../../lib";
 import { alerts } from "../../../lib/alert";
@@ -34,6 +35,8 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = createSignal<string | null>(null);
   const [sortOrder, setSortOrder] = createSignal<SortOrder>("Default");
   const [capturingFor, setCapturingFor] = createSignal<string | null>(null);
+  const [soundsHistory, { refetch: refetchSoundsHistory }] =
+    createResource(getSoundsHistory);
 
   createEffect(async () => {
     const loadedTabs = tabs();
@@ -90,6 +93,11 @@ export default function Dashboard() {
     refetchHotkeys();
   };
 
+  const handlePlay = async (path: string) => {
+    await playSoundTabMode(path);
+    await refetchSoundsHistory();
+  };
+
   const filteredSounds = () => {
     const sounds = currentTab()?.[1] ?? [];
     const q = searchQuery()?.toLowerCase();
@@ -110,6 +118,10 @@ export default function Dashboard() {
       default:
         return sounds;
     }
+  };
+
+  const soundInHistory = (path: string) => {
+    return soundsHistory()?.includes(path) ?? false;
   };
 
   return (
@@ -218,10 +230,11 @@ export default function Dashboard() {
             {(sound, i) => (
               <SoundItem
                 isPlaying={sounds.some(s => s.path === sound.path && !s.paused)}
+                isRecent={soundInHistory(sound.path)}
                 sound={sound}
                 odd={i() % 2 !== 0}
                 registered={findHotkeyForSound(sound.path)}
-                onPlay={() => playSoundTabMode(sound.path)}
+                onPlay={() => handlePlay(sound.path)}
                 onStartCapture={() => setCapturingFor(sound.path)}
                 onUnregister={(e) => handleUnregister(e, sound.path)}
               />

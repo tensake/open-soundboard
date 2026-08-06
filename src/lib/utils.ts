@@ -13,10 +13,6 @@ export async function markAsReady() {
   await invoke("mark_as_ready");
 }
 
-export async function clearAllCache() {
-  await invoke("clear_all_cache");
-}
-
 export function readableBytes(bytes: number): string {
   if (bytes === 0) return "0 bytes";
   const units = ["bytes", "KB", "MB", "GB", "TB"];

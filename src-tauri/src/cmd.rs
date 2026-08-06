@@ -54,7 +54,7 @@ pub fn play_sound(
         .ok_or("No output device found")?
         .clone();
     let normalize = state.cfg.lock().normalize;
-    let file_key = state.cache.get_file_key(&path).ok();
+    let file_key = crate::cache::get_file_key(&path).ok();
     log::info!("Playing sound {path} and using key {file_key:?}");
 
     // Try to get normalization gain from cache
@@ -82,11 +82,18 @@ pub fn play_sound(
     let id = state.next_id.fetch_add(1, Ordering::Relaxed);
     state.playing_sounds.lock().insert(id, handle);
 
+    // Record the sound in history
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64;
+    let _ = state.cache.record_sound(timestamp, &path);
+
     // Spawn a thread to calculate normalization gain if needed
     if cached_gain.is_none() {
         std::thread::spawn(move || {
             let state = app_handle.state::<AppState>();
-            let file_key = match state.cache.get_file_key(&path) {
+            let file_key = match crate::cache::get_file_key(&path) {
                 Ok(k) => k,
                 Err(e) => {
                     log::error!("Failed to get file key for {path}: {e}");
@@ -427,4 +434,9 @@ pub fn get_autostart(app: tauri::AppHandle) -> Result<bool, String> {
 pub fn clear_all_cache(state: State<AppState>) -> Result<(), String> {
     log::info!("Clearing all cache...");
     state.cache.clear_all_cache().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_sounds_history(state: State<AppState>) -> Result<Vec<String>, String> {
+    state.cache.get_sounds_history().map_err(|e| e.to_string())
 }
