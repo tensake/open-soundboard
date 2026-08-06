@@ -60,7 +60,7 @@ pub fn play_sound(
     // Try to get normalization gain from cache
     let cached_gain: Option<f32> = file_key
         .as_deref()
-        .and_then(|key| state.cache.get_normalization_cache(key).ok().flatten());
+        .and_then(|key| state.cache.get_normalization(key).ok().flatten());
     let initial_gain = if normalize {
         cached_gain.unwrap_or(1.0)
     } else {
@@ -97,7 +97,7 @@ pub fn play_sound(
                 Ok(gain) => {
                     log::debug!("Calculated normalization gain for {path}: {gain}");
                     normalization_gain.store(gain.to_bits(), Ordering::Relaxed);
-                    if let Err(e) = state.cache.set_normalization_cache(&file_key, gain) {
+                    if let Err(e) = state.cache.set_normalization(&file_key, gain) {
                         log::error!("Failed to save normalization cache: {e}");
                     }
                 }

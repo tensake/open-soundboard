@@ -34,14 +34,14 @@ fn get_duration(cache: &CacheDb, path: &PathBuf) -> u64 {
         .unwrap_or_default();
 
     // Check cache first
-    if let Ok(Some(duration)) = cache.get_duration_cache(&hash) {
+    if let Ok(Some(duration)) = cache.get_duration(&hash) {
         return duration;
     }
 
     let duration = mp3_duration::from_path(path)
         .map(|d| d.as_millis() as u64)
         .unwrap_or(0);
-    let _ = cache.set_duration_cache(&hash, duration);
+    let _ = cache.set_duration(&hash, duration);
     duration
 }
 
