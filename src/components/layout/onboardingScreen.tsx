@@ -1,5 +1,6 @@
 import { createSignal } from "solid-js";
 import { ONBOARDING_STEPS } from "../../lib";
+import { Button } from "../ui/button";
 
 interface OnboardingProps {
   onComplete: () => void;
@@ -26,11 +27,11 @@ export default function OnboardingScreen(props: OnboardingProps) {
           <span class="text-subtext-0 text-lg leading-none">
             {stepIndex() + 1}/{ONBOARDING_STEPS.length}
           </span>
-          <button onClick={handleNext} class="leading-none">
+          <Button onClick={handleNext} class="leading-none">
             {stepIndex() + 1 === ONBOARDING_STEPS.length
               ? "Let me in!"
               : "Next"}
-          </button>
+          </Button>
         </div>
 
         {/* Content */}

@@ -27,6 +27,8 @@ import SettingSlider from "../../ui/settings/settingSlider";
 import SettingToggle from "../../ui/settings/settingToggle";
 import SidebarTab from "../../ui/settings/sidebarTab";
 import { Transition } from "solid-transition-group";
+import { Button } from "../../ui/button";
+import { Textarea } from "../../ui/textarea";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = createSignal("audio");
@@ -133,13 +135,12 @@ export default function Settings() {
                 <div class="max-w-xl flex flex-col gap-2">
                   <div class="flex items-center justify-between">
                     <h2 class="text-lg font-medium mb-1">Custom CSS</h2>
-                    <button onClick={() => saveCustomCss(draftCss())}>
+                    <Button onClick={() => saveCustomCss(draftCss())}>
                       Save CSS
-                    </button>
+                    </Button>
                   </div>
-                  <textarea
+                  <Textarea
                     rows={16}
-                    class="w-full"
                     placeholder="Enter your own css here."
                     value={customCss()}
                     onInput={(e) => {
@@ -228,9 +229,9 @@ export default function Settings() {
                   onInput={(e) => setAutoStart(e.currentTarget.checked)}
                 />
 
-                <button class="self-start" onClick={clearAllCache}>
+                <Button class="self-start" onClick={clearAllCache}>
                   Clear Cache
-                </button>
+                </Button>
               </div>
             </Match>
           </Switch>

@@ -14,6 +14,8 @@ import {
 import { Square, SquareChevronRight, Volume2, Mic } from "lucide-solid";
 import { TransitionGroup } from "solid-transition-group";
 import SettingSlider from "../../ui/settings/settingSlider";
+import { Button } from "../../ui/button";
+import { Slider } from "../../ui/slider";
 
 function ForwardItem({ app }: { app: AudioApp }) {
   const forwarded = () => forwardedApps.find((a) => a.pid === app.id);
@@ -47,8 +49,7 @@ function ForwardItem({ app }: { app: AudioApp }) {
         <Show when={forwarded()}>
           {(fw) => (
             <>
-              <input
-                type="range"
+              <Slider
                 min="0"
                 max="1"
                 step="0.01"
@@ -56,29 +57,24 @@ function ForwardItem({ app }: { app: AudioApp }) {
                 onInput={(e) =>
                   setForwardVolume(fw().id, parseFloat(e.currentTarget.value))
                 }
-                class="w-24 sm:w-32"
               />
 
-              <button
-                type="button"
-                class="cursor-pointer text-sm bg-transparent border-none px-2 py-1 font-medium"
+              <Button
                 onClick={() => stopForward(fw().id)}
               >
                 <Square class="w-4 h-4" />
                 Stop
-              </button>
+              </Button>
             </>
           )}
         </Show>
 
         <Show when={!forwarded()}>
-          <button
-            type="button"
-            class="cursor-pointer text-sm text-primary-500 hover:text-primary-400 bg-transparent border-none px-2 py-1 font-medium"
+          <Button
             onClick={() => forwardApp(app.id)}
           >
             <SquareChevronRight class="w-4 h-4" /> Forward
-          </button>
+          </Button>
         </Show>
       </div>
     </div>

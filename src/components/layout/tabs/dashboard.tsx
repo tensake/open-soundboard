@@ -25,6 +25,10 @@ import SoundItem from "../../ui/sounds/soundItem";
 import UpdateNotification from "../../ui/updateNotification";
 import TabGroup from "../../ui/tab/tabGroup";
 import { SortOrder } from "../../../lib";
+import { Button } from "../../ui/button";
+import { Input } from "../../ui/input";
+import { Select } from "../../ui/select";
+import { Divider } from "../../ui/divider";
 
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = createSignal<string | null>(null);
@@ -133,9 +137,8 @@ export default function Dashboard() {
 
         {/* Search */}
         <div class="bg-mantle px-2 py-1.5 shrink-0 flex items-center gap-2 border-t border-surface-0 border-l border-b rounded-t-md pr-2">
-          <input
-            type="text"
-            class="w-full bg-base text-sm truncate"
+          <Input
+            class="bg-base!"
             placeholder="Start typing here to search..."
             value={searchQuery() ?? ""}
             onInput={(e) => setSearchQuery(e.currentTarget.value || null)}
@@ -151,19 +154,17 @@ export default function Dashboard() {
           {/* Sort order */}
           <div class="relative flex items-center w-28 mx-2" title="Click to change sort order">
             <Funnel class="absolute left-2 size-3.5 text-subtext-0 pointer-events-none z-10" />
-            <select
+            <Select
               value={sortOrder()}
-              class="appearance-none pl-7! text-subtext-0"
+              class="appearance-none pl-7! text-subtext-0 bg-base"
               onChange={(e) => setSortOrder(e.currentTarget.value as SortOrder)}
             >
               <For each={SORT_ORDER}>
                 {(order) => <option value={order}>{order}</option>}
               </For>
-            </select>
+            </Select>
           </div>
-
-          {/* Separator */}
-          <div class="w-0.5 h-full bg-surface-1" />
+          <Divider class="w-0.5 h-full" />
 
           {/* Playlist mode */}
           <div
@@ -194,12 +195,11 @@ export default function Dashboard() {
               {tabs()?.length === 0 ? (
                 <div class="flex flex-col items-center gap-3">
                   <h1>No tabs are created yet. Click to add one!</h1>
-                  <button
-                    class="rounded-md bg-primary px-4 py-2 text-white transition hover:bg-primary/90"
+                  <Button
                     onClick={handleAddTab}
                   >
                     Add Tab
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 "Loading..."
