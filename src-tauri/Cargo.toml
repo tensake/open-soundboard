@@ -38,6 +38,8 @@ rodio = "0.22.2"
 rubato = "4.0"
 redb = "4.1.0"
 blake3 = "1.8.5"
+rayon = "1.12.0"
+mp3-duration = "0.1.10"
 ringbuf = "0.5"
 symphonia = { version = "0.6", features = ["mp3", "wav", "flac", "vorbis", "ogg", "isomp4", "aac", "pcm"] }
 parking_lot = "0.12.5"

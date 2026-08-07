@@ -8,6 +8,7 @@ export type AlertKind = "Warn" | "Error";
 export type HotKeyKind = "Sound" | "Control";
 export type ControlAction = "Mute" | "MicMute" | "StopAll" | "PauseResumeAll";
 export type PlaylistMode = "disabled" | "repeat" | "shuffle";
+export type SortOrder = "Default" | "Size" | "Date" | "Duration";
 
 export interface Alert {
   kind: AlertKind;
@@ -37,15 +38,20 @@ export interface SoundFile {
   path: string;
   size: number;
   datetime: number;
+  duration: number;
 }
 
+// Represents all sounds bound to a single file.
+//
+// For example, if same sound is played multiple times,
+// all their ids will be represented as one SoundEntry.
+// Progress and pause state reflect the latest instance only.
 export interface SoundEntry {
   ids: number[];
   path: string;
   current: number;
   total: number;
   paused: boolean;
-  count: number;
   speed: number;
   playlistMode: PlaylistMode;
 }

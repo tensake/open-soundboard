@@ -9,20 +9,16 @@ import {
   applyCustomCss,
   saveCustomCss,
   setAutoStart,
-  autoStartSignal,
-  soundPlaybackSpeed,
   setMicPitch,
-  setSounds,
-  sounds,
-  setSoundPlaybackSpeed,
-  setPlaybackSpeed,
-  micPitchSignal,
-  setMicPitchSignal,
-  normalizationSignal,
   setNormalization,
   clearAllCache,
+  autoStart,
+  soundState,
+  micState,
+  setMicState,
+  normalization,
+  handleSpeedSlider,
 } from "../../../lib";
-import { produce } from "solid-js/store";
 import type { HotKeyEntry } from "../../../lib";
 import { For, createSignal, Switch, Match } from "solid-js";
 import HotkeyOverlay from "../hotkeyOverlay";
@@ -31,32 +27,14 @@ import SettingSlider from "../../ui/settings/settingSlider";
 import SettingToggle from "../../ui/settings/settingToggle";
 import SidebarTab from "../../ui/settings/sidebarTab";
 import { Transition } from "solid-transition-group";
+import { Button } from "../../ui/button";
+import { Textarea } from "../../ui/textarea";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = createSignal("audio");
   const [draftCss, setDraftCss] = createSignal("");
   const [capturingHotkey, setCapturingHotkey] =
     createSignal<HotKeyEntry | null>(null);
-
-  function handleAllSoundPlaybackSpeedSlider(e: Event) {
-    const value = parseFloat((e.currentTarget as HTMLInputElement).value);
-    setSoundPlaybackSpeed(value);
-
-    // Update registered sounds
-    setSounds(
-      produce((s) => {
-        s.forEach((entry) => {
-          entry.speed = value;
-        });
-      }),
-    );
-
-    // Update backend sounds
-    for (const sound of sounds) {
-      const latestId = sound.ids[sound.ids.length - 1];
-      setPlaybackSpeed(latestId, value);
-    }
-  }
 
   const handleCapture = async (binding: string) => {
     const current = capturingHotkey();
@@ -120,9 +98,9 @@ export default function Settings() {
                     min={0.5}
                     max={2.5}
                     step={0.05}
-                    value={soundPlaybackSpeed()}
-                    onInput={handleAllSoundPlaybackSpeedSlider}
-                    valueLabel={`${soundPlaybackSpeed()}x`}
+                    value={soundState.speed}
+                    onInput={handleSpeedSlider}
+                    valueLabel={`${soundState.speed}x`}
                   />
 
                   <SettingSlider
@@ -130,20 +108,20 @@ export default function Settings() {
                     min={-12}
                     max={12}
                     step={1}
-                    value={micPitchSignal()}
+                    value={micState.pitch}
                     onInput={(e) => {
                       const v = Number(e.currentTarget.value);
-                      setMicPitchSignal(v);
+                      setMicState({ pitch: v });
                       setMicPitch(v);
                     }}
-                    valueLabel={`${micPitchSignal()} st`}
+                    valueLabel={`${micState.pitch} st`}
                   />
                 </div>
 
                 <SettingToggle
                   title="Normalize sound volume"
                   description="Normalize sound volume, so that loud sounds are quieter and quiet sounds are louder."
-                  checked={normalizationSignal()}
+                  checked={normalization() ?? false}
                   onInput={(e) => setNormalization(e.currentTarget.checked)}
                 />
               </div>
@@ -157,13 +135,12 @@ export default function Settings() {
                 <div class="max-w-xl flex flex-col gap-2">
                   <div class="flex items-center justify-between">
                     <h2 class="text-lg font-medium mb-1">Custom CSS</h2>
-                    <button onClick={() => saveCustomCss(draftCss())}>
+                    <Button onClick={() => saveCustomCss(draftCss())}>
                       Save CSS
-                    </button>
+                    </Button>
                   </div>
-                  <textarea
+                  <Textarea
                     rows={16}
-                    class="w-full"
                     placeholder="Enter your own css here."
                     value={customCss()}
                     onInput={(e) => {
@@ -248,13 +225,13 @@ export default function Settings() {
                 <SettingToggle
                   title="Auto Start"
                   description="Start the soundboard with system in the background."
-                  checked={autoStartSignal()}
+                  checked={autoStart() ?? false}
                   onInput={(e) => setAutoStart(e.currentTarget.checked)}
                 />
 
-                <button class="self-start" onClick={clearAllCache}>
+                <Button class="self-start" onClick={clearAllCache}>
                   Clear Cache
-                </button>
+                </Button>
               </div>
             </Match>
           </Switch>

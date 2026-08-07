@@ -1,5 +1,5 @@
-import { createEffect, createSignal, For, Show, onCleanup } from "solid-js";
-import { Repeat, Shuffle } from "lucide-solid";
+import { createEffect, createSignal, For, Show, onCleanup, createResource } from "solid-js";
+import { Repeat, Shuffle, Funnel } from "lucide-solid";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   tabs,
@@ -12,9 +12,11 @@ import {
   playSoundTabMode,
   playlistMode,
   nextPlaylistMode,
-  setCurrentTabPaths,
   currentTab,
   setCurrentTab,
+  sounds,
+  SORT_ORDER,
+  getSoundsHistory,
 } from "../../../lib";
 import type { HotKeyEntry } from "../../../lib";
 import { alerts } from "../../../lib/alert";
@@ -23,10 +25,18 @@ import AlertItem from "../../ui/alert";
 import SoundItem from "../../ui/sounds/soundItem";
 import UpdateNotification from "../../ui/updateNotification";
 import TabGroup from "../../ui/tab/tabGroup";
+import { SortOrder } from "../../../lib";
+import { Button } from "../../ui/button";
+import { Input } from "../../ui/input";
+import { Select } from "../../ui/select";
+import { Divider } from "../../ui/divider";
 
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = createSignal<string | null>(null);
+  const [sortOrder, setSortOrder] = createSignal<SortOrder>("Default");
   const [capturingFor, setCapturingFor] = createSignal<string | null>(null);
+  const [soundsHistory, { refetch: refetchSoundsHistory }] =
+    createResource(getSoundsHistory);
 
   createEffect(async () => {
     const loadedTabs = tabs();
@@ -50,11 +60,6 @@ export default function Dashboard() {
     }, 5000);
 
     onCleanup(() => clearInterval(interval));
-  });
-
-  // Update current sounds from tab for playlist
-  createEffect(() => {
-    setCurrentTabPaths(currentTab()?.[1].map((s) => s.path) ?? []);
   });
 
   const handleAddTab = async () => {
@@ -88,12 +93,35 @@ export default function Dashboard() {
     refetchHotkeys();
   };
 
+  const handlePlay = async (path: string) => {
+    await playSoundTabMode(path);
+    await refetchSoundsHistory();
+  };
+
   const filteredSounds = () => {
     const sounds = currentTab()?.[1] ?? [];
     const q = searchQuery()?.toLowerCase();
     return q
       ? sounds.filter((s) => s.path.split(/[\\/]/).pop()!.toLowerCase().includes(q))
       : sounds;
+  };
+
+  const sortedSounds = () => {
+    const sounds = filteredSounds();
+    switch (sortOrder()) {
+      case "Size":
+        return [...sounds].sort((a, b) => b.size - a.size);
+      case "Date":
+        return [...sounds].sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime());
+      case "Duration":
+        return [...sounds].sort((a, b) => b.duration - a.duration);
+      default:
+        return sounds;
+    }
+  };
+
+  const soundInHistory = (path: string) => {
+    return soundsHistory()?.includes(path) ?? false;
   };
 
   return (
@@ -121,9 +149,8 @@ export default function Dashboard() {
 
         {/* Search */}
         <div class="bg-mantle px-2 py-1.5 shrink-0 flex items-center gap-2 border-t border-surface-0 border-l border-b rounded-t-md pr-2">
-          <input
-            type="text"
-            class="w-full bg-base text-sm truncate"
+          <Input
+            class="bg-base!"
             placeholder="Start typing here to search..."
             value={searchQuery() ?? ""}
             onInput={(e) => setSearchQuery(e.currentTarget.value || null)}
@@ -135,6 +162,21 @@ export default function Dashboard() {
               }
             }}
           />
+
+          {/* Sort order */}
+          <div class="relative flex items-center w-28 mx-2" title="Click to change sort order">
+            <Funnel class="absolute left-2 size-3.5 text-subtext-0 pointer-events-none z-10" />
+            <Select
+              value={sortOrder()}
+              class="appearance-none pl-7! text-subtext-0 bg-base"
+              onChange={(e) => setSortOrder(e.currentTarget.value as SortOrder)}
+            >
+              <For each={SORT_ORDER}>
+                {(order) => <option value={order}>{order}</option>}
+              </For>
+            </Select>
+          </div>
+          <Divider class="w-0.5 h-full" />
 
           {/* Playlist mode */}
           <div
@@ -165,12 +207,11 @@ export default function Dashboard() {
               {tabs()?.length === 0 ? (
                 <div class="flex flex-col items-center gap-3">
                   <h1>No tabs are created yet. Click to add one!</h1>
-                  <button
-                    class="rounded-md bg-primary px-4 py-2 text-white transition hover:bg-primary/90"
+                  <Button
                     onClick={handleAddTab}
                   >
                     Add Tab
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 "Loading..."
@@ -179,7 +220,7 @@ export default function Dashboard() {
           }
         >
           <For
-            each={filteredSounds()}
+            each={sortedSounds()}
             fallback={
               <p class="text-sm text-subtext-0 p-4">
                 No sound files are found in this folder.
@@ -188,10 +229,12 @@ export default function Dashboard() {
           >
             {(sound, i) => (
               <SoundItem
+                isPlaying={sounds.some(s => s.path === sound.path && !s.paused)}
+                isRecent={soundInHistory(sound.path)}
                 sound={sound}
                 odd={i() % 2 !== 0}
                 registered={findHotkeyForSound(sound.path)}
-                onPlay={() => playSoundTabMode(sound.path)}
+                onPlay={() => handlePlay(sound.path)}
                 onStartCapture={() => setCapturingFor(sound.path)}
                 onUnregister={(e) => handleUnregister(e, sound.path)}
               />

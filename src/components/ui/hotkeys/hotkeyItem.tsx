@@ -1,6 +1,7 @@
 import { HotKeyEntry } from "../../../lib";
 import { Trash2 } from "lucide-solid";
 import { unregisterHotkey } from "../../../lib/hotkey";
+import { Button } from "../button";
 
 export default function HotKeyItem(props: {
   hotkey: HotKeyEntry;
@@ -11,16 +12,15 @@ export default function HotKeyItem(props: {
     <div class="flex items-center justify-between gap-4 px-3 py-2 rounded-md transition-all bg-surface-0 hover:bg-surface-1">
       {/* Unregister button */}
       <div class="flex items-center gap-3 min-w-0 flex-1">
-        <button
-          onClick={async (_) => {
+        <Button
+          onClick={async (_: MouseEvent) => {
             await unregisterHotkey(props.hotkey.id);
           }}
           disabled={props.disabled}
-          class="disabled:opacity-30 disabled:cursor-not-allowed text-text"
           title="Unregister hotkey"
         >
           <Trash2 class="w-3.5 h-3.5" />
-        </button>
+        </Button>
 
         {/* Context */}
         <div class="flex flex-col min-w-0">

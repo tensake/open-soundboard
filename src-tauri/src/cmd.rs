@@ -54,13 +54,13 @@ pub fn play_sound(
         .ok_or("No output device found")?
         .clone();
     let normalize = state.cfg.lock().normalize;
-    let file_key = state.cache.get_file_key(&path).ok();
+    let file_key = crate::cache::get_file_key(&path).ok();
     log::info!("Playing sound {path} and using key {file_key:?}");
 
     // Try to get normalization gain from cache
     let cached_gain: Option<f32> = file_key
         .as_deref()
-        .and_then(|key| state.cache.get_normalization_cache(key).ok().flatten());
+        .and_then(|key| state.cache.get_normalization(key).ok().flatten());
     let initial_gain = if normalize {
         cached_gain.unwrap_or(1.0)
     } else {
@@ -82,11 +82,18 @@ pub fn play_sound(
     let id = state.next_id.fetch_add(1, Ordering::Relaxed);
     state.playing_sounds.lock().insert(id, handle);
 
+    // Record the sound in history
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64;
+    let _ = state.cache.record_sound(timestamp, &path);
+
     // Spawn a thread to calculate normalization gain if needed
     if cached_gain.is_none() {
         std::thread::spawn(move || {
             let state = app_handle.state::<AppState>();
-            let file_key = match state.cache.get_file_key(&path) {
+            let file_key = match crate::cache::get_file_key(&path) {
                 Ok(k) => k,
                 Err(e) => {
                     log::error!("Failed to get file key for {path}: {e}");
@@ -97,7 +104,7 @@ pub fn play_sound(
                 Ok(gain) => {
                     log::debug!("Calculated normalization gain for {path}: {gain}");
                     normalization_gain.store(gain.to_bits(), Ordering::Relaxed);
-                    if let Err(e) = state.cache.set_normalization_cache(&file_key, gain) {
+                    if let Err(e) = state.cache.set_normalization(&file_key, gain) {
                         log::error!("Failed to save normalization cache: {e}");
                     }
                 }
@@ -257,7 +264,10 @@ pub fn get_tabs(
     state: tauri::State<AppState>,
 ) -> Vec<(config::tab::Tab, Vec<config::tab::SoundFile>)> {
     let tabs = state.cfg.lock().get_tabs();
-    tabs.iter().map(|t| (t.clone(), t.list_sounds())).collect()
+    let cache = &state.cache;
+    tabs.iter()
+        .map(|t| (t.clone(), t.list_sounds(cache)))
+        .collect()
 }
 
 #[tauri::command]
@@ -265,11 +275,12 @@ pub fn get_tab(
     state: tauri::State<AppState>,
     id: String,
 ) -> Option<(config::tab::Tab, Vec<config::tab::SoundFile>)> {
+    let cache = &state.cache;
     state
         .cfg
         .lock()
         .get_tab(id)
-        .map(|t| (t.clone(), t.list_sounds()))
+        .map(|t| (t.clone(), t.list_sounds(cache)))
 }
 
 #[tauri::command]
@@ -423,4 +434,9 @@ pub fn get_autostart(app: tauri::AppHandle) -> Result<bool, String> {
 pub fn clear_all_cache(state: State<AppState>) -> Result<(), String> {
     log::info!("Clearing all cache...");
     state.cache.clear_all_cache().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_sounds_history(state: State<AppState>) -> Result<Vec<String>, String> {
+    state.cache.get_sounds_history().map_err(|e| e.to_string())
 }

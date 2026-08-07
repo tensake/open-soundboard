@@ -306,6 +306,7 @@ pub fn run() {
             cmd::get_mic_volume,
             // Cache
             cmd::clear_all_cache,
+            cmd::get_sounds_history,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

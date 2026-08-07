@@ -1,6 +1,9 @@
 //! Configuration for tabs in the dashboard.
 
+use crate::cache::CacheDb;
 use crate::config;
+use mp3_duration;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -22,12 +25,28 @@ pub struct SoundFile {
     path: String,
     size: u64,
     datetime: u64,
+    duration: u64,
+}
+
+fn get_duration(cache: &CacheDb, path: &PathBuf) -> u64 {
+    let hash = crate::cache::get_file_key(&path.to_string_lossy()).unwrap_or_default();
+
+    // Check cache first
+    if let Ok(Some(duration)) = cache.get_duration(&hash) {
+        return duration;
+    }
+
+    let duration = mp3_duration::from_path(path)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    let _ = cache.set_duration(&hash, duration);
+    duration
 }
 
 impl Tab {
     /// Lists all sounds in the tab's path that are sound files.
-    pub fn list_sounds(&self) -> Vec<SoundFile> {
-        config::list_path(PathBuf::from(&self.path))
+    pub fn list_sounds(&self, cache: &CacheDb) -> Vec<SoundFile> {
+        let paths: Vec<PathBuf> = config::list_path(PathBuf::from(&self.path))
             .unwrap_or_default()
             .into_iter()
             .filter(|p| {
@@ -36,6 +55,10 @@ impl Tab {
                     .map(|e| ALLOWED_FILE_EXT.contains(&e.to_lowercase().as_str()))
                     .unwrap_or(false)
             })
+            .collect();
+
+        paths
+            .par_iter()
             .map(|p| {
                 let meta = p.metadata().ok();
                 SoundFile {
@@ -47,6 +70,7 @@ impl Tab {
                         .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
                         .map(|d| d.as_secs())
                         .unwrap_or(0),
+                    duration: get_duration(cache, p),
                 }
             })
             .collect()

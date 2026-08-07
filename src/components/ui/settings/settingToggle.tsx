@@ -1,4 +1,5 @@
 import type { JSX } from "solid-js";
+import { Checkbox } from "../checkbox";
 
 interface SettingToggleProps {
   title: string;
@@ -17,8 +18,7 @@ export default function SettingToggle(props: SettingToggleProps) {
             <h3 class="text-sm text-subtext-0">{props.description}</h3>
           )}
         </div>
-        <input
-          type="checkbox"
+        <Checkbox
           checked={props.checked}
           onInput={props.onInput}
         />

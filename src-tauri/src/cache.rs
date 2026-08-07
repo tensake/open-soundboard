@@ -1,17 +1,90 @@
 use parking_lot::Mutex;
-use redb::{Database, Error, ReadableDatabase, TableDefinition};
+use redb::{Database, Error, ReadableDatabase, ReadableTable, TableDefinition};
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::{BufReader, Read};
 use std::path::Path;
 use std::time::UNIX_EPOCH;
 
 const CACHE_FILE_NAME: &str = "cache";
 const NORMALIZATION_TABLE: TableDefinition<&str, f32> = TableDefinition::new("normalization");
+const DURATION_TABLE: TableDefinition<&str, u64> = TableDefinition::new("duration");
+const HISTORY_TABLE: TableDefinition<u64, &str> = TableDefinition::new("history");
+
+/// Sets a value in the cache to the specified database and memory.
+macro_rules! set_cache {
+    // Write to DB and memory
+    ($this:expr, $memory:expr, $table:expr, $key:expr, $value:expr) => {{
+        let value = $value;
+
+        let txn = $this.db.begin_write()?;
+        txn.open_table($table)?.insert($key, value)?;
+        txn.commit()?;
+
+        $memory.lock().insert($key.to_owned(), value);
+
+        Ok(())
+    }};
+
+    // Write to DB only
+    ($this:expr, $table:expr, $key:expr, $value:expr) => {{
+        let txn = $this.db.begin_write()?;
+        txn.open_table($table)?.insert($key, $value)?;
+        txn.commit()?;
+
+        Ok(())
+    }};
+}
+
+/// Gets a value from the cache.
+macro_rules! get_cache {
+    // For getting one value
+    ($this:expr, $memory:expr, $table:expr, $hash:expr) => {{
+        if let Some(&value) = $memory.lock().get($hash) {
+            Ok(Some(value))
+        } else {
+            let txn = $this.db.begin_read()?;
+
+            match txn.open_table($table) {
+                Ok(table) => {
+                    let value = table.get($hash)?.map(|v| v.value());
+
+                    if let Some(value) = value {
+                        $memory.lock().insert($hash.to_owned(), value);
+                    }
+
+                    Ok(value)
+                }
+                Err(redb::TableError::TableDoesNotExist(_)) => Ok(None),
+                Err(e) => Err(e.into()),
+            }
+        }
+    }};
+
+    // For getting latest multiple values
+    ($this:expr, $table:expr, $count:expr) => {{
+        let txn = $this.db.begin_read()?;
+
+        // Reverse iterate the table to get latest values
+        match txn.open_table($table) {
+            Ok(table) => table
+                .iter()?
+                .rev()
+                .take($count)
+                .map(|entry| {
+                    let (_, value) = entry?;
+                    Ok(value.value().to_owned())
+                })
+                .collect::<Result<Vec<_>, Error>>(),
+
+            Err(redb::TableError::TableDoesNotExist(_)) => Ok(Vec::new()),
+            Err(e) => Err(e.into()),
+        }
+    }};
+}
 
 pub struct CacheDb {
     db: Database,
-    normalization_memory: Mutex<HashMap<String, f32>>,
+    normalization: Mutex<HashMap<String, f32>>,
+    duration: Mutex<HashMap<String, u64>>,
 }
 
 impl CacheDb {
@@ -19,79 +92,55 @@ impl CacheDb {
         let db = Database::create(path.join(CACHE_FILE_NAME))?;
         Ok(Self {
             db,
-            normalization_memory: Mutex::new(HashMap::new()),
+            normalization: Mutex::new(HashMap::new()),
+            duration: Mutex::new(HashMap::new()),
         })
     }
 
     pub fn clear_all_cache(&self) -> Result<(), Error> {
         let txn = self.db.begin_write()?;
         txn.delete_table(NORMALIZATION_TABLE)?;
+        txn.delete_table(DURATION_TABLE)?;
+        txn.delete_table(HISTORY_TABLE)?;
         txn.commit()?;
-        self.normalization_memory.lock().clear();
+        self.normalization.lock().clear();
+        self.duration.lock().clear();
         Ok(())
     }
 
-    /// Get optional cached normalization gain for a file by its hash.
-    pub fn get_normalization_cache(&self, hash: &str) -> Result<Option<f32>, Error> {
-        // Check memory cache first
-        if let Some(&gain) = self.normalization_memory.lock().get(hash) {
-            return Ok(Some(gain));
-        }
-
-        // Check database cache
-        let txn = self.db.begin_read()?;
-        match txn.open_table(NORMALIZATION_TABLE) {
-            Ok(table) => {
-                let gain = table.get(hash)?.map(|v| v.value());
-
-                // Add to memory for faster lookup time
-                if let Some(g) = gain {
-                    self.normalization_memory.lock().insert(hash.to_string(), g);
-                }
-                Ok(gain)
-            }
-            Err(redb::TableError::TableDoesNotExist(_)) => Ok(None),
-            Err(e) => Err(e.into()),
-        }
+    pub fn get_normalization(&self, hash: &str) -> Result<Option<f32>, Error> {
+        get_cache!(self, self.normalization, NORMALIZATION_TABLE, hash)
     }
 
-    /// Cache the normalization gain for a file by its hash.
-    pub fn set_normalization_cache(&self, hash: &str, gain: f32) -> Result<(), Error> {
-        self.normalization_memory
-            .lock()
-            .insert(hash.to_string(), gain);
-        let txn = self.db.begin_write()?;
-        txn.open_table(NORMALIZATION_TABLE)?.insert(hash, gain)?;
-        txn.commit()?;
-        Ok(())
+    pub fn get_duration(&self, hash: &str) -> Result<Option<u64>, Error> {
+        get_cache!(self, self.duration, DURATION_TABLE, hash)
     }
 
-    /// Get a hash of a file from the path provided by its contents.
-    #[allow(unused)]
-    pub fn hash_file(&self, path: &str) -> std::io::Result<String> {
-        let file = File::open(path)?;
-        let mut reader = BufReader::new(file);
-        let mut hasher = blake3::Hasher::new();
-        let mut buf = [0u8; 65536];
-        loop {
-            let n = reader.read(&mut buf)?;
-            if n == 0 {
-                break;
-            }
-            hasher.update(&buf[..n]);
-        }
-        Ok(hasher.finalize().to_hex().to_string())
+    pub fn set_normalization(&self, hash: &str, gain: f32) -> Result<(), Error> {
+        set_cache!(self, self.normalization, NORMALIZATION_TABLE, hash, gain)
     }
 
-    /// Get a cache key for a file based on its path and metadata.
-    pub fn get_file_key(&self, path: &str) -> std::io::Result<String> {
-        let meta = std::fs::metadata(path)?;
-        let modified = meta
-            .modified()?
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
-        let size = meta.len();
-        Ok(format!("{path}|{size}|{modified}"))
+    pub fn set_duration(&self, hash: &str, duration: u64) -> Result<(), Error> {
+        set_cache!(self, self.duration, DURATION_TABLE, hash, duration)
     }
+
+    pub fn get_sounds_history(&self) -> Result<Vec<String>, Error> {
+        get_cache!(self, HISTORY_TABLE, 20)
+    }
+
+    pub fn record_sound(&self, timestamp: u64, path: &str) -> Result<(), Error> {
+        set_cache!(self, HISTORY_TABLE, timestamp, path)
+    }
+}
+
+/// Get a cache key for a file based on its path and metadata.
+pub fn get_file_key(path: &str) -> std::io::Result<String> {
+    let meta = std::fs::metadata(path)?;
+    let modified = meta
+        .modified()?
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    let size = meta.len();
+    Ok(format!("{path}|{size}|{modified}"))
 }

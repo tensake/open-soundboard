@@ -1,10 +1,10 @@
 import DashboardIcon from "../components/ui/icons/dashboardIcon";
 import { AudioLines, SettingsIcon } from "lucide-solid";
-
 import { Tab, PlaylistMode } from "./types";
 
 export const CONTROL_ACTIONS = ["Mute", "MicMute", "StopAll", "PauseResumeAll"];
 export const PLAYLIST_ORDER: PlaylistMode[] = ["disabled", "repeat", "shuffle"];
+export const SORT_ORDER = ["Default", "Size", "Date", "Duration"];
 
 export const TABS = {
   [Tab.Dashboard]: { icon: DashboardIcon },

@@ -1,4 +1,5 @@
 import { JSX, createSignal } from "solid-js";
+import { Slider } from "./slider";
 
 interface ProgressSliderProps {
   value?: number;
@@ -31,8 +32,7 @@ export default function ProgressSlider(props: ProgressSliderProps) {
       </div>
 
       {/* Range input */}
-      <input
-        type="range"
+      <Slider
         {...props.inputProps}
         min={min()}
         max={max()}

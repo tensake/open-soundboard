@@ -6,17 +6,19 @@ import {
   stopForward,
   setForwardVolume,
   AudioApp,
-  soundVolumeSignal,
-  micVolumeSignal,
   handleMicVolumeSlider,
   handleVolumeSlider,
+  soundState,
+  micState,
 } from "../../../lib";
 import { Square, SquareChevronRight, Volume2, Mic } from "lucide-solid";
 import { TransitionGroup } from "solid-transition-group";
 import SettingSlider from "../../ui/settings/settingSlider";
+import { Button } from "../../ui/button";
+import { Slider } from "../../ui/slider";
 
 function ForwardItem({ app }: { app: AudioApp }) {
-  const forwarded = () => forwardedApps().find((a) => a.pid === app.id);
+  const forwarded = () => forwardedApps.find((a) => a.pid === app.id);
   return (
     <div class="flex items-center justify-between gap-4 rounded-xl p-2 transition-colors duration-200 hover:bg-primary-400/10">
       <div class="flex items-center gap-3">
@@ -47,8 +49,7 @@ function ForwardItem({ app }: { app: AudioApp }) {
         <Show when={forwarded()}>
           {(fw) => (
             <>
-              <input
-                type="range"
+              <Slider
                 min="0"
                 max="1"
                 step="0.01"
@@ -56,29 +57,24 @@ function ForwardItem({ app }: { app: AudioApp }) {
                 onInput={(e) =>
                   setForwardVolume(fw().id, parseFloat(e.currentTarget.value))
                 }
-                class="w-24 sm:w-32"
               />
 
-              <button
-                type="button"
-                class="cursor-pointer text-sm bg-transparent border-none px-2 py-1 font-medium"
+              <Button
                 onClick={() => stopForward(fw().id)}
               >
                 <Square class="w-4 h-4" />
                 Stop
-              </button>
+              </Button>
             </>
           )}
         </Show>
 
         <Show when={!forwarded()}>
-          <button
-            type="button"
-            class="cursor-pointer text-sm text-primary-500 hover:text-primary-400 bg-transparent border-none px-2 py-1 font-medium"
+          <Button
             onClick={() => forwardApp(app.id)}
           >
             <SquareChevronRight class="w-4 h-4" /> Forward
-          </button>
+          </Button>
         </Show>
       </div>
     </div>
@@ -109,9 +105,9 @@ export default function Audio() {
               min={0}
               max={100}
               step={1}
-              value={soundVolumeSignal()}
+              value={soundState.volume}
               onInput={handleVolumeSlider}
-              valueLabel={`${soundVolumeSignal()}%`}
+              valueLabel={`${soundState.volume}%`}
             />
           </div>
         </div>
@@ -124,9 +120,9 @@ export default function Audio() {
               min={0}
               max={300}
               step={1}
-              value={micVolumeSignal()}
+              value={micState.volume}
               onInput={handleMicVolumeSlider}
-              valueLabel={`${micVolumeSignal()}%`}
+              valueLabel={`${micState.volume}%`}
             />
           </div>
         </div>

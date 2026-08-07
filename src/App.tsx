@@ -6,6 +6,7 @@ import {
   onMount,
   createEffect,
   Show,
+  onCleanup,
 } from "solid-js";
 import { listen } from "@tauri-apps/api/event";
 import {
@@ -21,13 +22,15 @@ import {
   ControlAction,
   Tab,
   TABS,
+  startProgressPolling,
+  stopProgressPolling,
   markAsReady,
   checkForUpdate,
   customCss,
   applyCustomCss,
-  onboardedSignal,
   onboard,
   initConfig,
+  onboarded,
 } from "./lib";
 import Dashboard from "./components/layout/tabs/dashboard";
 import Audio from "./components/layout/tabs/audio";
@@ -78,9 +81,13 @@ export default function App() {
     // Initialize from config
     await initConfig();
 
+    startProgressPolling();
+
     // Check for update
     await checkForUpdate();
   });
+
+  onCleanup(stopProgressPolling);
 
   createEffect(() => {
     // Apply custom css
@@ -90,7 +97,7 @@ export default function App() {
 
   return (
     <Show
-      when={onboardedSignal()}
+      when={onboarded()}
       fallback={<OnboardingScreen onComplete={onboard} />}
     >
       <main class="flex h-screen w-screen overflow-hidden">

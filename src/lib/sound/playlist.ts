@@ -1,39 +1,31 @@
 import { PLAYLIST_ORDER } from "../constants";
-import { createEffect } from "solid-js";
 import {
   playlistMode,
   sounds,
   setSounds,
   setPlaylistMode,
-  finishedPlaylistSound,
-  setFinishedPlaylistSound,
-  currentTabPaths,
 } from "./state";
 import { playSoundTagged } from "./cmd";
+import { currentTabPaths } from "../config";
+import { PlaylistMode } from "../types";
 
-createEffect(() => {
-  const finished = finishedPlaylistSound();
-  if (!finished) return;
-  setFinishedPlaylistSound(null);
-
-  if (finished.mode === "repeat") {
-    playSoundTagged(finished.path, "repeat");
+export function handleSoundFinished(path: string, mode: PlaylistMode) {
+  if (mode === "repeat") {
+    playSoundTagged(path, "repeat");
     return;
   }
 
-  if (finished.mode === "shuffle") {
-    const tabSounds = currentTabPaths();
-    if (tabSounds.length === 0) return;
-
-    let next = finished.path;
-    if (tabSounds.length > 1) {
+  if (mode === "shuffle") {
+    const paths = currentTabPaths();
+    let next = path;
+    if (paths.length > 1) {
       do {
-        next = tabSounds[Math.floor(Math.random() * tabSounds.length)];
-      } while (next === finished.path);
+        next = paths[Math.floor(Math.random() * paths.length)];
+      } while (next === path);
     }
     playSoundTagged(next, "shuffle");
   }
-});
+}
 
 export function nextPlaylistMode() {
   const idx = PLAYLIST_ORDER.indexOf(playlistMode());

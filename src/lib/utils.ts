@@ -13,10 +13,6 @@ export async function markAsReady() {
   await invoke("mark_as_ready");
 }
 
-export async function clearAllCache() {
-  await invoke("clear_all_cache");
-}
-
 export function readableBytes(bytes: number): string {
   if (bytes === 0) return "0 bytes";
   const units = ["bytes", "KB", "MB", "GB", "TB"];
@@ -33,4 +29,14 @@ export function readableDate(unix: number): string {
     year: 'numeric', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit'
   });
+}
+
+export function readableMilisecs(milisecs: number): string {
+  if (!isFinite(milisecs) || milisecs < 0) return "0:00";
+  const secs = Math.floor(milisecs / 1000);
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60)
+    .toString()
+    .padStart(2, "0");
+  return `${m}:${s}`;
 }
