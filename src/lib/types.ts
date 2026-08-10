@@ -34,6 +34,7 @@ export type SoundTab = {
   kind: SoundTabKind;
   name: string;
   path?: string;
+  sounds: string[];
 };
 
 export interface SoundFile {
@@ -61,7 +62,6 @@ export interface SoundEntry {
 export interface SoundConfig {
   tags: string[];
   pins: string[];
-  usertabs: string[];
 }
 
 export interface ForwardedApp {

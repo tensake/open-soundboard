@@ -11,8 +11,6 @@ pub struct SoundConfig {
     pub tags: Vec<String>,
     /// List of tabs that the sound is pinned to.
     pub pins: Vec<String>,
-    /// List of usertabs that the sound is added to.
-    pub usertabs: Vec<String>,
 }
 
 impl config::Config {

@@ -296,6 +296,11 @@ pub fn add_tab(
 }
 
 #[tauri::command]
+pub fn edit_tab(state: tauri::State<AppState>, tab: config::tab::Tab) {
+    state.cfg.lock().edit_tab(tab);
+}
+
+#[tauri::command]
 pub fn remove_tab(state: tauri::State<AppState>, id: String) {
     log::debug!("Removing tab: {id}");
     state.cfg.lock().remove_tab(id);

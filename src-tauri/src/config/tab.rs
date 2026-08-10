@@ -26,6 +26,7 @@ pub struct Tab {
     kind: TabKind,
     name: String,
     path: Option<String>,
+    sounds: Vec<String>,
 }
 
 /// Represents a sound file in a tab.
@@ -52,42 +53,48 @@ fn get_duration(cache: &CacheDb, path: &PathBuf) -> u64 {
     duration
 }
 
+fn get_sound_file(p: &PathBuf, cache: &CacheDb) -> SoundFile {
+    let meta = p.metadata().ok();
+    SoundFile {
+        path: p.to_string_lossy().into_owned(),
+        size: meta.as_ref().map(|m| m.len()).unwrap_or(0),
+        datetime: meta
+            .as_ref()
+            .and_then(|m| m.modified().ok())
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_secs())
+            .unwrap_or(0),
+        duration: get_duration(cache, p),
+    }
+}
+
 impl Tab {
     /// Lists all sounds in the tab's path that are sound files.
     pub fn list_sounds(&self, cache: &CacheDb) -> Vec<SoundFile> {
-        // Return empty if path is not set
-        let Some(path) = &self.path else {
-            return vec![];
-        };
-
-        let paths: Vec<PathBuf> = config::list_path(PathBuf::from(path))
-            .unwrap_or_default()
-            .into_iter()
-            .filter(|p| {
-                p.extension()
-                    .and_then(|e| e.to_str())
-                    .map(|e| ALLOWED_FILE_EXT.contains(&e.to_lowercase().as_str()))
-                    .unwrap_or(false)
-            })
-            .collect();
-
-        paths
-            .par_iter()
-            .map(|p| {
-                let meta = p.metadata().ok();
-                SoundFile {
-                    path: p.to_string_lossy().into_owned(),
-                    size: meta.as_ref().map(|m| m.len()).unwrap_or(0),
-                    datetime: meta
-                        .as_ref()
-                        .and_then(|m| m.modified().ok())
-                        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-                        .map(|d| d.as_secs())
-                        .unwrap_or(0),
-                    duration: get_duration(cache, p),
-                }
-            })
-            .collect()
+        match self.kind {
+            TabKind::Directory => {
+                let Some(path) = &self.path else {
+                    return vec![];
+                };
+                let paths: Vec<PathBuf> = config::list_path(PathBuf::from(path))
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter(|p| {
+                        p.extension()
+                            .and_then(|e| e.to_str())
+                            .map(|e| ALLOWED_FILE_EXT.contains(&e.to_lowercase().as_str()))
+                            .unwrap_or(false)
+                    })
+                    .collect();
+                paths.par_iter().map(|p| get_sound_file(p, cache)).collect()
+            }
+            TabKind::User => self
+                .sounds
+                .par_iter()
+                .map(|s| get_sound_file(&PathBuf::from(s), cache))
+                .collect(),
+            _ => vec![],
+        }
     }
 }
 
@@ -98,6 +105,7 @@ impl config::Config {
             name,
             kind,
             path,
+            sounds: Vec::new(),
         };
         self.tabs.push(tab);
     }
@@ -112,6 +120,12 @@ impl config::Config {
 
     pub fn get_tab(&self, id: String) -> Option<Tab> {
         self.tabs.iter().find(|t| t.id == id).cloned()
+    }
+
+    pub fn edit_tab(&mut self, tab: Tab) {
+        if let Some(index) = self.tabs.iter().position(|t| t.id == tab.id) {
+            self.tabs[index] = tab;
+        }
     }
 
     pub fn move_tab(&mut self, id: String, idx: usize) {

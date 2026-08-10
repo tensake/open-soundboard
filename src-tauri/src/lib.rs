@@ -294,6 +294,7 @@ pub fn run() {
             cmd::get_tabs,
             cmd::get_tab,
             cmd::add_tab,
+            cmd::edit_tab,
             cmd::remove_tab,
             cmd::move_tab,
             cmd::get_custom_css,
