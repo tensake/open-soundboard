@@ -8,6 +8,7 @@ use uuid::Uuid;
 
 pub mod customcss;
 pub mod hotkey;
+pub mod sound;
 pub mod tab;
 
 const DATA_FILE: &str = "data.json";
@@ -20,6 +21,7 @@ const CSS_FILE: &str = "style.css";
 pub struct Config {
     tabs: Vec<tab::Tab>,
     hotkeys: HashMap<Uuid, hotkey::HotKeyEntry>,
+    sounds: HashMap<String, sound::SoundConfig>,
 
     pub onboarded: bool,
     pub normalize: bool,
@@ -51,6 +53,7 @@ impl Config {
         Config {
             tabs: Vec::new(),
             hotkeys: HashMap::new(),
+            sounds: HashMap::new(),
             onboarded: false,
             normalize: false,
             volume: 1.0,

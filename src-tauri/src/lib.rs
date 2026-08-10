@@ -304,6 +304,9 @@ pub fn run() {
             cmd::set_normalize,
             cmd::get_volume,
             cmd::get_mic_volume,
+            cmd::get_sound_config,
+            cmd::set_sound_config,
+            cmd::get_sounds_config,
             // Cache
             cmd::clear_all_cache,
             cmd::get_sounds_history,

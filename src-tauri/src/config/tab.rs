@@ -11,12 +11,21 @@ const ALLOWED_FILE_EXT: [&str; 8] = [
     "mp3", "wav", "flac", "vorbis", "ogg", "isomp4", "aac", "pcm",
 ];
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum TabKind {
+    Directory,
+    User,
+    Favourite,
+}
+
 /// Represents a tab in the dashboard tab.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Tab {
     id: String,
+    kind: TabKind,
     name: String,
-    path: String,
+    path: Option<String>,
 }
 
 /// Represents a sound file in a tab.
@@ -46,7 +55,12 @@ fn get_duration(cache: &CacheDb, path: &PathBuf) -> u64 {
 impl Tab {
     /// Lists all sounds in the tab's path that are sound files.
     pub fn list_sounds(&self, cache: &CacheDb) -> Vec<SoundFile> {
-        let paths: Vec<PathBuf> = config::list_path(PathBuf::from(&self.path))
+        // Return empty if path is not set
+        let Some(path) = &self.path else {
+            return vec![];
+        };
+
+        let paths: Vec<PathBuf> = config::list_path(PathBuf::from(path))
             .unwrap_or_default()
             .into_iter()
             .filter(|p| {
@@ -78,10 +92,11 @@ impl Tab {
 }
 
 impl config::Config {
-    pub fn add_tab(&mut self, name: String, path: String) {
+    pub fn add_tab(&mut self, name: String, kind: TabKind, path: Option<String>) {
         let tab = Tab {
             id: uuid::Uuid::new_v4().to_string(),
             name,
+            kind,
             path,
         };
         self.tabs.push(tab);
