@@ -1,12 +1,12 @@
 import { Show, createSignal } from "solid-js";
 import { Play, Clock } from "lucide-solid";
-import { HotKeyEntry, SoundFile, SoundConfig, readableBytes, readableDate, readableMilisecs } from "../../../lib";
+import { HotKeyEntry, SoundFile, SoundConfig, readableBytes, readableDate, readableMilisecs, SoundTab } from "../../../lib";
 import HoverMenu from "./hoverMenu";
 import { waveform } from 'ldrs';
 waveform.register();
 
 interface SoundItemProps {
-  currentTabId: string | undefined;
+  currentTab: SoundTab | null ;
   isPlaying: boolean;
   isRecent: boolean;
   sound: SoundFile;
@@ -18,6 +18,7 @@ interface SoundItemProps {
   onUnregister: (e: MouseEvent) => void | Promise<void>;
   onToggleFavourite: () => void;
   onTogglePin: () => void;
+  onRemove: () => void;
 }
 
 export default function SoundItem(props: SoundItemProps) {
@@ -65,7 +66,7 @@ export default function SoundItem(props: SoundItemProps) {
       </Show>
 
       {/* Metadata and hover menu */}
-      <div class="relative flex items-center shrink-0 overflow-hidden"
+      <div class="relative flex items-center shrink-0 overflow-hidden -my-1 py-1"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
@@ -87,13 +88,14 @@ export default function SoundItem(props: SoundItemProps) {
           }`}
         >
           <HoverMenu
-            currentTabId={props.currentTabId}
+            currentTab={props.currentTab}
             soundConfig={props.soundConfig}
             registered={props.registered}
             onToggleFavourite={props.onToggleFavourite}
             onTogglePin={() => { setHovered(false); props.onTogglePin(); }}
             onStartCapture={props.onStartCapture}
             onUnregister={props.onUnregister}
+            onRemove={props.onRemove}
           />
         </div>
       </div>

@@ -1,21 +1,35 @@
 import { Show } from "solid-js";
-import { Heart, Pin, Keyboard, KeyboardOff } from "lucide-solid";
-import type { HotKeyEntry, SoundConfig } from "../../../lib";
+import { Heart, Pin, Keyboard, KeyboardOff, Trash } from "lucide-solid";
+import type { HotKeyEntry, SoundConfig, SoundTab } from "../../../lib";
 
 export default function HoverMenu(props: {
-  currentTabId: string | undefined;
+  currentTab: SoundTab | null;
   soundConfig: SoundConfig | null;
   registered: HotKeyEntry | undefined;
   onToggleFavourite: () => void;
   onTogglePin: () => void;
   onStartCapture: () => void;
   onUnregister: (e: MouseEvent) => void | Promise<void>;
+  onRemove: () => void;
 }) {
   const isFavourite = () => props.soundConfig?.tags.includes("favourite") ?? false;
-  const isPinned = () => props.soundConfig?.pins.includes(props.currentTabId ?? "") ?? false;
+  const isPinned = () => props.currentTab
+      ? (props.soundConfig?.pins.includes(props.currentTab.id) ?? false)
+      : false;
 
   return (
     <div class="mx-1 flex items-center gap-2">
+      {/* Remove from tab */}
+      <Show when={props.currentTab?.kind === "user"}>
+        <div
+          class="hover-menu-item text-subtext-0 hover:text-primary-400 transition-colors"
+          onClick={(e) => { e.stopPropagation(); props.onRemove?.(); }}
+          title="Remove from tab"
+        >
+          <Trash class="w-3.5 h-3.5" />
+        </div>
+      </Show>
+
       {/* Favourite */}
       <div
         class={`hover-menu-item transition-colors ${isFavourite() ? "text-primary-400" : "text-subtext-0 hover:text-primary-400"}`}
@@ -39,7 +53,7 @@ export default function HoverMenu(props: {
         when={props.registered}
         fallback={
           <div
-            class="hover-menu-item text-subtext-0 hover:text-blue transition-colors"
+            class="hover-menu-item text-subtext-0 hover:text-primary-400 transition-colors"
             onClick={(e) => { e.stopPropagation(); props.onStartCapture(); }}
             title="Set hotkey"
           >
@@ -49,7 +63,7 @@ export default function HoverMenu(props: {
       >
         {(_) => (
           <div
-            class="hover-menu-item text-subtext-0 hover:text-red transition-colors"
+            class="hover-menu-item text-subtext-0 hover:text-primary-400 transition-colors"
             onClick={(e) => { e.stopPropagation(); props.onUnregister(e); }}
             title="Remove hotkey"
           >

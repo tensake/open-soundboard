@@ -32,7 +32,7 @@ import {
   initConfig,
   onboarded,
 } from "./lib";
-import Dashboard from "./components/layout/tabs/dashboard";
+import Dashboard from "./components/layout/tabs/dashboard/dashboard";
 import Audio from "./components/layout/tabs/audio";
 import Settings from "./components/layout/tabs/settings";
 import SoundsList from "./components/ui/sounds/soundsList";

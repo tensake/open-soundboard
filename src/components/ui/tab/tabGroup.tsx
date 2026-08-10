@@ -1,5 +1,6 @@
-import { createSignal, For } from "solid-js";
-import { Plus, Folder, FolderOpen, X } from "lucide-solid";
+import { createSignal, For, Show } from "solid-js";
+import { Folder, FolderOpen, X, ListMusic } from "lucide-solid";
+import AddTabMenu from "./addTabMenu";
 import {
   tabs,
   refetchTabs,
@@ -13,6 +14,7 @@ import { SoundTab } from "../../../lib/types";
 
 interface TabGroupProps {
   onAddTab?: () => void;
+  onAddUserTab?: () => void;
   onTabChange?: () => void;
 }
 
@@ -67,8 +69,12 @@ export default function TabGroup(props: TabGroupProps) {
             }}
           >
             {isCurrentTab(tab)
-              ? <FolderOpen class="w-3.5 h-3.5 shrink-0" />
-              : <Folder class="w-3.5 h-3.5 shrink-0" />
+              ? <Show when={tab.kind === "user"} fallback={<FolderOpen class="w-3.5 h-3.5 shrink-0" />}>
+                  <ListMusic class="w-3.5 h-3.5 shrink-0" />
+                </Show>
+              : <Show when={tab.kind === "user"} fallback={<Folder class="w-3.5 h-3.5 shrink-0" />}>
+                  <ListMusic class="w-3.5 h-3.5 shrink-0" />
+                </Show>
             }
             <span class="truncate flex-1">{tab.name}</span>
             <div
@@ -91,12 +97,10 @@ export default function TabGroup(props: TabGroupProps) {
         )}
       </For>
 
-      <div
-        class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-subtext-0 hover:text-text cursor-pointer rounded-t select-none transition-colors shrink-0"
-        onClick={props.onAddTab}
-      >
-        <Plus class="w-3.5 h-3.5" />
-      </div>
+      <AddTabMenu
+        onAddDirectory={() => props.onAddTab?.()}
+        onAddUserTab={() => props.onAddUserTab?.()}
+      />
     </div>
   );
 }
