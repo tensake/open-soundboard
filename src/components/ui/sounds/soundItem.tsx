@@ -1,19 +1,28 @@
-import { Show } from "solid-js";
-import { Play, Keyboard, KeyboardOff, Clock } from "lucide-solid";
-import { HotKeyEntry, SoundFile, readableBytes, readableDate, readableMilisecs } from "../../../lib";
+import { Show, createSignal } from "solid-js";
+import { Play, Clock } from "lucide-solid";
+import { HotKeyEntry, SoundFile, SoundConfig, readableBytes, readableDate, readableMilisecs } from "../../../lib";
+import HoverMenu from "./hoverMenu";
 import { waveform } from 'ldrs';
 waveform.register();
 
-export default function SoundItem(props: {
+interface SoundItemProps {
+  currentTabId: string | undefined;
   isPlaying: boolean;
   isRecent: boolean;
   sound: SoundFile;
   odd: boolean;
   registered: HotKeyEntry | undefined;
+  soundConfig: SoundConfig | null;
   onPlay: () => void;
   onStartCapture: () => void;
   onUnregister: (e: MouseEvent) => void | Promise<void>;
-}) {
+  onToggleFavourite: () => void;
+  onTogglePin: () => void;
+}
+
+export default function SoundItem(props: SoundItemProps) {
+  const [hovered, setHovered] = createSignal(false);
+
   const Playing = () => (
     <l-waveform size="12" color="var(--color-primary-400)" stroke={2} />
   );
@@ -37,10 +46,7 @@ export default function SoundItem(props: {
       <Show
         when={props.isPlaying}
         fallback={
-          <Show
-            when={props.isRecent}
-            fallback={<Idle />}
-          >
+          <Show when={props.isRecent} fallback={<Idle />}>
             <Recent />
           </Show>
         }
@@ -58,36 +64,39 @@ export default function SoundItem(props: {
         )}
       </Show>
 
-      {/* Metadata */}
-      <div class="flex items-center gap-3 text-xs text-subtext-0 truncate shrink-0">
-        <span class="w-32 text-right">{readableDate(props.sound.datetime)}</span>
-        <span class="w-16 text-right">{readableBytes(props.sound.size)}</span>
-        <span class="w-8 text-right">{readableMilisecs(props.sound.duration)}</span>
-      </div>
-
-      {/* Register/Unregister button */}
-      <Show
-        when={props.registered}
-        fallback={
-          <div
-            class="opacity-0 group-hover:opacity-100 hover:text-blue transition-opacity shrink-0"
-            onClick={(e) => { e.stopPropagation(); props.onStartCapture(); }}
-            title="Click to register hotkey"
-          >
-            <Keyboard class="w-3.5 h-3.5" />
-          </div>
-        }
+      {/* Metadata and hover menu */}
+      <div class="relative flex items-center shrink-0 overflow-hidden"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
       >
-        {(_) => (
-          <div
-            class="opacity-0 group-hover:opacity-100 hover:text-red transition-opacity shrink-0"
-            onClick={(e) => { e.stopPropagation(); props.onUnregister(e); }}
-            title="Click to unregister hotkey"
-          >
-            <KeyboardOff class="w-3.5 h-3.5" />
-          </div>
-        )}
-      </Show>
+        {/* Metadata */}
+        <div
+          class={`flex items-center gap-3 text-xs text-subtext-0 transition-all duration-200 ${
+            hovered() ? "opacity-0 translate-x-4 pointer-events-none" : "opacity-100 translate-x-0"
+          }`}
+        >
+          <span class="w-32 text-right">{readableDate(props.sound.datetime)}</span>
+          <span class="w-16 text-right">{readableBytes(props.sound.size)}</span>
+          <span class="w-8 text-right">{readableMilisecs(props.sound.duration)}</span>
+        </div>
+
+        {/* Hover menu */}
+        <div
+          class={`absolute right-0 flex items-center transition-all duration-200 ${
+            hovered() ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4 pointer-events-none"
+          }`}
+        >
+          <HoverMenu
+            currentTabId={props.currentTabId}
+            soundConfig={props.soundConfig}
+            registered={props.registered}
+            onToggleFavourite={props.onToggleFavourite}
+            onTogglePin={() => { setHovered(false); props.onTogglePin(); }}
+            onStartCapture={props.onStartCapture}
+            onUnregister={props.onUnregister}
+          />
+        </div>
+      </div>
     </div>
   );
 }

@@ -9,6 +9,7 @@ export type HotKeyKind = "Sound" | "Control";
 export type ControlAction = "Mute" | "MicMute" | "StopAll" | "PauseResumeAll";
 export type PlaylistMode = "disabled" | "repeat" | "shuffle";
 export type SortOrder = "Default" | "Size" | "Date" | "Duration";
+export type SoundTabKind = "directory" | "user" | "favourite";
 
 export interface Alert {
   kind: AlertKind;
@@ -30,8 +31,9 @@ export interface Progress {
 
 export type SoundTab = {
   id: string;
+  kind: SoundTabKind;
   name: string;
-  path: string;
+  path?: string;
 };
 
 export interface SoundFile {
@@ -54,6 +56,12 @@ export interface SoundEntry {
   paused: boolean;
   speed: number;
   playlistMode: PlaylistMode;
+}
+
+export interface SoundConfig {
+  tags: string[];
+  pins: string[];
+  usertabs: string[];
 }
 
 export interface ForwardedApp {

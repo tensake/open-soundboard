@@ -17,6 +17,9 @@ import {
   sounds,
   SORT_ORDER,
   getSoundsHistory,
+  setSoundConfig,
+  getSoundsConfig,
+  SoundConfig
 } from "../../../lib";
 import type { HotKeyEntry } from "../../../lib";
 import { alerts } from "../../../lib/alert";
@@ -37,6 +40,7 @@ export default function Dashboard() {
   const [capturingFor, setCapturingFor] = createSignal<string | null>(null);
   const [soundsHistory, { refetch: refetchSoundsHistory }] =
     createResource(getSoundsHistory);
+  const [soundsConfig, { refetch: refetchSoundsConfig }] = createResource(getSoundsConfig);
 
   createEffect(async () => {
     const loadedTabs = tabs();
@@ -66,7 +70,7 @@ export default function Dashboard() {
     const selected = await open({ directory: true, multiple: false });
     if (!selected) return;
     const name = selected.split(/[\\/]/).pop() ?? selected;
-    await addTab(name, selected);
+    await addTab(name, "directory", selected);
   };
 
   const handleCapture = async (binding: string) => {
@@ -107,21 +111,57 @@ export default function Dashboard() {
   };
 
   const sortedSounds = () => {
-    const sounds = filteredSounds();
-    switch (sortOrder()) {
-      case "Size":
-        return [...sounds].sort((a, b) => b.size - a.size);
-      case "Date":
-        return [...sounds].sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime());
-      case "Duration":
-        return [...sounds].sort((a, b) => b.duration - a.duration);
-      default:
-        return sounds;
-    }
+    const tabId = currentTab()?.[0].id;
+    const all = filteredSounds();
+
+    const pinned = tabId
+      ? all.filter(s => soundsConfig()?.[s.path]?.pins.includes(tabId))
+      : [];
+    const unpinned = tabId
+      ? all.filter(s => !soundsConfig()?.[s.path]?.pins.includes(tabId))
+      : all;
+
+    const sortFn = (a: typeof all[0], b: typeof all[0]) => {
+      switch (sortOrder()) {
+        case "Size": return b.size - a.size;
+        case "Date": return new Date(b.datetime).getTime() - new Date(a.datetime).getTime();
+        case "Duration": return b.duration - a.duration;
+        default: return 0;
+      }
+    };
+
+    return [...pinned.sort(sortFn), ...unpinned.sort(sortFn)];
   };
 
   const soundInHistory = (path: string) => {
     return soundsHistory()?.includes(path) ?? false;
+  };
+
+  const getSoundCfg = (path: string): SoundConfig | null =>
+    soundsConfig()?.[path] ?? null;
+
+  const handleToggleTag = async (path: string, tag: string) => {
+    const existing = getSoundCfg(path) ?? { tags: [], pins: [], usertabs: [] };
+    const hasTag = existing.tags.includes(tag);
+    const updated: SoundConfig = {
+      ...existing,
+      tags: hasTag ? existing.tags.filter(t => t !== tag) : [...existing.tags, tag],
+    };
+    await setSoundConfig(path, updated);
+    refetchSoundsConfig();
+  };
+
+  const handleTogglePin = async (path: string) => {
+    const tabId = currentTab()?.[0].id;
+    if (!tabId) return;
+    const existing = getSoundCfg(path) ?? { tags: [], pins: [], usertabs: [] };
+    const isPinned = existing.pins.includes(tabId);
+    const updated: SoundConfig = {
+      ...existing,
+      pins: isPinned ? existing.pins.filter(id => id !== tabId) : [...existing.pins, tabId],
+    };
+    await setSoundConfig(path, updated);
+    refetchSoundsConfig();
   };
 
   return (
@@ -229,14 +269,18 @@ export default function Dashboard() {
           >
             {(sound, i) => (
               <SoundItem
+                currentTabId={currentTab()?.[0].id}
                 isPlaying={sounds.some(s => s.path === sound.path && !s.paused)}
                 isRecent={soundInHistory(sound.path)}
                 sound={sound}
                 odd={i() % 2 !== 0}
                 registered={findHotkeyForSound(sound.path)}
+                soundConfig={getSoundCfg(sound.path)}
                 onPlay={() => handlePlay(sound.path)}
                 onStartCapture={() => setCapturingFor(sound.path)}
                 onUnregister={(e) => handleUnregister(e, sound.path)}
+                onToggleFavourite={() => handleToggleTag(sound.path, "favourite")}
+                onTogglePin={() => handleTogglePin(sound.path)}
               />
             )}
           </For>
