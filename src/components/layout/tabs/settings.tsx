@@ -31,7 +31,7 @@ import { Button } from "../../ui/button";
 import { Textarea } from "../../ui/textarea";
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = createSignal("audio");
+  const [activeTab, setActiveTab] = createSignal("general");
   const [draftCss, setDraftCss] = createSignal("");
   const [capturingHotkey, setCapturingHotkey] =
     createSignal<HotKeyEntry | null>(null);
@@ -86,9 +86,9 @@ export default function Settings() {
         <Transition name="fade" mode="outin">
           <Switch>
             {/* Audio tab */}
-            <Match when={activeTab() === "audio"}>
+            <Match when={activeTab() === "general"}>
               <div class="flex flex-col gap-4">
-                <h1 class="text-2xl font-bold mb-4">Audio</h1>
+                <h1 class="text-2xl font-bold mb-4">General Settings</h1>
 
                 <div class="flex flex-col gap-4">
                   <h2 class="text-lg font-medium">Effects</h2>

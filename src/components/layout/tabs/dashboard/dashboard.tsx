@@ -43,7 +43,7 @@ export default function Dashboard() {
   } = useDashboard();
 
   return (
-    <div class="flex flex-col h-full overflow-hidden bg-crust">
+    <div class="flex flex-col h-full w-full overflow-hidden bg-crust">
       <HotkeyOverlay
         capturingFor={capturingFor()}
         onCapture={handleCapture}
@@ -58,7 +58,7 @@ export default function Dashboard() {
 
       <Show when={(tabs()?.length ?? 0) > 0}>
         {/* Tabs */}
-        <div class="flex items-center bg-crust px-2 pt-2 shrink-0 min-w-0">
+        <div class="flex items-center bg-crust px-2 pt-2 shrink-0 min-w-0 w-full">
           <TabGroup
             onAddTab={handleAddTab}
             onAddUserTab={handleAddUserTab}

@@ -1,4 +1,4 @@
-import { createEffect, createSignal, createResource, onCleanup } from "solid-js";
+import { createEffect, createSignal, createResource, onCleanup, createMemo } from "solid-js";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   tabs,
@@ -16,6 +16,7 @@ import {
   setSoundConfig,
   getSoundsConfig,
   SoundConfig,
+  removeTab
 } from "../../../../lib";
 import type { HotKeyEntry } from "../../../../lib";
 import { SortOrder } from "../../../../lib";
@@ -34,7 +35,7 @@ export function useDashboard() {
     }
   });
 
-  // Refresh current tab every 5 seconds
+  // Refresh current tab every 2 seconds
   createEffect(() => {
     const interval = setInterval(async () => {
       const active = currentTab();
@@ -46,7 +47,7 @@ export function useDashboard() {
           setCurrentTab(newTab);
         }
       }
-    }, 5000);
+    }, 2000);
     onCleanup(() => clearInterval(interval));
   });
 
@@ -60,6 +61,29 @@ export function useDashboard() {
       ? all.filter((s) => s.path.split(/[\\/]/).pop()!.toLowerCase().includes(q))
       : all;
   };
+
+  const favouriteSounds = createMemo(() =>
+    Object.keys(soundsConfig() ?? {}).filter(key =>
+      soundsConfig()?.[key].tags?.includes("favourite")
+    )
+  );
+
+  createEffect(async () => {
+    const favSounds = favouriteSounds();
+    const allTabs = tabs();
+    if (!allTabs) return;
+
+    const favTab = allTabs.find(([t]) => t.kind === "favourite");
+
+    if (favSounds.length > 0 && !favTab) {
+      await addTab("Favourites", "favourite");
+    } else if (favSounds.length === 0 && favTab) {
+      await removeTab(favTab[0].id);
+      if (currentTab()?.[0].kind === "favourite") {
+        setCurrentTab(allTabs.find(([t]) => t.kind !== "favourite") ?? null);
+      }
+    }
+  });
 
   const sortedSounds = () => {
     const tabId = currentTab()?.[0].id;
@@ -126,7 +150,7 @@ export function useDashboard() {
       tags: hasTag ? existing.tags.filter(t => t !== tag) : [...existing.tags, tag],
     };
     await setSoundConfig(path, updated);
-    refetchSoundsConfig();
+    await refetchSoundsConfig();
   };
 
   const handleTogglePin = async (path: string) => {
@@ -139,7 +163,7 @@ export function useDashboard() {
       pins: isPinned ? existing.pins.filter(id => id !== tabId) : [...existing.pins, tabId],
     };
     await setSoundConfig(path, updated);
-    refetchSoundsConfig();
+    await refetchSoundsConfig();
   };
 
   const handleRemoveFromTab = async (path: string) => {

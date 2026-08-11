@@ -22,11 +22,11 @@ pub enum TabKind {
 /// Represents a tab in the dashboard tab.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Tab {
-    id: String,
-    kind: TabKind,
-    name: String,
-    path: Option<String>,
-    sounds: Vec<String>,
+    pub id: String,
+    pub kind: TabKind,
+    pub name: String,
+    pub path: Option<String>,
+    pub sounds: Vec<String>,
 }
 
 /// Represents a sound file in a tab.
@@ -68,37 +68,45 @@ fn get_sound_file(p: &PathBuf, cache: &CacheDb) -> SoundFile {
     }
 }
 
-impl Tab {
-    /// Lists all sounds in the tab's path that are sound files.
-    pub fn list_sounds(&self, cache: &CacheDb) -> Vec<SoundFile> {
-        match self.kind {
+impl config::Config {
+    /// Lists all sounds in the tab by its ID.
+    pub fn list_tab_sounds(&self, tab_id: &str, cache: &CacheDb) -> Vec<SoundFile> {
+        let Some(tab) = self.tabs.iter().find(|t| t.id == tab_id) else {
+            return vec![];
+        };
+
+        match tab.kind {
             TabKind::Directory => {
-                let Some(path) = &self.path else {
+                let Some(path) = &tab.path else {
                     return vec![];
                 };
                 let paths: Vec<PathBuf> = config::list_path(PathBuf::from(path))
                     .unwrap_or_default()
-                    .into_iter()
+                    .par_iter()
                     .filter(|p| {
                         p.extension()
                             .and_then(|e| e.to_str())
                             .map(|e| ALLOWED_FILE_EXT.contains(&e.to_lowercase().as_str()))
                             .unwrap_or(false)
                     })
+                    .cloned()
                     .collect();
                 paths.par_iter().map(|p| get_sound_file(p, cache)).collect()
             }
-            TabKind::User => self
+            TabKind::User => tab
                 .sounds
                 .par_iter()
                 .map(|s| get_sound_file(&PathBuf::from(s), cache))
                 .collect(),
-            _ => vec![],
+            TabKind::Favourite => self
+                .sounds
+                .iter()
+                .filter(|(_, v)| v.tags.contains(&"favourite".to_string()))
+                .map(|(path, _)| get_sound_file(&PathBuf::from(path), cache))
+                .collect(),
         }
     }
-}
 
-impl config::Config {
     pub fn add_tab(&mut self, name: String, kind: TabKind, path: Option<String>) {
         let tab = Tab {
             id: uuid::Uuid::new_v4().to_string(),

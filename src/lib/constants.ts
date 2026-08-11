@@ -13,7 +13,7 @@ export const TABS = {
 };
 
 export const SETTINGS_TABS = [
-  { id: "audio", label: "Audio" },
+  { id: "general", label: "General" },
   { id: "appearance", label: "Appearance" },
   { id: "hotkeys", label: "Hotkeys" },
   { id: "system", label: "System" },
