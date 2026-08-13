@@ -56,7 +56,7 @@ cpal = { version = "0.18", features = ["pipewire"] }
 pipewire = { version = "0.10", features = ["v0_3_44"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-wasapi = "0.23.0"
+wasapi = "0.24.0"
 windows-icons = "0.4.0"
 sysinfo = "0.39"
 
