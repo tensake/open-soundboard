@@ -18,6 +18,14 @@ export const [customCss, { refetch: refetchCustomCss }] = createResource(() =>
   invoke<string>("get_custom_css"),
 );
 
+export const [soundsConfig, { refetch: refetchSoundsConfig }] = createResource(getSoundsConfig);
+
+export const favouriteSounds = createMemo(() =>
+  Object.keys(soundsConfig() ?? {}).filter(key =>
+    soundsConfig()?.[key].tags?.includes("favourite")
+  )
+);
+
 async function getTabs(): Promise<[SoundTab, SoundFile[]][]> {
   return invoke<[SoundTab, SoundFile[]][]>("get_tabs");
 }

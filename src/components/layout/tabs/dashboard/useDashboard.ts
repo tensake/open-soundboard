@@ -1,4 +1,4 @@
-import { createEffect, createSignal, createResource, onCleanup, createMemo } from "solid-js";
+import { createEffect, createSignal, createResource, onCleanup } from "solid-js";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   tabs,
@@ -14,7 +14,9 @@ import {
   getSoundsHistory,
   editTab,
   setSoundConfig,
-  getSoundsConfig,
+  favouriteSounds,
+  refetchSoundsConfig,
+  soundsConfig,
   SoundConfig,
   removeTab
 } from "../../../../lib";
@@ -26,7 +28,6 @@ export function useDashboard() {
   const [sortOrder, setSortOrder] = createSignal<SortOrder>("Default");
   const [capturingFor, setCapturingFor] = createSignal<string | null>(null);
   const [soundsHistory, { refetch: refetchSoundsHistory }] = createResource(getSoundsHistory);
-  const [soundsConfig, { refetch: refetchSoundsConfig }] = createResource(getSoundsConfig);
 
   createEffect(async () => {
     const loadedTabs = tabs();
@@ -62,17 +63,10 @@ export function useDashboard() {
       : all;
   };
 
-  const favouriteSounds = createMemo(() =>
-    Object.keys(soundsConfig() ?? {}).filter(key =>
-      soundsConfig()?.[key].tags?.includes("favourite")
-    )
-  );
-
   createEffect(async () => {
     const favSounds = favouriteSounds();
     const allTabs = tabs();
-    if (!allTabs) return;
-
+    if (allTabs === undefined || soundsConfig() === undefined) return;
     const favTab = allTabs.find(([t]) => t.kind === "favourite");
 
     if (favSounds.length > 0 && !favTab) {
