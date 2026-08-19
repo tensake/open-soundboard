@@ -94,7 +94,10 @@ fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
 }
 
 fn config_watcher(app_handle: tauri::AppHandle) {
-    let mut prev_cfg: Option<config::Config> = None;
+    let mut prev_cfg: Option<config::Config> = app_handle
+        .try_state::<AppState>()
+        .map(|state| state.cfg.lock().clone());
+
     loop {
         std::thread::sleep(std::time::Duration::from_secs(1));
         if let Some(state) = app_handle.try_state::<AppState>() {
