@@ -209,6 +209,6 @@ export function handleSpeedSlider(e: Event) {
 
 export function handleMicVolumeSlider(e: Event) {
   const value = parseFloat((e.currentTarget as HTMLInputElement).value);
-  setMicState({ volume: value });
+  setMicState({ volume: value, muted: false });
   setMicVolume(value / 100);
 }
