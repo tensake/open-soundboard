@@ -1,6 +1,7 @@
 //! Commands for interacting with the Tauri application for frontend.
 
 use serde::Serialize;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering;
@@ -263,10 +264,11 @@ pub fn stop_mic(state: tauri::State<AppState>) {
 pub fn get_tabs(
     state: tauri::State<AppState>,
 ) -> Vec<(config::tab::Tab, Vec<config::tab::SoundFile>)> {
-    let tabs = state.cfg.lock().get_tabs();
     let cache = &state.cache;
-    tabs.iter()
-        .map(|t| (t.clone(), t.list_sounds(cache)))
+    let cfg = state.cfg.lock();
+    cfg.get_tabs()
+        .iter()
+        .map(|t| (t.clone(), cfg.list_tab_sounds(&t.id, cache)))
         .collect()
 }
 
@@ -276,17 +278,25 @@ pub fn get_tab(
     id: String,
 ) -> Option<(config::tab::Tab, Vec<config::tab::SoundFile>)> {
     let cache = &state.cache;
-    state
-        .cfg
-        .lock()
-        .get_tab(id)
-        .map(|t| (t.clone(), t.list_sounds(cache)))
+    let cfg = state.cfg.lock();
+    cfg.get_tab(id.clone())
+        .map(|t| (t.clone(), cfg.list_tab_sounds(&id, cache)))
 }
 
 #[tauri::command]
-pub fn add_tab(state: tauri::State<AppState>, name: String, path: String) {
-    log::debug!("Adding tab: {path}");
-    state.cfg.lock().add_tab(name, path);
+pub fn add_tab(
+    state: tauri::State<AppState>,
+    name: String,
+    kind: config::tab::TabKind,
+    path: Option<String>,
+) {
+    log::debug!("Adding {kind:?} tab: {path:?}");
+    state.cfg.lock().add_tab(name, kind, path);
+}
+
+#[tauri::command]
+pub fn edit_tab(state: tauri::State<AppState>, tab: config::tab::Tab) {
+    state.cfg.lock().edit_tab(tab);
 }
 
 #[tauri::command]
@@ -428,6 +438,25 @@ pub fn set_autostart(app: tauri::AppHandle, enabled: bool) -> Result<(), String>
 #[tauri::command]
 pub fn get_autostart(app: tauri::AppHandle) -> Result<bool, String> {
     app.autolaunch().is_enabled().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_sound_config(state: State<AppState>, key: String) -> Option<config::sound::SoundConfig> {
+    state.cfg.lock().get_sound_config(&key)
+}
+
+#[tauri::command]
+pub fn set_sound_config(
+    state: State<AppState>,
+    key: String,
+    config: config::sound::SoundConfig,
+) -> Result<(), String> {
+    state.cfg.lock().set_sound_config(&key, config)
+}
+
+#[tauri::command]
+pub fn get_sounds_config(state: State<AppState>) -> HashMap<String, config::sound::SoundConfig> {
+    state.cfg.lock().get_sounds_config().clone()
 }
 
 #[tauri::command]

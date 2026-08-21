@@ -1,5 +1,6 @@
-import { createSignal, For } from "solid-js";
-import { Plus, Folder, FolderOpen, X } from "lucide-solid";
+import { createSignal, For, Show } from "solid-js";
+import { Folder, FolderOpen, X, ListMusic, Heart } from "lucide-solid";
+import AddTabMenu from "./addTabMenu";
 import {
   tabs,
   refetchTabs,
@@ -13,6 +14,7 @@ import { SoundTab } from "../../../lib/types";
 
 interface TabGroupProps {
   onAddTab?: () => void;
+  onAddUserTab?: () => void;
   onTabChange?: () => void;
 }
 
@@ -67,36 +69,48 @@ export default function TabGroup(props: TabGroupProps) {
             }}
           >
             {isCurrentTab(tab)
-              ? <FolderOpen class="w-3.5 h-3.5 shrink-0" />
-              : <Folder class="w-3.5 h-3.5 shrink-0" />
+              ? <Show when={tab.kind === "user"} fallback={
+                  <Show when={tab.kind === "favourite"} fallback={<FolderOpen class="w-3.5 h-3.5 shrink-0" />}>
+                    <Heart class="w-3.5 h-3.5 shrink-0 fill-primary-400" />
+                  </Show>
+                }>
+                  <ListMusic class="w-3.5 h-3.5 shrink-0 fill-primary-400" />
+                </Show>
+              : <Show when={tab.kind === "user"} fallback={
+                  <Show when={tab.kind === "favourite"} fallback={<Folder class="w-3.5 h-3.5 shrink-0" />}>
+                    <Heart class="w-3.5 h-3.5 shrink-0" />
+                  </Show>
+                }>
+                  <ListMusic class="w-3.5 h-3.5 shrink-0" />
+                </Show>
             }
             <span class="truncate flex-1">{tab.name}</span>
-            <div
-              class="hover:text-red transition-opacity shrink-0 ml-auto"
-              onClick={async (e) => {
-                e.stopPropagation();
-                await removeTab(tab.id);
-                await refetchTabs();
+            <Show when={tab.kind !== "favourite"}>
+              <div
+                class="hover:text-red transition-opacity shrink-0 ml-auto"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  await removeTab(tab.id);
+                  await refetchTabs();
 
-                // Clear search query and current tab if no tabs remain
-                if (isCurrentTab(tab)) {
+                  // Clear search query and current tab if no tabs remain
+                  if (isCurrentTab(tab)) {
                     setCurrentTab(null);
                     props.onTabChange?.();
                   }
-              }}
-            >
-              <X class="w-3 h-3" />
-            </div>
+                }}
+              >
+                <X class="w-3 h-3" />
+              </div>
+            </Show>
           </div>
         )}
       </For>
 
-      <div
-        class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-subtext-0 hover:text-text cursor-pointer rounded-t select-none transition-colors shrink-0"
-        onClick={props.onAddTab}
-      >
-        <Plus class="w-3.5 h-3.5" />
-      </div>
+      <AddTabMenu
+        onAddDirectory={() => props.onAddTab?.()}
+        onAddUserTab={() => props.onAddUserTab?.()}
+      />
     </div>
   );
 }

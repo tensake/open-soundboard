@@ -94,7 +94,10 @@ fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
 }
 
 fn config_watcher(app_handle: tauri::AppHandle) {
-    let mut prev_cfg: Option<config::Config> = None;
+    let mut prev_cfg: Option<config::Config> = app_handle
+        .try_state::<AppState>()
+        .map(|state| state.cfg.lock().clone());
+
     loop {
         std::thread::sleep(std::time::Duration::from_secs(1));
         if let Some(state) = app_handle.try_state::<AppState>() {
@@ -294,6 +297,7 @@ pub fn run() {
             cmd::get_tabs,
             cmd::get_tab,
             cmd::add_tab,
+            cmd::edit_tab,
             cmd::remove_tab,
             cmd::move_tab,
             cmd::get_custom_css,
@@ -304,6 +308,9 @@ pub fn run() {
             cmd::set_normalize,
             cmd::get_volume,
             cmd::get_mic_volume,
+            cmd::get_sound_config,
+            cmd::set_sound_config,
+            cmd::get_sounds_config,
             // Cache
             cmd::clear_all_cache,
             cmd::get_sounds_history,
