@@ -8,6 +8,7 @@ import {
   moveTab,
   currentTab,
   setCurrentTab,
+  editTab,
 } from "../../../lib";
 import type { SoundFile } from "../../../lib";
 import { SoundTab } from "../../../lib/types";
@@ -20,6 +21,8 @@ interface TabGroupProps {
 
 export default function TabGroup(props: TabGroupProps) {
   const [draggedTabId, setDraggedTabId] = createSignal<string | null>(null);
+  const [editingTabId, setEditingTabId] = createSignal<string | null>(null);
+  const [editingName, setEditingName] = createSignal("");
 
   const isCurrentTab = (tab: SoundTab) => currentTab()?.[0].id === tab.id;
 
@@ -51,6 +54,14 @@ export default function TabGroup(props: TabGroupProps) {
                 : "bg-disabled text-subtext-0 hover:bg-enabled hover:text-subtext-1"
             }`}
             onClick={async () => {
+              {/* Start editing name if current */}
+              if (isCurrentTab(tab)) {
+                setEditingTabId(tab.id);
+                setEditingName(tab.name);
+                return;
+              }
+
+              {/* Set as current tab */}
               await refetchTabs();
               const recentTab = tabs()?.find(([t]) => t.id === tab.id);
               setCurrentTab(recentTab ?? [tab, sounds]);
@@ -84,7 +95,26 @@ export default function TabGroup(props: TabGroupProps) {
                   <ListMusic class="w-3.5 h-3.5 shrink-0" />
                 </Show>
             }
-            <span class="truncate flex-1">{tab.name}</span>
+            <Show when={editingTabId() === tab.id} fallback={
+              <span class="truncate flex-1">{tab.name}</span>
+            }>
+              <input
+                class="truncate flex-1 bg-transparent outline-none text-sm w-0 min-w-0"
+                value={editingName()}
+                onInput={(e) => setEditingName(e.currentTarget.value)}
+                onKeyDown={async (e) => {
+                  if (e.key === "Enter" || e.key === "Escape") {
+                    e.currentTarget.blur();
+                  }
+                }}
+                onBlur={async () => {
+                  const name = editingName().trim() || tab.name;
+                  await editTab({ ...tab, name });
+                  setEditingTabId(null);
+                }}
+                ref={(el) => setTimeout(() => el?.focus(), 0)}
+              />
+            </Show>
             <Show when={tab.kind !== "favourite"}>
               <div
                 class="hover:text-red transition-opacity shrink-0 ml-auto"
