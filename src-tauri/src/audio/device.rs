@@ -4,6 +4,7 @@
 use crate::AppState;
 use crate::audio;
 use crate::cmd;
+use crate::types;
 use cpal::traits::{DeviceTrait, HostTrait};
 use parking_lot::Mutex;
 use std::sync::Arc;
@@ -53,8 +54,8 @@ pub fn listen_devices(app: tauri::AppHandle) {
                     if shown_alerts.insert(alert_key.clone()) {
                         let _ = app.emit(
                             "alert",
-                            cmd::Alert {
-                                kind: cmd::AlertKind::Error,
+                            types::Alert {
+                                kind: types::AlertKind::Error,
                                 title: alert_key,
                                 message: e,
                             },

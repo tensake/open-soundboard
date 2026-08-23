@@ -16,7 +16,7 @@ use wasapi::{
 use windows_icons::get_icon_base64_by_process_id;
 
 use crate::audio::PlaybackState;
-use crate::audio::forwarding::AudioApp;
+use crate::types::AudioApp;
 
 /// Resolve the parent process ID for the given child process ID.
 fn resolve_target_pid(pid: u32) -> u32 {

@@ -1,6 +1,6 @@
 use crate::audio::PlaybackState;
 
-use super::AudioApp;
+use crate::types::AudioApp;
 use pipewire::{
     channel,
     context::ContextRc,

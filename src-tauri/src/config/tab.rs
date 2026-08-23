@@ -2,41 +2,14 @@
 
 use crate::cache::CacheDb;
 use crate::config;
+use crate::types;
 use mp3_duration;
 use rayon::prelude::*;
-use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 const ALLOWED_FILE_EXT: [&str; 8] = [
     "mp3", "wav", "flac", "vorbis", "ogg", "isomp4", "aac", "pcm",
 ];
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum TabKind {
-    Directory,
-    User,
-    Favourite,
-}
-
-/// Represents a tab in the dashboard tab.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct Tab {
-    pub id: String,
-    pub kind: TabKind,
-    pub name: String,
-    pub path: Option<String>,
-    pub sounds: Vec<String>,
-}
-
-/// Represents a sound file in a tab.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct SoundFile {
-    path: String,
-    size: u64,
-    datetime: u64,
-    duration: u64,
-}
 
 fn get_duration(cache: &CacheDb, path: &PathBuf) -> u64 {
     let hash = crate::cache::get_file_key(&path.to_string_lossy()).unwrap_or_default();
@@ -53,9 +26,9 @@ fn get_duration(cache: &CacheDb, path: &PathBuf) -> u64 {
     duration
 }
 
-fn get_sound_file(p: &PathBuf, cache: &CacheDb) -> SoundFile {
+fn get_sound_file(p: &PathBuf, cache: &CacheDb) -> types::SoundFile {
     let meta = p.metadata().ok();
-    SoundFile {
+    types::SoundFile {
         path: p.to_string_lossy().into_owned(),
         size: meta.as_ref().map(|m| m.len()).unwrap_or(0),
         datetime: meta
@@ -70,13 +43,13 @@ fn get_sound_file(p: &PathBuf, cache: &CacheDb) -> SoundFile {
 
 impl config::Config {
     /// Lists all sounds in the tab by its ID.
-    pub fn list_tab_sounds(&self, tab_id: &str, cache: &CacheDb) -> Vec<SoundFile> {
+    pub fn list_tab_sounds(&self, tab_id: &str, cache: &CacheDb) -> Vec<types::SoundFile> {
         let Some(tab) = self.tabs.iter().find(|t| t.id == tab_id) else {
             return vec![];
         };
 
         match tab.kind {
-            TabKind::Directory => {
+            types::TabKind::Directory => {
                 let Some(path) = &tab.path else {
                     return vec![];
                 };
@@ -93,12 +66,12 @@ impl config::Config {
                     .collect();
                 paths.par_iter().map(|p| get_sound_file(p, cache)).collect()
             }
-            TabKind::User => tab
+            types::TabKind::User => tab
                 .sounds
                 .par_iter()
                 .map(|s| get_sound_file(&PathBuf::from(s), cache))
                 .collect(),
-            TabKind::Favourite => self
+            types::TabKind::Favourite => self
                 .sounds
                 .iter()
                 .filter(|(_, v)| v.tags.contains(&"favourite".to_string()))
@@ -107,8 +80,8 @@ impl config::Config {
         }
     }
 
-    pub fn add_tab(&mut self, name: String, kind: TabKind, path: Option<String>) {
-        let tab = Tab {
+    pub fn add_tab(&mut self, name: String, kind: types::TabKind, path: Option<String>) {
+        let tab = types::Tab {
             id: uuid::Uuid::new_v4().to_string(),
             name,
             kind,
@@ -122,15 +95,15 @@ impl config::Config {
         self.tabs.retain(|t| t.id != id);
     }
 
-    pub fn get_tabs(&self) -> Vec<Tab> {
+    pub fn get_tabs(&self) -> Vec<types::Tab> {
         self.tabs.clone()
     }
 
-    pub fn get_tab(&self, id: String) -> Option<Tab> {
+    pub fn get_tab(&self, id: String) -> Option<types::Tab> {
         self.tabs.iter().find(|t| t.id == id).cloned()
     }
 
-    pub fn edit_tab(&mut self, tab: Tab) {
+    pub fn edit_tab(&mut self, tab: types::Tab) {
         if let Some(index) = self.tabs.iter().position(|t| t.id == tab.id) {
             self.tabs[index] = tab;
         }
