@@ -3,15 +3,14 @@ import { Folder, FolderOpen, X, ListMusic, Heart } from "lucide-solid";
 import AddTabMenu from "./addTabMenu";
 import {
   tabs,
-  refetchTabs,
   removeTab,
+  editTab,
   moveTab,
+  refetchTabs,
   currentTab,
   setCurrentTab,
-  editTab,
 } from "../../../lib";
-import type { SoundFile } from "../../../lib";
-import { SoundTab } from "../../../lib/types";
+import { SoundFile, Tab } from "../../../bindings";
 
 interface TabGroupProps {
   onAddTab?: () => void;
@@ -24,7 +23,7 @@ export default function TabGroup(props: TabGroupProps) {
   const [editingTabId, setEditingTabId] = createSignal<string | null>(null);
   const [editingName, setEditingName] = createSignal("");
 
-  const isCurrentTab = (tab: SoundTab) => currentTab()?.[0].id === tab.id;
+  const isCurrentTab = (tab: Tab) => currentTab()?.[0].id === tab.id;
 
   const startDrag = (tabId: string) => {
     setDraggedTabId(tabId);
@@ -46,7 +45,7 @@ export default function TabGroup(props: TabGroupProps) {
       }}
     >
       <For each={tabs()}>
-        {([tab, sounds]: [SoundTab, SoundFile[]]) => (
+        {([tab, sounds]: [Tab, SoundFile[]]) => (
           <div
             class={`group flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer rounded-t select-none transition-colors shrink-0 w-36 ${
               isCurrentTab(tab)

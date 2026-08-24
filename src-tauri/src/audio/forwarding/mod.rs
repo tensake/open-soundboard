@@ -1,6 +1,7 @@
 //! Provides methods for forwarding audio from a specific process by using PID to the virtual cable device.
 
 use crate::audio::PlaybackState;
+use crate::types::AudioApp;
 use cpal::traits::DeviceTrait;
 use std::sync::atomic::{AtomicU8, AtomicU32, Ordering};
 use std::sync::{Arc, mpsc};
@@ -10,14 +11,6 @@ pub mod windows;
 
 #[cfg(target_os = "linux")]
 pub mod linux;
-
-#[derive(serde::Serialize, Clone)]
-pub struct AudioApp {
-    pub id: u32,
-    pub name: String,
-    /// Base64 encoded icon
-    pub icon: Option<String>,
-}
 
 /// Handle for controlling a forwarder.
 pub struct ForwardingHandle {

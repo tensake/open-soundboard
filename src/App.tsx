@@ -10,9 +10,6 @@ import {
 } from "solid-js";
 import { listen } from "@tauri-apps/api/event";
 import {
-  getActiveSounds,
-  HotKeyEntry,
-  registerHotkeyCmd,
   hotkeys,
   refetchHotkeys,
   playSound,
@@ -20,17 +17,17 @@ import {
   registerSound,
   listenAlerts,
   ControlAction,
-  Tab,
+  UITabKind,
   TABS,
   startProgressPolling,
   stopProgressPolling,
-  markAsReady,
   checkForUpdate,
   customCss,
   applyCustomCss,
   onboard,
   initConfig,
   onboarded,
+  unwrapOrThrow,
 } from "./lib";
 import Dashboard from "./components/layout/tabs/dashboard/dashboard";
 import Audio from "./components/layout/tabs/audio";
@@ -39,18 +36,19 @@ import SoundsList from "./components/ui/sounds/soundsList";
 import OnboardingScreen from "./components/layout/onboardingScreen";
 import { Transition } from "solid-transition-group";
 import "./App.css";
+import { commands, HotKeyEntry } from "./bindings";
 
 export default function App() {
-  const [activeTab, setActiveTab] = createSignal<Tab>(Tab.Dashboard);
+  const [activeTab, setActiveTab] = createSignal<UITabKind>(UITabKind.Dashboard);
   onMount(async () => {
     // Register all active sounds
-    const ids = await getActiveSounds();
+    const ids = await commands.getActiveSounds();
     ids.forEach((id) => registerSound(id, ""));
 
     // Register all hotkeys
     for (const hk of hotkeys.latest ?? []) {
       try {
-        await registerHotkeyCmd(hk);
+        await commands.registerHotkey(hk);
       } catch (e) {
         console.warn("hotkey already registered", hk, e);
       }
@@ -76,7 +74,7 @@ export default function App() {
     });
 
     // Mark frontend as ready
-    await markAsReady();
+    await commands.markAsReady();
 
     // Initialize from config
     await initConfig();
@@ -92,7 +90,7 @@ export default function App() {
   createEffect(() => {
     // Apply custom css
     const css = customCss();
-    if (css !== undefined) applyCustomCss(css);
+    if (css !== undefined) applyCustomCss(unwrapOrThrow(css));
   });
 
   return (
@@ -102,7 +100,7 @@ export default function App() {
     >
       <main class="flex h-screen w-screen overflow-hidden">
         <nav class="flex flex-col gap-2 p-4 w-18 bg-mantle">
-          <For each={Object.values(Tab)}>
+          <For each={Object.values(UITabKind)}>
             {(tabValue) => {
               const meta = TABS[tabValue];
               return (
@@ -123,13 +121,13 @@ export default function App() {
           <div class="flex-1 overflow-hidden">
             <Transition name="fade">
               <Switch>
-                <Match when={activeTab() === Tab.Dashboard}>
+                <Match when={activeTab() === UITabKind.Dashboard}>
                   <Dashboard />
                 </Match>
-                <Match when={activeTab() === Tab.Audio}>
+                <Match when={activeTab() === UITabKind.Audio}>
                   <Audio />
                 </Match>
-                <Match when={activeTab() === Tab.Settings}>
+                <Match when={activeTab() === UITabKind.Settings}>
                   <Settings />
                 </Match>
               </Switch>

@@ -1,15 +1,16 @@
-import { listen } from "@tauri-apps/api/event";
 import { createSignal } from "solid-js";
-import type { Alert } from "./types";
+import { events } from "../bindings";
+import type { Alert } from "../bindings";
 
 export const [alerts, setAlerts] = createSignal<Alert[]>([]);
 
 export async function listenAlerts() {
-  const unlisten_alert = await listen<Alert>("alert", (event) => {
-    setAlerts((prev) => [...prev, event.payload]);
+  const unlisten_alert = await events.alertEvent.listen((e) => {
+    setAlerts((prev) => [...prev, e.payload]);
   });
-  const unlisten_dismiss = await listen<string>("alert-dismiss", (event) => {
-    setAlerts((prev) => prev.filter((a) => a.title !== event.payload));
+
+  const unlisten_dismiss = await events.alertDismissEvent.listen((e) => {
+    setAlerts((prev) => prev.filter((a) => a.title !== e.payload));
   });
   return () => {
     unlisten_alert();

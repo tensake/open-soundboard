@@ -1,5 +1,6 @@
 //! Configuration for the application.
 
+use crate::types;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -19,9 +20,9 @@ const CSS_FILE: &str = "style.css";
 /// The config is taken from a JSON file and is saved on changes.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Config {
-    tabs: Vec<tab::Tab>,
-    hotkeys: HashMap<Uuid, hotkey::HotKeyEntry>,
-    sounds: HashMap<String, sound::SoundConfig>,
+    tabs: Vec<types::Tab>,
+    hotkeys: HashMap<Uuid, types::HotKeyEntry>,
+    sounds: HashMap<String, types::SoundConfig>,
 
     pub onboarded: bool,
     pub normalize: bool,

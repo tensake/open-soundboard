@@ -1,6 +1,5 @@
 //! Commands for interacting with the Tauri application for frontend.
 
-use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU32;
@@ -13,28 +12,10 @@ use uuid::Uuid;
 use crate::AppState;
 use crate::audio;
 use crate::config;
-
-#[derive(Serialize)]
-pub struct Progress {
-    current: f64,
-    total: f64,
-}
-
-#[derive(Serialize, Clone)]
-pub enum AlertKind {
-    Error,
-    #[allow(unused)]
-    Warn,
-}
-
-#[derive(Serialize, Clone)]
-pub struct Alert {
-    pub kind: AlertKind,
-    pub title: String,
-    pub message: String,
-}
+use crate::types;
 
 #[tauri::command]
+#[specta::specta]
 pub fn play_sound(
     path: String,
     volume: Option<f32>,
@@ -118,6 +99,7 @@ pub fn play_sound(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn pause_sound(id: u32, state: State<AppState>) {
     if let Some(h) = state.playing_sounds.lock().get(&id) {
         h.pause();
@@ -125,6 +107,7 @@ pub fn pause_sound(id: u32, state: State<AppState>) {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn resume_sound(id: u32, state: State<AppState>) {
     if let Some(h) = state.playing_sounds.lock().get(&id) {
         h.resume();
@@ -132,6 +115,7 @@ pub fn resume_sound(id: u32, state: State<AppState>) {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn stop_sound(id: u32, state: State<AppState>) {
     if let Some(h) = state.playing_sounds.lock().get(&id) {
         h.stop();
@@ -139,6 +123,7 @@ pub fn stop_sound(id: u32, state: State<AppState>) {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn seek_sound(id: u32, secs: f32, state: State<AppState>) {
     if let Some(h) = state.playing_sounds.lock().get(&id) {
         h.seek(secs);
@@ -146,6 +131,7 @@ pub fn seek_sound(id: u32, secs: f32, state: State<AppState>) {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn set_general_volume(volume: f32, state: State<AppState>) {
     for (_, h) in state.playing_sounds.lock().iter() {
         h.set_volume(volume);
@@ -154,6 +140,7 @@ pub fn set_general_volume(volume: f32, state: State<AppState>) {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn set_volume(id: u32, volume: f32, state: State<AppState>) {
     if let Some(h) = state.playing_sounds.lock().get(&id) {
         h.set_volume(volume);
@@ -161,6 +148,7 @@ pub fn set_volume(id: u32, volume: f32, state: State<AppState>) {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn set_playback_speed(id: u32, speed: f32, state: State<AppState>) {
     if let Some(h) = state.playing_sounds.lock().get(&id) {
         h.set_speed(speed);
@@ -168,6 +156,7 @@ pub fn set_playback_speed(id: u32, speed: f32, state: State<AppState>) {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn stop_all_sounds(state: State<AppState>) {
     for (_, h) in state.playing_sounds.lock().drain() {
         h.stop();
@@ -175,26 +164,30 @@ pub fn stop_all_sounds(state: State<AppState>) {
 }
 
 #[tauri::command]
-pub fn get_progress(id: u32, state: tauri::State<AppState>) -> Option<Progress> {
+#[specta::specta]
+pub fn get_progress(id: u32, state: tauri::State<AppState>) -> Option<types::Progress> {
     let sounds = state.playing_sounds.lock();
     let h = sounds.get(&id)?;
-    Some(Progress {
+    Some(types::Progress {
         current: h.progress_secs(),
         total: h.total_secs(),
     })
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn get_active_sounds(state: State<AppState>) -> Vec<u32> {
     state.playing_sounds.lock().keys().copied().collect()
 }
 
 #[tauri::command]
-pub fn get_audio_apps() -> Result<Vec<audio::forwarding::AudioApp>, String> {
+#[specta::specta]
+pub fn get_audio_apps() -> Result<Vec<types::AudioApp>, String> {
     audio::forwarding::get_audio_apps().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn forward_app(pid: u32, state: tauri::State<AppState>) -> Result<u32, String> {
     log::debug!("Starting forwarder for app: {pid}");
     let cable = state
@@ -213,6 +206,7 @@ pub fn forward_app(pid: u32, state: tauri::State<AppState>) -> Result<u32, Strin
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn stop_forward(id: u32, state: tauri::State<AppState>) -> Result<(), String> {
     log::debug!("Stopping forwarder with id: {id}");
     if let Some(handle) = state.forwarding_handles.lock().remove(&id) {
@@ -222,6 +216,7 @@ pub fn stop_forward(id: u32, state: tauri::State<AppState>) -> Result<(), String
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn set_forward_volume(
     id: u32,
     volume: f32,
@@ -234,6 +229,7 @@ pub fn set_forward_volume(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn set_mic_volume(volume: f32, state: tauri::State<AppState>) {
     if let Some(h) = state.mic_handle.lock().as_ref() {
         h.set_volume(volume)
@@ -242,11 +238,13 @@ pub fn set_mic_volume(volume: f32, state: tauri::State<AppState>) {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn get_mic_pitch(state: tauri::State<AppState>) -> f32 {
     state.mic_handle.lock().as_ref().map_or(0.0, |h| h.pitch())
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn set_mic_pitch(semitones: f32, state: State<AppState>) {
     if let Some(h) = state.mic_handle.lock().as_ref() {
         h.set_pitch(semitones)
@@ -254,6 +252,7 @@ pub fn set_mic_pitch(semitones: f32, state: State<AppState>) {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn stop_mic(state: tauri::State<AppState>) {
     if let Some(h) = state.mic_handle.lock().as_ref() {
         h.stop()
@@ -261,9 +260,8 @@ pub fn stop_mic(state: tauri::State<AppState>) {
 }
 
 #[tauri::command]
-pub fn get_tabs(
-    state: tauri::State<AppState>,
-) -> Vec<(config::tab::Tab, Vec<config::tab::SoundFile>)> {
+#[specta::specta]
+pub fn get_tabs(state: tauri::State<AppState>) -> Vec<(types::Tab, Vec<types::SoundFile>)> {
     let cache = &state.cache;
     let cfg = state.cfg.lock();
     cfg.get_tabs()
@@ -273,10 +271,11 @@ pub fn get_tabs(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn get_tab(
     state: tauri::State<AppState>,
     id: String,
-) -> Option<(config::tab::Tab, Vec<config::tab::SoundFile>)> {
+) -> Option<(types::Tab, Vec<types::SoundFile>)> {
     let cache = &state.cache;
     let cfg = state.cfg.lock();
     cfg.get_tab(id.clone())
@@ -284,10 +283,11 @@ pub fn get_tab(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn add_tab(
     state: tauri::State<AppState>,
     name: String,
-    kind: config::tab::TabKind,
+    kind: types::TabKind,
     path: Option<String>,
 ) {
     log::debug!("Adding {kind:?} tab: {path:?}");
@@ -295,41 +295,48 @@ pub fn add_tab(
 }
 
 #[tauri::command]
-pub fn edit_tab(state: tauri::State<AppState>, tab: config::tab::Tab) {
+#[specta::specta]
+pub fn edit_tab(state: tauri::State<AppState>, tab: types::Tab) {
     state.cfg.lock().edit_tab(tab);
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn remove_tab(state: tauri::State<AppState>, id: String) {
     log::debug!("Removing tab: {id}");
     state.cfg.lock().remove_tab(id);
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn move_tab(state: tauri::State<AppState>, id: String, idx: usize) {
     log::debug!("Moving tab: {id} to index: {idx}");
     state.cfg.lock().move_tab(id, idx);
 }
 
 #[tauri::command]
-pub fn get_hotkeys(state: State<AppState>) -> Vec<config::hotkey::HotKeyEntry> {
+#[specta::specta]
+pub fn get_hotkeys(state: State<AppState>) -> Vec<types::HotKeyEntry> {
     state.cfg.lock().get_hotkeys()
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn get_custom_css(state: State<AppState>) -> Result<String, String> {
     state.cfg.lock().get_custom_css()
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn save_custom_css(state: State<AppState>, css: String) -> Result<(), String> {
     log::debug!("Saving custom CSS...");
     state.cfg.lock().save_custom_css(&css)
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn register_hotkey(
-    hk: config::hotkey::HotKeyEntry,
+    hk: types::HotKeyEntry,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
     log::debug!("Registering hotkey: {hk:?}");
@@ -354,8 +361,9 @@ pub async fn register_hotkey(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn update_hotkey(
-    hk: config::hotkey::HotKeyEntry,
+    hk: types::HotKeyEntry,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
     unregister_hotkey(hk.id.clone().to_string(), state.clone())
@@ -365,6 +373,7 @@ pub async fn update_hotkey(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn unregister_hotkey(id: String, state: State<'_, AppState>) -> Result<(), String> {
     log::debug!("Unregistering hotkey: {id}");
     // Send unregister command
@@ -382,38 +391,45 @@ pub async fn unregister_hotkey(id: String, state: State<'_, AppState>) -> Result
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn mark_as_ready() -> Result<(), String> {
     // Will be used later
     Ok(())
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn get_volume(state: State<AppState>) -> f32 {
     state.cfg.lock().volume
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn get_mic_volume(state: State<AppState>) -> f32 {
     state.mic_handle.lock().as_ref().map_or(0.0, |h| h.volume())
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn onboard(state: State<AppState>) -> Result<(), String> {
     state.cfg.lock().onboarded = true;
     Ok(())
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn is_onboarded(state: State<AppState>) -> bool {
     state.cfg.lock().onboarded
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn get_normalize(state: State<AppState>) -> bool {
     state.cfg.lock().normalize
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn set_normalize(state: State<AppState>, normalize: bool) -> Result<(), String> {
     log::debug!("Setting normalization to {normalize}");
     state.cfg.lock().normalize = normalize;
@@ -426,6 +442,7 @@ pub fn set_normalize(state: State<AppState>, normalize: bool) -> Result<(), Stri
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn set_autostart(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
     log::info!("Setting autostart to {enabled}");
     if enabled {
@@ -436,36 +453,42 @@ pub fn set_autostart(app: tauri::AppHandle, enabled: bool) -> Result<(), String>
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn get_autostart(app: tauri::AppHandle) -> Result<bool, String> {
     app.autolaunch().is_enabled().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn get_sound_config(state: State<AppState>, key: String) -> Option<config::sound::SoundConfig> {
+#[specta::specta]
+pub fn get_sound_config(state: State<AppState>, key: String) -> Option<types::SoundConfig> {
     state.cfg.lock().get_sound_config(&key)
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn set_sound_config(
     state: State<AppState>,
     key: String,
-    config: config::sound::SoundConfig,
+    config: types::SoundConfig,
 ) -> Result<(), String> {
     state.cfg.lock().set_sound_config(&key, config)
 }
 
 #[tauri::command]
-pub fn get_sounds_config(state: State<AppState>) -> HashMap<String, config::sound::SoundConfig> {
+#[specta::specta]
+pub fn get_sounds_config(state: State<AppState>) -> HashMap<String, types::SoundConfig> {
     state.cfg.lock().get_sounds_config().clone()
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn clear_all_cache(state: State<AppState>) -> Result<(), String> {
     log::info!("Clearing all cache...");
     state.cache.clear_all_cache().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn get_sounds_history(state: State<AppState>) -> Result<Vec<String>, String> {
     state.cache.get_sounds_history().map_err(|e| e.to_string())
 }

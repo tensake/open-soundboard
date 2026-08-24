@@ -1,8 +1,8 @@
 
 import { createSignal, createMemo } from "solid-js";
 import { createStore } from "solid-js/store";
+import { commands } from "../../bindings";
 import { PlaylistMode, SoundEntry } from "../types";
-import { getVolume, getMicVolume } from "./cmd";
 
 export const [soundState, setSoundState] = createStore({
   volume: 100,
@@ -22,6 +22,6 @@ export const paused = createMemo(() =>
 );
 
 export async function initConfig() {
-  setSoundState({ volume: Math.round(await getVolume() * 100) });
-  setMicState({ volume: Math.round(await getMicVolume() * 100) });
+  setSoundState({ volume: Math.round(await commands.getVolume() * 100) });
+  setMicState({ volume: Math.round(await commands.getMicVolume() * 100) });
 }

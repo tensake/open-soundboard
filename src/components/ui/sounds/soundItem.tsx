@@ -1,12 +1,13 @@
 import { Show, createSignal } from "solid-js";
 import { Play, Clock } from "lucide-solid";
-import { HotKeyEntry, SoundFile, SoundConfig, readableBytes, readableDate, readableMilisecs, SoundTab } from "../../../lib";
+import { readableBytes, readableDate, readableMilisecs } from "../../../lib";
+import type { HotKeyEntry, SoundConfig, Tab, SoundFile } from "../../../bindings";
 import HoverMenu from "./hoverMenu";
 import { waveform } from 'ldrs';
 waveform.register();
 
 interface SoundItemProps {
-  currentTab: SoundTab | null ;
+  currentTab: Tab | null ;
   isPlaying: boolean;
   isRecent: boolean;
   sound: SoundFile;

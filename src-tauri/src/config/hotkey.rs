@@ -1,7 +1,7 @@
 //! Logic related to registering and unregistering hotkeys.
 
 use crate::config;
-use serde::{Deserialize, Serialize};
+use crate::types;
 use std::str::FromStr;
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
 use std::time::Duration;
@@ -9,27 +9,9 @@ use tauri::Manager;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
 use uuid::Uuid;
 
-/// Hotkey kind
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub enum HotKeyKind {
-    /// For playing a sound
-    Sound,
-    /// For controling playback and microphone (global only)
-    Control,
-}
-
 pub enum HotKeyCmd {
-    Register(HotKeyEntry, Sender<Result<(Uuid, String), String>>),
+    Register(types::HotKeyEntry, Sender<Result<(Uuid, String), String>>),
     Unregister(Uuid, Sender<Result<(), String>>),
-}
-
-/// Represents a hotkey entry.
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
-pub struct HotKeyEntry {
-    pub id: Uuid,
-    pub binding: String,
-    pub kind: HotKeyKind,
-    pub context: String,
 }
 
 /// Listens for hotkey commands and handles them on the main thread.
@@ -95,15 +77,15 @@ pub fn listen_hotkeys(app_handle: tauri::AppHandle, hotkey_rx: Receiver<HotKeyCm
 }
 
 impl config::Config {
-    pub fn get_hotkeys(&self) -> Vec<HotKeyEntry> {
+    pub fn get_hotkeys(&self) -> Vec<types::HotKeyEntry> {
         self.hotkeys.values().cloned().collect()
     }
 
-    pub fn insert_hotkey(&mut self, hk: HotKeyEntry) {
+    pub fn insert_hotkey(&mut self, hk: types::HotKeyEntry) {
         self.hotkeys.insert(hk.id, hk);
     }
 
-    pub fn remove_hotkey(&mut self, id: Uuid) -> Option<HotKeyEntry> {
+    pub fn remove_hotkey(&mut self, id: Uuid) -> Option<types::HotKeyEntry> {
         self.hotkeys.remove(&id)
     }
 }

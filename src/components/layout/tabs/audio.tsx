@@ -5,12 +5,12 @@ import {
   forwardApp,
   stopForward,
   setForwardVolume,
-  AudioApp,
   handleMicVolumeSlider,
   handleVolumeSlider,
   soundState,
   micState,
 } from "../../../lib";
+import { AudioApp } from "../../../bindings";
 import { Square, SquareChevronRight, Volume2, Mic } from "lucide-solid";
 import { TransitionGroup } from "solid-transition-group";
 import SettingSlider from "../../ui/settings/settingSlider";

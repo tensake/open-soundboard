@@ -1,4 +1,4 @@
-import { HotKeyEntry } from "../../../lib";
+import { HotKeyEntry } from "../../../bindings";
 import { Trash2 } from "lucide-solid";
 import { unregisterHotkey } from "../../../lib/hotkey";
 import { Button } from "../button";

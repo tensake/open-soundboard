@@ -1,6 +1,5 @@
 export * from "./utils";
 export * from "./alert";
-export * from "./cache";
 export * from "./hotkey";
 export * from "./sound";
 export * from "./config";
