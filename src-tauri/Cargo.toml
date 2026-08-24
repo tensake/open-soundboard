@@ -30,7 +30,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = ["tray-icon"] }
-specta = { version = "=2.0.0-rc.22", features = ["uuid"] }
+specta = { version = "=2.0.0-rc.25", features = ["uuid"] }
 specta-typescript = "=0.0.9"
 tauri-specta = { version = "=2.0.0-rc.21", features = ["derive", "typescript"] }
 tauri-plugin-opener = "2"
