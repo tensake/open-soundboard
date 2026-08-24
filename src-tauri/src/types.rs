@@ -37,8 +37,11 @@ pub struct Tab {
 #[derive(Serialize, Deserialize, Debug, Clone, Type)]
 pub struct SoundFile {
     pub path: String,
+    #[specta(type = specta_typescript::Number)]
     pub size: u64,
+    #[specta(type = specta_typescript::Number)]
     pub datetime: u64,
+    #[specta(type = specta_typescript::Number)]
     pub duration: u64,
 }
 
@@ -72,7 +75,9 @@ pub struct SoundConfig {
 /// Progress of a sound.
 #[derive(Serialize, Type)]
 pub struct Progress {
+    #[specta(type = specta_typescript::Number)]
     pub current: f64,
+    #[specta(type = specta_typescript::Number)]
     pub total: f64,
 }
 
