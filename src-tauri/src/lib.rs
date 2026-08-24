@@ -1,4 +1,5 @@
 use parking_lot::Mutex;
+use specta_typescript::Typescript;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU32;
@@ -8,11 +9,13 @@ use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
 };
+use tauri_specta::{Builder, collect_commands};
 
 mod audio;
 mod cache;
 mod cmd;
 mod config;
+mod types;
 
 struct AppState {
     playing_sounds: Arc<Mutex<HashMap<u32, audio::PlaybackHandle>>>,
@@ -113,7 +116,76 @@ fn config_watcher(app_handle: tauri::AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let specta_builder = Builder::<tauri::Wry>::new()
+        .commands(collect_commands![
+            // Sound
+            cmd::play_sound,
+            cmd::pause_sound,
+            cmd::resume_sound,
+            cmd::stop_sound,
+            cmd::seek_sound,
+            cmd::set_general_volume,
+            cmd::set_volume,
+            cmd::stop_all_sounds,
+            cmd::get_progress,
+            cmd::get_active_sounds,
+            cmd::set_playback_speed,
+            // Microphone
+            cmd::get_mic_volume,
+            cmd::set_mic_volume,
+            cmd::get_mic_pitch,
+            cmd::set_mic_pitch,
+            cmd::stop_mic,
+            // App forwarding
+            cmd::get_audio_apps,
+            cmd::set_forward_volume,
+            cmd::stop_forward,
+            cmd::forward_app,
+            // Hotkeys
+            cmd::get_hotkeys,
+            cmd::register_hotkey,
+            cmd::update_hotkey,
+            cmd::unregister_hotkey,
+            // Initialization
+            cmd::mark_as_ready,
+            cmd::onboard,
+            cmd::is_onboarded,
+            // Config
+            cmd::get_tabs,
+            cmd::get_tab,
+            cmd::add_tab,
+            cmd::edit_tab,
+            cmd::remove_tab,
+            cmd::move_tab,
+            cmd::get_custom_css,
+            cmd::save_custom_css,
+            cmd::set_autostart,
+            cmd::get_autostart,
+            cmd::get_normalize,
+            cmd::set_normalize,
+            cmd::get_volume,
+            cmd::get_sound_config,
+            cmd::set_sound_config,
+            cmd::get_sounds_config,
+            // Cache
+            cmd::clear_all_cache,
+            cmd::get_sounds_history,
+        ])
+        .events(tauri_specta::collect_events![
+            types::AlertEvent,
+            types::AlertDismissEvent
+        ]);
+
+    #[cfg(debug_assertions)]
+    specta_builder
+        .export(
+            Typescript::default().bigint(specta_typescript::BigIntExportBehavior::Number),
+            "../src/bindings.ts",
+        )
+        .expect("Failed to export TypeScript bindings");
+
     tauri::Builder::default()
+        .invoke_handler(specta_builder.invoke_handler())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(if cfg!(debug_assertions) {
@@ -145,6 +217,7 @@ pub fn run() {
                 v = env!("CARGO_PKG_VERSION"),
                 args = std::env::args()
             );
+            specta_builder.mount_events(app);
             // Initialize state
             let playing_sounds = Arc::new(Mutex::new(HashMap::<u32, audio::PlaybackHandle>::new()));
             let forwarding_handles = Arc::new(Mutex::new(HashMap::<
@@ -260,61 +333,6 @@ pub fn run() {
                 api.prevent_close();
             }
         })
-        .invoke_handler(tauri::generate_handler![
-            // Sound
-            cmd::play_sound,
-            cmd::pause_sound,
-            cmd::resume_sound,
-            cmd::stop_sound,
-            cmd::seek_sound,
-            cmd::set_general_volume,
-            cmd::set_volume,
-            cmd::stop_all_sounds,
-            cmd::get_progress,
-            cmd::get_active_sounds,
-            cmd::set_playback_speed,
-            // Microphone
-            cmd::get_mic_volume,
-            cmd::set_mic_volume,
-            cmd::get_mic_pitch,
-            cmd::set_mic_pitch,
-            cmd::stop_mic,
-            // App forwarding
-            cmd::get_audio_apps,
-            cmd::set_forward_volume,
-            cmd::stop_forward,
-            cmd::forward_app,
-            // Hotkeys
-            cmd::get_hotkeys,
-            cmd::register_hotkey,
-            cmd::update_hotkey,
-            cmd::unregister_hotkey,
-            // Initialization
-            cmd::mark_as_ready,
-            cmd::onboard,
-            cmd::is_onboarded,
-            // Config
-            cmd::get_tabs,
-            cmd::get_tab,
-            cmd::add_tab,
-            cmd::edit_tab,
-            cmd::remove_tab,
-            cmd::move_tab,
-            cmd::get_custom_css,
-            cmd::save_custom_css,
-            cmd::set_autostart,
-            cmd::get_autostart,
-            cmd::get_normalize,
-            cmd::set_normalize,
-            cmd::get_volume,
-            cmd::get_mic_volume,
-            cmd::get_sound_config,
-            cmd::set_sound_config,
-            cmd::get_sounds_config,
-            // Cache
-            cmd::clear_all_cache,
-            cmd::get_sounds_history,
-        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
