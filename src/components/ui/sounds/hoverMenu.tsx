@@ -1,9 +1,9 @@
 import { Show } from "solid-js";
 import { Heart, Pin, Keyboard, KeyboardOff, Trash } from "lucide-solid";
-import type { HotKeyEntry, SoundConfig, SoundTab } from "../../../lib";
+import type { HotKeyEntry, SoundConfig, Tab } from "../../../bindings";
 
 export default function HoverMenu(props: {
-  currentTab: SoundTab | null;
+  currentTab: Tab | null;
   soundConfig: SoundConfig | null;
   registered: HotKeyEntry | undefined;
   onToggleFavourite: () => void;

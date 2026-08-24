@@ -1,7 +1,6 @@
 import {
   hotkeys,
   refetchHotkeys,
-  updateHotkey,
   registerHotkey,
   CONTROL_ACTIONS,
   SETTINGS_TABS,
@@ -9,17 +8,16 @@ import {
   applyCustomCss,
   saveCustomCss,
   setAutoStart,
-  setMicPitch,
   setNormalization,
-  clearAllCache,
   autoStart,
   soundState,
   micState,
   setMicState,
   normalization,
   handleSpeedSlider,
+  unwrap,
 } from "../../../lib";
-import type { HotKeyEntry } from "../../../lib";
+import { HotKeyEntry, commands } from "../../../bindings";
 import { For, createSignal, Switch, Match } from "solid-js";
 import HotkeyOverlay from "../hotkeyOverlay";
 import HotKeyItem from "../../ui/hotkeys/hotkeyItem";
@@ -41,7 +39,7 @@ export default function Settings() {
     if (!current) return;
 
     if (current.id) {
-      await updateHotkey({
+      await commands.updateHotkey({
         id: current.id,
         binding,
         kind: current.kind,
@@ -112,7 +110,7 @@ export default function Settings() {
                     onInput={(e) => {
                       const v = Number(e.currentTarget.value);
                       setMicState({ pitch: v });
-                      setMicPitch(v);
+                      commands.setMicPitch(v);
                     }}
                     valueLabel={`${micState.pitch} st`}
                   />
@@ -142,7 +140,7 @@ export default function Settings() {
                   <Textarea
                     rows={16}
                     placeholder="Enter your own css here."
-                    value={customCss()}
+                    value={unwrap(customCss())}
                     onInput={(e) => {
                       const val = e.currentTarget.value;
                       setDraftCss(val);
@@ -225,11 +223,11 @@ export default function Settings() {
                 <SettingToggle
                   title="Auto Start"
                   description="Start the soundboard with system in the background."
-                  checked={autoStart() ?? false}
+                  checked={unwrap(autoStart()) ?? false}
                   onInput={(e) => setAutoStart(e.currentTarget.checked)}
                 />
 
-                <Button class="self-start" onClick={clearAllCache}>
+                <Button class="self-start" onClick={commands.clearAllCache}>
                   Clear Cache
                 </Button>
               </div>

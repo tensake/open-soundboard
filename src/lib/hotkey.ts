@@ -1,20 +1,13 @@
 import { createResource } from "solid-js";
-import { invoke } from "@tauri-apps/api/core";
-import type { HotKeyEntry } from "./types";
 import {
   setSounds,
   paused,
-  setGeneralVolume,
-  setMicVolume,
-  stopAllSounds,
-  getActiveSounds,
-  pauseSound,
-  resumeSound,
   soundState,
   micState,
   setSoundState,
   setMicState,
 } from "./sound";
+import { commands, HotKeyEntry } from "../bindings";
 import { ControlAction } from "./types";
 import { produce } from "solid-js/store";
 
@@ -23,25 +16,25 @@ export const controlActions: Record<ControlAction, () => void | Promise<void>> =
     Mute: () => {
       const nowMuted = !soundState.muted;
       setSoundState("muted", nowMuted);
-      setGeneralVolume(nowMuted ? 0 : soundState.volume / 100);
+      commands.setGeneralVolume(nowMuted ? 0 : soundState.volume / 100);
     },
     MicMute: () => {
       const nowMuted = !micState.muted;
       setMicState("muted", nowMuted);
-      setMicVolume(nowMuted ? 0 : micState.volume / 100);
+      commands.setMicVolume(nowMuted ? 0 : micState.volume / 100);
     },
     StopAll: () => {
-      stopAllSounds();
+      commands.stopAllSounds();
       setSounds([]);
     },
     PauseResumeAll: async () => {
-      const ids = await getActiveSounds();
+      const ids = await commands.getActiveSounds();
       const newPaused = !paused();
 
       if (newPaused) {
-        ids.forEach(pauseSound);
+        ids.forEach((id) => commands.pauseSound(id));
       } else {
-        ids.forEach(resumeSound);
+        ids.forEach((id) => commands.resumeSound(id));
       }
 
       setSounds(
@@ -54,29 +47,16 @@ export const controlActions: Record<ControlAction, () => void | Promise<void>> =
     },
   };
 
-export const registerHotkeyCmd = (hk: HotKeyEntry) =>
-  invoke("register_hotkey", { hk });
-
-export const updateHotkey = (hk: HotKeyEntry) =>
-  invoke("update_hotkey", { hk });
-
-export const unregisterHotkeyCmd = (id: string) =>
-  invoke("unregister_hotkey", { id });
-
-async function fetchHotkeys(): Promise<HotKeyEntry[]> {
-  return invoke<HotKeyEntry[]>("get_hotkeys");
-}
-
 export const [hotkeys, { refetch: refetchHotkeys }] =
-  createResource(fetchHotkeys);
+  createResource(commands.getHotkeys);
 
 export async function registerHotkey(entry: HotKeyEntry) {
-  await registerHotkeyCmd(entry);
+  await commands.registerHotkey(entry);
   refetchHotkeys();
 }
 
 export async function unregisterHotkey(id: string) {
-  await unregisterHotkeyCmd(id);
+  await commands.unregisterHotkey(id);
   refetchHotkeys();
 }
 

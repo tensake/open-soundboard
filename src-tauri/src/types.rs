@@ -77,7 +77,7 @@ pub struct Progress {
 }
 
 /// Kind of the [`Alert`].
-#[derive(Serialize, Clone, Type)]
+#[derive(Serialize, Clone, Type, Debug, Deserialize)]
 pub enum AlertKind {
     Error,
     #[allow(unused)]
@@ -85,7 +85,7 @@ pub enum AlertKind {
 }
 
 /// Represents an alert to be displayed in the UI.
-#[derive(Serialize, Clone, Type)]
+#[derive(Serialize, Clone, Type, Debug, Deserialize)]
 pub struct Alert {
     pub kind: AlertKind,
     pub title: String,
@@ -94,10 +94,7 @@ pub struct Alert {
 
 /// Event emitted when an alert is displayed.
 #[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
-pub struct AlertEvent {
-    pub title: String,
-    pub message: String,
-}
+pub struct AlertEvent(pub Alert);
 
 /// Event emitted when an alert is dismissed.
 #[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]

@@ -1,4 +1,15 @@
-import { invoke } from "@tauri-apps/api/core";
+export type Result<T, E> = { status: "ok"; data: T } | { status: "error"; error: E };
+
+export function unwrap<T>(result: Result<T, string> | undefined): T | undefined {
+  if (!result || result.status === "error") return undefined;
+  return result.data;
+}
+
+export function unwrapOrThrow<T>(result: Result<T, string> | undefined): T {
+  if (!result) throw new Error("Command returned no result");
+  if (result.status === "error") throw new Error(result.error);
+  return result.data;
+}
 
 export function formatTime(secs: number): string {
   if (!isFinite(secs) || secs < 0) return "0:00";
@@ -7,10 +18,6 @@ export function formatTime(secs: number): string {
     .toString()
     .padStart(2, "0");
   return `${m}:${s}`;
-}
-
-export async function markAsReady() {
-  await invoke("mark_as_ready");
 }
 
 export function readableBytes(bytes: number): string {

@@ -4,14 +4,10 @@ import AddTabMenu from "./addTabMenu";
 import {
   tabs,
   refetchTabs,
-  removeTab,
-  moveTab,
   currentTab,
   setCurrentTab,
-  editTab,
 } from "../../../lib";
-import type { SoundFile } from "../../../lib";
-import { SoundTab } from "../../../lib/types";
+import { SoundFile, Tab, commands } from "../../../bindings";
 
 interface TabGroupProps {
   onAddTab?: () => void;
@@ -24,7 +20,7 @@ export default function TabGroup(props: TabGroupProps) {
   const [editingTabId, setEditingTabId] = createSignal<string | null>(null);
   const [editingName, setEditingName] = createSignal("");
 
-  const isCurrentTab = (tab: SoundTab) => currentTab()?.[0].id === tab.id;
+  const isCurrentTab = (tab: Tab) => currentTab()?.[0].id === tab.id;
 
   const startDrag = (tabId: string) => {
     setDraggedTabId(tabId);
@@ -46,7 +42,7 @@ export default function TabGroup(props: TabGroupProps) {
       }}
     >
       <For each={tabs()}>
-        {([tab, sounds]: [SoundTab, SoundFile[]]) => (
+        {([tab, sounds]: [Tab, SoundFile[]]) => (
           <div
             class={`group flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer rounded-t select-none transition-colors shrink-0 w-36 ${
               isCurrentTab(tab)
@@ -72,7 +68,7 @@ export default function TabGroup(props: TabGroupProps) {
               const dragged = draggedTabId();
               if (!dragged || dragged === tab.id) return;
 
-              await moveTab(
+              await commands.moveTab(
                 dragged,
                 tabs()!.findIndex(([t]) => t.id === tab.id),
               );
@@ -109,7 +105,7 @@ export default function TabGroup(props: TabGroupProps) {
                 }}
                 onBlur={async () => {
                   const name = editingName().trim() || tab.name;
-                  await editTab({ ...tab, name });
+                  await commands.editTab({ ...tab, name });
                   setEditingTabId(null);
                 }}
                 ref={(el) => setTimeout(() => el?.focus(), 0)}
@@ -120,7 +116,7 @@ export default function TabGroup(props: TabGroupProps) {
                 class="hover:text-red transition-opacity shrink-0 ml-auto"
                 onClick={async (e) => {
                   e.stopPropagation();
-                  await removeTab(tab.id);
+                  await commands.removeTab(tab.id);
                   await refetchTabs();
 
                   // Clear search query and current tab if no tabs remain

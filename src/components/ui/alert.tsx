@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
 import { TriangleAlert, CircleX } from "lucide-solid";
-import { Alert } from "../../lib";
+import { Alert } from "../../bindings";
 
 export default function AlertItem(props: { alert: Alert }) {
   return (

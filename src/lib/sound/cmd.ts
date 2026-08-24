@@ -1,7 +1,7 @@
-import { invoke } from "@tauri-apps/api/core";
 import { produce } from "solid-js/store";
-import { SoundEntry, Progress, PlaylistMode } from "../types";
+import { SoundEntry, PlaylistMode } from "../types";
 import { showNotification } from "../notifications";
+import { commands } from "../../bindings";
 import {
   playlistMode,
   sounds,
@@ -65,19 +65,19 @@ export function handlePauseResume(entry: SoundEntry) {
   const i = sounds.findIndex((s) => s.path === entry.path);
   if (i === -1) return;
 
-  entry.ids.forEach((id) => (entry.paused ? resumeSound(id) : pauseSound(id)));
+  entry.ids.forEach((id) => (entry.paused ? commands.resumeSound(id) : commands.pauseSound(id)));
   setSounds(i, "paused", !entry.paused);
 }
 
 export function handleStop(entry: SoundEntry) {
-  entry.ids.forEach((id) => stopSound(id));
+  entry.ids.forEach((id) => commands.stopSound(id));
   removeSound(entry.path);
 }
 
 // Seek sound to a specific position (updates only latest id)
 export function handleSeekCommit(entry: SoundEntry, value: number) {
   const latestId = entry.ids[entry.ids.length - 1];
-  seekSound(latestId, value);
+  commands.seekSound(latestId, value);
   const i = sounds.findIndex((s) => s.path === entry.path);
   if (i !== -1) setSounds(i, "current", value);
 }
@@ -93,7 +93,7 @@ export function startProgressPolling() {
         sounds.map(async (s) => ({
           path: s.path,
           playlistMode: s.playlistMode,
-          progresses: await Promise.all(s.ids.map((id) => getProgress(id))),
+          progresses: await Promise.all(s.ids.map((id) => commands.getProgress(id))),
           ids: s.ids,
         }))
       );
@@ -127,25 +127,18 @@ export function stopProgressPolling() {
   progressInterval = null;
 }
 
-export async function playSoundCmd(
-  path: string,
-  volume: number,
-  speed: number,
-) {
+export async function playSoundTagged(path: string, mode: PlaylistMode) {
   try {
-    return await invoke<number>("play_sound", { path, volume, speed });
+    const result = await commands.playSound(path, soundState.volume / 100, soundState.speed);
+    if (result.status === "error") return;
+
+    registerSound(result.data, path, mode, soundState.speed);
   } catch (e) {
     console.error(e);
     showNotification("Error while playing sound file", String(e));
   }
 }
 
-export async function playSoundTagged(path: string, mode: PlaylistMode) {
-  const id = await playSoundCmd(path, soundState.volume / 100, soundState.speed);
-  if (id === undefined) return;
-
-  registerSound(id, path, mode, soundState.speed);
-}
 export async function playSoundTabMode(path: string) {
   return playSoundTagged(path, playlistMode());
 }
@@ -153,44 +146,11 @@ export async function playSound(path: string) {
   return playSoundTagged(path, "disabled");
 }
 
-export const getActiveSounds = () => invoke<number[]>("get_active_sounds");
-
-export const pauseSound = (id: number) => invoke("pause_sound", { id });
-
-export const resumeSound = (id: number) => invoke("resume_sound", { id });
-
-export const stopSound = (id: number) => invoke("stop_sound", { id });
-
-export const stopAllSounds = () => invoke("stop_all_sounds");
-
-export const seekSound = (id: number, secs: number) =>
-  invoke("seek_sound", { id, secs });
-
-export const setGeneralVolume = (volume: number) =>
-  invoke("set_general_volume", { volume });
-
-export const getVolume = () => invoke<number>("get_volume");
-export const getProgress = (id: number) =>
-  invoke<Progress | null>("get_progress", { id });
-
-export const getMicVolume = () => invoke<number>("get_mic_volume");
-
-export const setMicVolume = (volume: number) =>
-  invoke("set_mic_volume", { volume });
-
-export const setMicPitch = (semitones: number) =>
-  invoke("set_mic_pitch", { semitones });
-
-export const getMicPitch = () => invoke<number>("get_mic_pitch");
-
-export const setSoundPlaybackSpeed = (id: number, speed: number) =>
-  invoke("set_playback_speed", { id, speed });
-
 export const setAllSoundPlaybackSpeed = async (speed: number) => {
   setSoundState({ speed });
   await Promise.all(
     sounds.flatMap((sound) =>
-      sound.ids.map((id) => setSoundPlaybackSpeed(id, speed)))
+      sound.ids.map((id) => commands.setPlaybackSpeed(id, speed)))
   );
   setSounds(produce((s) => s.forEach((entry) => { entry.speed = speed; })));
 };
@@ -198,7 +158,7 @@ export const setAllSoundPlaybackSpeed = async (speed: number) => {
 export function handleVolumeSlider(e: Event) {
   const value = parseFloat((e.currentTarget as HTMLInputElement).value);
   setSoundState({ volume: value });
-  setGeneralVolume(value / 100);
+  commands.setGeneralVolume(value / 100);
 }
 
 export function handleSpeedSlider(e: Event) {
@@ -210,5 +170,5 @@ export function handleSpeedSlider(e: Event) {
 export function handleMicVolumeSlider(e: Event) {
   const value = parseFloat((e.currentTarget as HTMLInputElement).value);
   setMicState({ volume: value, muted: false });
-  setMicVolume(value / 100);
+  commands.setMicVolume(value / 100);
 }

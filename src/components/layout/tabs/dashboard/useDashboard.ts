@@ -2,8 +2,6 @@ import { createEffect, createSignal, createResource, onCleanup } from "solid-js"
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   tabs,
-  getTab,
-  addTab,
   refetchHotkeys,
   registerHotkey,
   unregisterHotkey,
@@ -11,23 +9,19 @@ import {
   playSoundTabMode,
   currentTab,
   setCurrentTab,
-  getSoundsHistory,
-  editTab,
-  setSoundConfig,
   favouriteSounds,
   refetchSoundsConfig,
   soundsConfig,
-  SoundConfig,
-  removeTab
+  unwrap,
 } from "../../../../lib";
-import type { HotKeyEntry } from "../../../../lib";
+import { commands, HotKeyEntry, SoundConfig } from "../../../../bindings";
 import { SortOrder } from "../../../../lib";
 
 export function useDashboard() {
   const [searchQuery, setSearchQuery] = createSignal<string | null>(null);
   const [sortOrder, setSortOrder] = createSignal<SortOrder>("Default");
   const [capturingFor, setCapturingFor] = createSignal<string | null>(null);
-  const [soundsHistory, { refetch: refetchSoundsHistory }] = createResource(getSoundsHistory);
+  const [soundsHistory, { refetch: refetchSoundsHistory }] = createResource(commands.getSoundsHistory);
 
   createEffect(async () => {
     const loadedTabs = tabs();
@@ -41,7 +35,7 @@ export function useDashboard() {
     const interval = setInterval(async () => {
       const active = currentTab();
       if (active) {
-        const newTab = await getTab(active[0].id);
+        const newTab = await commands.getTab(active[0].id);
         if (newTab && (newTab[1].length !== active[1].length
           || newTab[1].some((sound, i) => sound.path !== active[1][i]?.path))
         ) {
@@ -70,9 +64,9 @@ export function useDashboard() {
     const favTab = allTabs.find(([t]) => t.kind === "favourite");
 
     if (favSounds.length > 0 && !favTab) {
-      await addTab("Favourites", "favourite");
+      await commands.addTab("Favourites", "favourite", null);
     } else if (favSounds.length === 0 && favTab) {
-      await removeTab(favTab[0].id);
+      await commands.removeTab(favTab[0].id);
       if (currentTab()?.[0].kind === "favourite") {
         setCurrentTab(allTabs.find(([t]) => t.kind !== "favourite") ?? null);
       }
@@ -95,18 +89,19 @@ export function useDashboard() {
     return [...pinned.sort(sortFn), ...unpinned.sort(sortFn)];
   };
 
-  const soundInHistory = (path: string) => soundsHistory()?.includes(path) ?? false;
+  const soundInHistory = (path: string) =>
+    unwrap(soundsHistory())?.includes(path) ?? false;
 
   const handleAddTab = async () => {
     const selected = await open({ directory: true, multiple: false });
     if (!selected) return;
     const name = selected.split(/[\\/]/).pop() ?? selected;
-    await addTab(name, "directory", selected);
+    await commands.addTab(name, "directory", selected);
   };
 
   const handleAddUserTab = async () => {
     const name = `tab ${(tabs()?.length ?? 0) + 1}`;
-    await addTab(name, "user");
+    await commands.addTab(name, "user", null);
   };
 
   const handleCapture = async (binding: string) => {
@@ -143,7 +138,7 @@ export function useDashboard() {
       ...existing,
       tags: hasTag ? existing.tags.filter(t => t !== tag) : [...existing.tags, tag],
     };
-    await setSoundConfig(path, updated);
+    await commands.setSoundConfig(path, updated);
     await refetchSoundsConfig();
   };
 
@@ -156,15 +151,15 @@ export function useDashboard() {
       ...existing,
       pins: isPinned ? existing.pins.filter(id => id !== tabId) : [...existing.pins, tabId],
     };
-    await setSoundConfig(path, updated);
+    await commands.setSoundConfig(path, updated);
     await refetchSoundsConfig();
   };
 
   const handleRemoveFromTab = async (path: string) => {
     const tab = currentTab()?.[0];
     if (!tab || tab.kind !== "user") return;
-    await editTab({ ...tab, sounds: tab.sounds.filter(s => s !== path) });
-    const updated = await getTab(tab.id);
+    await commands.editTab({ ...tab, sounds: tab.sounds.filter(s => s !== path) });
+    const updated = await commands.getTab(tab.id);
     if (updated) setCurrentTab(updated);
   };
 
@@ -185,8 +180,8 @@ export function useDashboard() {
     const existing = new Set(tab.sounds ?? []);
     const deduped = files.filter(f => !existing.has(f));
     if (!deduped.length) return;
-    await editTab({ ...tab, sounds: [...(tab.sounds ?? []), ...deduped] });
-    const updated = await getTab(tab.id);
+    await commands.editTab({ ...tab, sounds: [...(tab.sounds ?? []), ...deduped] });
+    const updated = await commands.getTab(tab.id);
     if (updated) setCurrentTab(updated);
   };
 
