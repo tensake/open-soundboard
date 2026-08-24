@@ -10,11 +10,14 @@ import {
   paused,
   SortOrder,
   controlActions,
+  handleVolumeSlider,
+  soundState,
 } from "../../../lib";
 import TabGroup from "./tabGroup";
 import { Input } from "../../ui/input";
 import { Select } from "../../ui/select";
 import { Divider } from "../../ui/divider";
+import SettingSlider from "../settings/settingSlider";
 
 interface TabBarProps {
   searchQuery: () => string | null;
@@ -67,11 +70,23 @@ export default function TabBar(props: TabBarProps) {
             Add sound
           </button>
 
-          <Divider class="w-1 h-full" />
+          <Divider class="w-0.5 h-full shrink-0" />
         </Show>
 
         {/* Global controls */}
         <div class="flex items-center gap-1">
+          {/* Sound Volume */}
+          <SettingSlider
+            label=""
+            min={0}
+            max={100}
+            step={1}
+            value={soundState.volume}
+            onInput={handleVolumeSlider}
+            valueLabel={`Volume: ${soundState.volume}%`}
+            class="w-48 px-4"
+          />
+
           {/* Playlist mode */}
           <div
             class={`shrink-0 flex items-center justify-center cursor-pointer transition-colors px-2 ${
@@ -117,10 +132,10 @@ export default function TabBar(props: TabBarProps) {
           </button>
         </div>
 
-        <Divider class="w-1 h-full" />
+        <Divider class="w-0.5 h-full shrink-0" />
 
         {/* Sort order */}
-        <div class="relative flex items-center w-32 mx-2" title="Click to change sort order">
+        <div class="relative flex items-center w-24 mx-2 shrink-0" title="Click to change sort order">
           <Funnel class="absolute left-2 size-3.5 text-subtext-0 pointer-events-none z-10" />
           <Select
             value={props.sortOrder()}

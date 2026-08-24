@@ -8,12 +8,12 @@ interface SettingSliderProps {
   value: number;
   onInput: (e: InputEvent & { currentTarget: HTMLInputElement }) => void;
   valueLabel: string;
-  maxWidth?: string;
+  class?: string;
 }
 
 export default function SettingSlider(props: SettingSliderProps) {
   return (
-    <div class={props.maxWidth ?? "max-w-md"}>
+    <div class={props.class ?? "max-w-md"}>
       <h2 class="text-md font-medium mb-1">{props.label}</h2>
       <Slider
         min={props.min}
