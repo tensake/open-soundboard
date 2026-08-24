@@ -1,5 +1,5 @@
 import { createResource, createSignal, createMemo } from "solid-js";
-import { SoundFile, Tab } from "../bindings";
+import { SoundFile, TabKind, Tab } from "../bindings";
 import { commands } from "../bindings";
 
 export const [autoStart, { mutate: mutateAutoStart, refetch: refetchAutoStart }] =
@@ -62,4 +62,28 @@ export async function onboard() {
 export async function setNormalization(n: boolean) {
   await commands.setNormalize(n);
   mutateNormalization(n);
+}
+
+export async function addTab(
+  name: string,
+  kind: TabKind,
+  path: string | null,
+) {
+  await commands.addTab(name, kind, path);
+  await refetchTabs();
+}
+
+export async function removeTab(id: string) {
+  await commands.removeTab(id);
+  await refetchTabs();
+}
+
+export async function moveTab(id: string, idx: number) {
+  await commands.moveTab(id, idx);
+  await refetchTabs();
+}
+
+export async function editTab(tab: Tab) {
+  await commands.editTab(tab);
+  await refetchTabs();
 }

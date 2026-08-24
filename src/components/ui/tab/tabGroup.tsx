@@ -3,11 +3,14 @@ import { Folder, FolderOpen, X, ListMusic, Heart } from "lucide-solid";
 import AddTabMenu from "./addTabMenu";
 import {
   tabs,
+  removeTab,
+  editTab,
+  moveTab,
   refetchTabs,
   currentTab,
   setCurrentTab,
 } from "../../../lib";
-import { SoundFile, Tab, commands } from "../../../bindings";
+import { SoundFile, Tab } from "../../../bindings";
 
 interface TabGroupProps {
   onAddTab?: () => void;
@@ -68,7 +71,7 @@ export default function TabGroup(props: TabGroupProps) {
               const dragged = draggedTabId();
               if (!dragged || dragged === tab.id) return;
 
-              await commands.moveTab(
+              await moveTab(
                 dragged,
                 tabs()!.findIndex(([t]) => t.id === tab.id),
               );
@@ -105,7 +108,7 @@ export default function TabGroup(props: TabGroupProps) {
                 }}
                 onBlur={async () => {
                   const name = editingName().trim() || tab.name;
-                  await commands.editTab({ ...tab, name });
+                  await editTab({ ...tab, name });
                   setEditingTabId(null);
                 }}
                 ref={(el) => setTimeout(() => el?.focus(), 0)}
@@ -116,7 +119,7 @@ export default function TabGroup(props: TabGroupProps) {
                 class="hover:text-red transition-opacity shrink-0 ml-auto"
                 onClick={async (e) => {
                   e.stopPropagation();
-                  await commands.removeTab(tab.id);
+                  await removeTab(tab.id);
                   await refetchTabs();
 
                   // Clear search query and current tab if no tabs remain

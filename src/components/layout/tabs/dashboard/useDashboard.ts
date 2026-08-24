@@ -12,6 +12,9 @@ import {
   favouriteSounds,
   refetchSoundsConfig,
   soundsConfig,
+  addTab,
+  removeTab,
+  editTab,
   unwrap,
 } from "../../../../lib";
 import { commands, HotKeyEntry, SoundConfig } from "../../../../bindings";
@@ -64,9 +67,9 @@ export function useDashboard() {
     const favTab = allTabs.find(([t]) => t.kind === "favourite");
 
     if (favSounds.length > 0 && !favTab) {
-      await commands.addTab("Favourites", "favourite", null);
+      await addTab("Favourites", "favourite", null);
     } else if (favSounds.length === 0 && favTab) {
-      await commands.removeTab(favTab[0].id);
+      await removeTab(favTab[0].id);
       if (currentTab()?.[0].kind === "favourite") {
         setCurrentTab(allTabs.find(([t]) => t.kind !== "favourite") ?? null);
       }
@@ -96,12 +99,12 @@ export function useDashboard() {
     const selected = await open({ directory: true, multiple: false });
     if (!selected) return;
     const name = selected.split(/[\\/]/).pop() ?? selected;
-    await commands.addTab(name, "directory", selected);
+    await addTab(name, "directory", selected);
   };
 
   const handleAddUserTab = async () => {
     const name = `tab ${(tabs()?.length ?? 0) + 1}`;
-    await commands.addTab(name, "user", null);
+    await addTab(name, "user", null);
   };
 
   const handleCapture = async (binding: string) => {
@@ -158,7 +161,7 @@ export function useDashboard() {
   const handleRemoveFromTab = async (path: string) => {
     const tab = currentTab()?.[0];
     if (!tab || tab.kind !== "user") return;
-    await commands.editTab({ ...tab, sounds: tab.sounds.filter(s => s !== path) });
+    await editTab({ ...tab, sounds: tab.sounds.filter(s => s !== path) });
     const updated = await commands.getTab(tab.id);
     if (updated) setCurrentTab(updated);
   };
@@ -180,7 +183,7 @@ export function useDashboard() {
     const existing = new Set(tab.sounds ?? []);
     const deduped = files.filter(f => !existing.has(f));
     if (!deduped.length) return;
-    await commands.editTab({ ...tab, sounds: [...(tab.sounds ?? []), ...deduped] });
+    await editTab({ ...tab, sounds: [...(tab.sounds ?? []), ...deduped] });
     const updated = await commands.getTab(tab.id);
     if (updated) setCurrentTab(updated);
   };
