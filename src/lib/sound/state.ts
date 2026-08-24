@@ -22,6 +22,8 @@ export const paused = createMemo(() =>
 );
 
 export async function initConfig() {
-  setSoundState({ volume: Math.round(await commands.getVolume() * 100) });
-  setMicState({ volume: Math.round(await commands.getMicVolume() * 100) });
+  // Specta rc.25 incorrectly binds get_volume's f32 return type as number | null,
+  // which is not correct. so ! is used to ignore the null case
+  setSoundState({ volume: Math.round((await commands.getVolume())! * 100) });
+  setMicState({ volume: Math.round((await commands.getMicVolume())! * 100) });
 }

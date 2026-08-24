@@ -309,9 +309,9 @@ pub fn remove_tab(state: tauri::State<AppState>, id: String) {
 
 #[tauri::command]
 #[specta::specta]
-pub fn move_tab(state: tauri::State<AppState>, id: String, idx: usize) {
+pub fn move_tab(state: tauri::State<AppState>, id: String, idx: u32) {
     log::debug!("Moving tab: {id} to index: {idx}");
-    state.cfg.lock().move_tab(id, idx);
+    state.cfg.lock().move_tab(id, idx as usize);
 }
 
 #[tauri::command]
