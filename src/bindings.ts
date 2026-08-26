@@ -100,9 +100,9 @@ export type HotKeyEntry = {
 };
 
 /**  Hotkey kind */
-export type HotKeyKind =
+export type HotKeyKind = 
 /**  For playing a sound */
-"Sound" |
+"Sound" | 
 /**  For controling playback and microphone (global only) */
 "Control";
 
@@ -170,3 +170,4 @@ function makeEvent<T>(name: string, serialize?: (payload: T) => unknown, deseria
 
     return Object.assign(fn, base);
 }
+

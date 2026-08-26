@@ -392,8 +392,8 @@ pub async fn unregister_hotkey(id: String, state: State<'_, AppState>) -> Result
 
 #[tauri::command]
 #[specta::specta]
-pub fn mark_as_ready() -> Result<(), String> {
-    // Will be used later
+pub fn mark_as_ready(state: State<AppState>) -> Result<(), String> {
+    *state.frontend_ready.lock() = true;
     Ok(())
 }
 

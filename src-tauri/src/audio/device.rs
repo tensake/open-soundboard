@@ -8,7 +8,8 @@ use crate::types;
 use cpal::traits::{DeviceTrait, HostTrait};
 use parking_lot::Mutex;
 use std::sync::Arc;
-use tauri::{Emitter, Manager};
+use tauri::Manager;
+use tauri_specta::Event;
 
 /// Get the default microphone device.
 pub fn get_input_device() -> Result<cpal::Device, String> {
@@ -26,6 +27,22 @@ pub fn get_output_device() -> Result<cpal::Device, String> {
 
 /// Poll for default device changes and update the app state.
 pub fn listen_devices(app: tauri::AppHandle) {
+    // Wait for frontend to be ready
+    log::debug!("Waiting for frontend to be ready...");
+    loop {
+        let state = match app.try_state::<AppState>() {
+            Some(s) => s,
+            None => {
+                std::thread::sleep(std::time::Duration::from_millis(100));
+                continue;
+            }
+        };
+        if *state.frontend_ready.lock() {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+
     log::info!("Starting to listen to device changes...");
     let mut shown_alerts: std::collections::HashSet<String> = std::collections::HashSet::new();
     loop {
@@ -44,7 +61,7 @@ pub fn listen_devices(app: tauri::AppHandle) {
                 Ok(dev) => {
                     // Dismiss the alert if it was previously shown
                     if shown_alerts.remove(&alert_key) {
-                        let _ = app.emit("alert-dismiss", &alert_key);
+                        let _ = types::AlertDismissEvent(alert_key).emit(&app);
                     }
 
                     Some(Arc::new(dev))
@@ -52,14 +69,12 @@ pub fn listen_devices(app: tauri::AppHandle) {
                 Err(e) => {
                     log::warn!("Failed to get {label} device: {e}");
                     if shown_alerts.insert(alert_key.clone()) {
-                        let _ = app.emit(
-                            "alert",
-                            types::Alert {
-                                kind: types::AlertKind::Error,
-                                title: alert_key,
-                                message: e,
-                            },
-                        );
+                        let _ = types::AlertEvent(types::Alert {
+                            kind: types::AlertKind::Error,
+                            title: alert_key,
+                            message: e,
+                        })
+                        .emit(&app);
                     }
                     None
                 }
