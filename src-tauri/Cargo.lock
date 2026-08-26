@@ -3203,7 +3203,7 @@ dependencies = [
 
 [[package]]
 name = "open-soundboard"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "blake3",
  "cpal 0.18.2",
