@@ -1,4 +1,5 @@
 use parking_lot::Mutex;
+#[allow(unused)]
 use specta_typescript::Typescript;
 use std::collections::HashMap;
 use std::sync::Arc;
