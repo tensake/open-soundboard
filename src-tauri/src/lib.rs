@@ -1,4 +1,5 @@
 use parking_lot::Mutex;
+#[allow(unused)]
 use specta_typescript::Typescript;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -21,6 +22,7 @@ struct AppState {
     playing_sounds: Arc<Mutex<HashMap<u32, audio::PlaybackHandle>>>,
     forwarding_handles: Arc<Mutex<HashMap<u32, audio::forwarding::ForwardingHandle>>>,
     next_id: AtomicU32,
+    frontend_ready: Arc<Mutex<bool>>,
     cfg: Mutex<config::Config>,
     hotkey_tx: mpsc::Sender<config::hotkey::HotKeyCmd>,
     cache: cache::CacheDb,
@@ -270,6 +272,7 @@ pub fn run() {
                 playing_sounds: playing_sounds.clone(),
                 forwarding_handles,
                 next_id: AtomicU32::new(0),
+                frontend_ready: Arc::new(Mutex::new(false)),
                 cfg: Mutex::new(cfg),
                 hotkey_tx,
                 cache,

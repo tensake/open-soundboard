@@ -77,7 +77,7 @@ export default function SoundItem(props: SoundItemProps) {
             hovered() ? "opacity-0 translate-x-4 pointer-events-none" : "opacity-100 translate-x-0"
           }`}
         >
-          <span class="w-32 text-right">{readableDate(props.sound.datetime)}</span>
+          <span class="w-38 text-right">{readableDate(props.sound.datetime)}</span>
           <span class="w-16 text-right">{readableBytes(props.sound.size)}</span>
           <span class="w-8 text-right">{readableMilisecs(props.sound.duration)}</span>
         </div>

@@ -392,8 +392,8 @@ pub async fn unregister_hotkey(id: String, state: State<'_, AppState>) -> Result
 
 #[tauri::command]
 #[specta::specta]
-pub fn mark_as_ready() -> Result<(), String> {
-    // Will be used later
+pub fn mark_as_ready(state: State<AppState>) -> Result<(), String> {
+    *state.frontend_ready.lock() = true;
     Ok(())
 }
 
@@ -406,7 +406,7 @@ pub fn get_volume(state: State<AppState>) -> f32 {
 #[tauri::command]
 #[specta::specta]
 pub fn get_mic_volume(state: State<AppState>) -> f32 {
-    state.mic_handle.lock().as_ref().map_or(0.0, |h| h.volume())
+    state.cfg.lock().mic_volume
 }
 
 #[tauri::command]

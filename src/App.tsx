@@ -73,9 +73,6 @@ export default function App() {
       }
     });
 
-    // Mark frontend as ready
-    await commands.markAsReady();
-
     // Initialize from config
     await initConfig();
 
@@ -83,6 +80,9 @@ export default function App() {
 
     // Check for update
     await checkForUpdate();
+
+    // Mark frontend as ready
+    await commands.markAsReady();
   });
 
   onCleanup(stopProgressPolling);

@@ -30,6 +30,7 @@ impl MicrophoneHandle {
     }
 
     /// Get the current volume level for the microphone.
+    #[allow(unused)]
     pub fn volume(&self) -> f32 {
         f32::from_bits(self.volume.load(Ordering::Relaxed))
     }
