@@ -19,9 +19,9 @@
 
 ## Preview
 
-| ![Dashboard](https://10ku.net/osb/demo/open-soundboard_dashboard.jpg) | ![App Forwarding](https://10ku.net/osb/demo/open-soundboard_app-forwarding.jpg) |
+| ![Dashboard](https://10ku.net/osb/demo/open-soundboard_dashboard.png) | ![Audio](https://10ku.net/osb/demo/open-soundboard_audio.png) |
 | --- | --- |
-| ![Settings](https://10ku.net/osb/demo/open-soundboard_settings-sound.jpg) | ![Hotkeys](https://10ku.net/osb/demo/open-soundboard_settings-hotkeys.jpg) |
+| ![Settings](https://10ku.net/osb/demo/open-soundboard_settings.png) | ![Hotkeys](https://10ku.net/osb/demo/open-soundboard_hotkeys.png) |
 
 ## How to install
 
@@ -58,6 +58,7 @@ PipeWire (recommended) or PulseAudio.
 
 - [bun](https://bun.sh/) (or [npm](https://nodejs.org/en/download))
 - [cargo](https://rustup.rs/)
+- [tauri requirements](https://v2.tauri.app/start/prerequisites/)
 
 ### Steps to build
 
