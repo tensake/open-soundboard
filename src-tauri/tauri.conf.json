@@ -29,7 +29,7 @@
     "copyright": "Copyright © 2025 tensake",
     "homepage": "https://github.com/tensake/open-soundboard",
     "license": "GPL-3.0",
-    "licenseFile": "LICENSE",
+    "licenseFile": "../LICENSE",
     "shortDescription": "A fast, cross-platform and lightweight soundboard",
     "createUpdaterArtifacts": true,
     "targets": [
