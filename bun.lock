@@ -5,7 +5,7 @@
     "": {
       "name": "open-soundboard",
       "dependencies": {
-        "@lucide/lab": "^0.2.0",
+        "@lucide/lab": "^0.7.0",
         "@tauri-apps/api": "^2.11.1",
         "@tauri-apps/plugin-autostart": "~2.5.1",
         "@tauri-apps/plugin-cli": "~2.4.1",
@@ -85,7 +85,7 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
-    "@lucide/lab": ["@lucide/lab@0.2.0", "", {}, "sha512-5zXVyp+HizDgWjGX8v3yNEijo7yJwoHS5Icj9qeqBCIHPWxVNGofbEXtnHEJ1VZ71Uhho32AX6xpHVWtWbPO2g=="],
+    "@lucide/lab": ["@lucide/lab@0.7.0", "", {}, "sha512-Cy4z/LUtre/XnnWTIRfgAxSB2+OGF4oqZczgYr05iRa7ecNtDKVDmTbPc4Ak8LkJYj7jGGN+AfkR9MYgXmdRRA=="],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.6", "", { "dependencies": { "@tybys/wasm-util": "^0.10.3" }, "peerDependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1" } }, "sha512-ZLv/JdUfkvOy9eCnnBaGfiO+XimbjebAeO+MRQqD/B+FR1tnRN0tpKSJHRbE8sFfS6aqsXZ67TQjfwfsxULVbg=="],
 
