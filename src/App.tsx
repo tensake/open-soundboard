@@ -28,6 +28,8 @@ import {
   initConfig,
   onboarded,
   unwrapOrThrow,
+  refetchCustomCss,
+  noctaliaInstalled,
 } from "./lib";
 import Dashboard from "./components/layout/tabs/dashboard/dashboard";
 import Audio from "./components/layout/tabs/audio";
@@ -73,6 +75,9 @@ export default function App() {
       }
     });
 
+    // Listen to reload events
+    await listen("reload-css", () => refetchCustomCss());
+
     // Initialize from config
     await initConfig();
 
@@ -80,6 +85,11 @@ export default function App() {
 
     // Check for update
     await checkForUpdate();
+
+    // Install noctalia theme
+    if (noctaliaInstalled() == true) {
+      commands.installNoctaliaTemplate()
+    }
 
     // Mark frontend as ready
     await commands.markAsReady();

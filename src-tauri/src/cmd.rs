@@ -133,7 +133,7 @@ pub fn seek_sound(id: u32, secs: f32, state: State<AppState>) {
 #[tauri::command]
 #[specta::specta]
 pub fn set_general_volume(volume: f32, state: State<AppState>) {
-    for (_, h) in state.playing_sounds.lock().iter() {
+    for h in state.playing_sounds.lock().values() {
         h.set_volume(volume);
     }
     state.cfg.lock().volume = volume;
@@ -335,6 +335,19 @@ pub fn save_custom_css(state: State<AppState>, css: String) -> Result<(), String
 
 #[tauri::command]
 #[specta::specta]
+pub fn install_noctalia_template(app: tauri::AppHandle) -> Result<String, String> {
+    let path = app
+        .path()
+        .config_dir()
+        .map_err(|e| e.to_string())?
+        .join("noctalia/templates/open-soundboard.css");
+    log::debug!("Writing noctalia theme to {path:#?}");
+    config::Config::install_noctalia_theme(&path)?;
+    Ok(path.display().to_string())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn register_hotkey(
     hk: types::HotKeyEntry,
     state: State<'_, AppState>,
@@ -424,6 +437,19 @@ pub fn is_onboarded(state: State<AppState>) -> bool {
 
 #[tauri::command]
 #[specta::specta]
+pub fn is_noctalia_installed(app: tauri::AppHandle) -> bool {
+    if !cfg!(target_os = "linux") {
+        return false;
+    }
+
+    app.path()
+        .config_dir()
+        .map(|d| d.join("noctalia").is_dir())
+        .unwrap_or(false)
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn get_normalize(state: State<AppState>) -> bool {
     state.cfg.lock().normalize
 }
@@ -434,7 +460,7 @@ pub fn set_normalize(state: State<AppState>, normalize: bool) -> Result<(), Stri
     log::debug!("Setting normalization to {normalize}");
     state.cfg.lock().normalize = normalize;
 
-    for (_, h) in state.playing_sounds.lock().iter() {
+    for h in state.playing_sounds.lock().values() {
         h.set_normalize(normalize);
     }
 

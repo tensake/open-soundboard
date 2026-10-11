@@ -27,6 +27,7 @@ import SidebarTab from "../../ui/settings/sidebarTab";
 import { Transition } from "solid-transition-group";
 import { Button } from "../../ui/button";
 import { Textarea } from "../../ui/textarea";
+import NoctaliaHelp from "../../ui/settings/noctaliaHelp";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = createSignal("general");
@@ -147,6 +148,8 @@ export default function Settings() {
                       applyCustomCss(val);
                     }}
                   />
+
+                  <NoctaliaHelp />
                 </div>
               </div>
             </Match>

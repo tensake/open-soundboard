@@ -32,6 +32,8 @@ use std::{
     time::Duration,
 };
 
+type StreamMap = Rc<RefCell<HashMap<u32, (StreamRc, Box<dyn Any>)>>>;
+
 /// Lists all audio applications that are currently playing.
 ///
 /// Returns a vector of [`AudioApp`] structs with object.serial as id.
@@ -51,45 +53,42 @@ pub fn list_applications() -> Result<Vec<AudioApp>, Box<dyn std::error::Error>> 
             let apps = apps.clone();
             move |global: &GlobalObject<_>| {
                 // Get clients for having PIDs
-                if global.type_ == ObjectType::Client {
-                    if let Some(props) = global.props {
-                        if let Some(pid) = props
-                            .get("pipewire.sec.pid")
-                            .and_then(|s| s.parse::<u32>().ok())
-                        {
-                            clients.borrow_mut().insert(global.id, pid);
-                        }
-                    }
+                if global.type_ == ObjectType::Client
+                    && let Some(props) = global.props
+                    && let Some(pid) = props
+                        .get("pipewire.sec.pid")
+                        .and_then(|s| s.parse::<u32>().ok())
+                {
+                    clients.borrow_mut().insert(global.id, pid);
                 }
 
                 // Get PIDs for currently playing nodes
-                if global.type_ == ObjectType::Node {
-                    if let Some(props) = global.props {
-                        if props.get("media.class") == Some("Stream/Output/Audio") {
-                            let pid = props
-                                .get("client.id")
-                                .and_then(|s| s.parse::<u32>().ok())
-                                .and_then(|id| clients.borrow().get(&id).copied());
+                if global.type_ == ObjectType::Node
+                    && let Some(props) = global.props
+                    && props.get("media.class") == Some("Stream/Output/Audio")
+                {
+                    let pid = props
+                        .get("client.id")
+                        .and_then(|s| s.parse::<u32>().ok())
+                        .and_then(|id| clients.borrow().get(&id).copied());
 
-                            if let Some(pid) = pid
-                                && pid != own_pid
-                            {
-                                let name = props
-                                    .get("media.name")
-                                    .or_else(|| props.get("node.description"))
-                                    .or_else(|| props.get("node.name"))
-                                    .unwrap_or("Unnamed Stream");
+                    if let Some(pid) = pid
+                        && pid != own_pid
+                    {
+                        let name = props
+                            .get("media.name")
+                            .or_else(|| props.get("node.description"))
+                            .or_else(|| props.get("node.name"))
+                            .unwrap_or("Unnamed Stream");
 
-                                apps.borrow_mut().insert(
-                                    pid as u64,
-                                    AudioApp {
-                                        id: pid,
-                                        name: name.to_string(),
-                                        icon: None,
-                                    },
-                                );
-                            }
-                        }
+                        apps.borrow_mut().insert(
+                            pid as u64,
+                            AudioApp {
+                                id: pid,
+                                name: name.to_string(),
+                                icon: None,
+                            },
+                        );
                     }
                 }
             }
@@ -204,8 +203,7 @@ fn capture_audio_thread(
 
     let clients: Rc<RefCell<HashMap<u32, u32>>> = Rc::new(RefCell::new(HashMap::new()));
     let nodes: Rc<RefCell<HashSet<u32>>> = Rc::new(RefCell::new(HashSet::new()));
-    let streams: Rc<RefCell<HashMap<u32, (StreamRc, Box<dyn Any>)>>> =
-        Rc::new(RefCell::new(HashMap::new()));
+    let streams: StreamMap = Rc::new(RefCell::new(HashMap::new()));
 
     let pod_bytes = create_pod(rate, channels);
 
@@ -339,8 +337,10 @@ fn connect_stream(
             let end = (chunk_offset + chunk_size).min(bytes.len());
             let slice = &bytes[chunk_offset..end];
             let samples: Vec<f32> = slice
-                .chunks_exact(4)
-                .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|b| f32::from_le_bytes(*b))
                 .collect();
 
             // Finally, send audio samples to node_tx

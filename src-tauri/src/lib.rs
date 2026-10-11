@@ -52,10 +52,10 @@ fn show_window(app: &tauri::AppHandle, label: &str) {
 /// Check if the system uses tiling window manager.
 fn is_tiling_wm() -> bool {
     let wms = ["sway", "i3", "hyprland"];
-    if let Ok(d) = std::env::var("XDG_CURRENT_DESKTOP") {
-        if wms.iter().any(|wm| d.to_lowercase().contains(wm)) {
-            return true;
-        }
+    if let Ok(d) = std::env::var("XDG_CURRENT_DESKTOP")
+        && wms.iter().any(|wm| d.to_lowercase().contains(wm))
+    {
+        return true;
     }
 
     // Fallback for hyprland
@@ -87,10 +87,10 @@ fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {
-            if let tauri::tray::TrayIconEvent::Click { button, .. } = event {
-                if button == tauri::tray::MouseButton::Left {
-                    show_window(tray.app_handle(), "main");
-                }
+            if let tauri::tray::TrayIconEvent::Click { button, .. } = event
+                && button == tauri::tray::MouseButton::Left
+            {
+                show_window(tray.app_handle(), "main");
             }
         })
         .build(app)?;
@@ -152,6 +152,8 @@ pub fn run() {
             cmd::mark_as_ready,
             cmd::onboard,
             cmd::is_onboarded,
+            // Flags
+            cmd::is_noctalia_installed,
             // Config
             cmd::get_tabs,
             cmd::get_tab,
@@ -161,6 +163,7 @@ pub fn run() {
             cmd::move_tab,
             cmd::get_custom_css,
             cmd::save_custom_css,
+            cmd::install_noctalia_template,
             cmd::set_autostart,
             cmd::get_autostart,
             cmd::get_normalize,
@@ -201,8 +204,12 @@ pub fn run() {
                 ])
                 .build(),
         )
-        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
-            show_window(app, "main");
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            if argv.iter().any(|a| a == "--reload-css") {
+                let _ = app.emit("reload-css", ());
+            } else {
+                show_window(app, "main");
+            }
         }))
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -211,6 +218,11 @@ pub fn run() {
             Some(vec!["--hidden"]),
         ))
         .setup(move |app| {
+            // Handle app not running
+            if std::env::args().any(|a| a == "--reload-css") {
+                std::process::exit(0);
+            }
+
             log::info!(
                 "Running Open Soundboard v{v}. {args:?}",
                 v = env!("CARGO_PKG_VERSION"),
@@ -306,23 +318,17 @@ pub fn run() {
             // https://v2.tauri.app/plugin/global-shortcut/
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(move |app, shortcut, event| {
-                    if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
-                        if let Some(state) = app.try_state::<AppState>() {
-                            if let Some(hk) = state
-                                .cfg
-                                .lock()
-                                .get_hotkeys()
-                                .iter()
-                                .find(|h| h.binding == shortcut.to_string())
-                            {
-                                log::info!(
-                                    "Hotkey {0} pressed! Context: {1}",
-                                    hk.binding,
-                                    hk.context
-                                );
-                                let _ = app.emit("hotkey-pressed", hk.clone());
-                            }
-                        }
+                    if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed
+                        && let Some(state) = app.try_state::<AppState>()
+                        && let Some(hk) = state
+                            .cfg
+                            .lock()
+                            .get_hotkeys()
+                            .iter()
+                            .find(|h| h.binding == shortcut.to_string())
+                    {
+                        log::info!("Hotkey {0} pressed! Context: {1}", hk.binding, hk.context);
+                        let _ = app.emit("hotkey-pressed", hk.clone());
                     }
                 })
                 .build(),

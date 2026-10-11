@@ -6,13 +6,13 @@ use std::collections::HashMap;
 
 impl config::Config {
     /// Set the sound configuration for the given key.
-    pub fn set_sound_config(&mut self, key: &String, config: SoundConfig) -> Result<(), String> {
-        self.sounds.insert(key.clone(), config);
+    pub fn set_sound_config(&mut self, key: &str, config: SoundConfig) -> Result<(), String> {
+        self.sounds.insert(key.to_owned(), config);
         Ok(())
     }
 
     /// Get sound config for the given key.
-    pub fn get_sound_config(&self, key: &String) -> Option<SoundConfig> {
+    pub fn get_sound_config(&self, key: &str) -> Option<SoundConfig> {
         self.sounds.get(key).cloned()
     }
 

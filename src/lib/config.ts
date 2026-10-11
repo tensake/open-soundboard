@@ -2,6 +2,8 @@ import { createResource, createSignal, createMemo } from "solid-js";
 import { SoundFile, TabKind, Tab } from "../bindings";
 import { commands } from "../bindings";
 
+// Flags
+export const [noctaliaInstalled] = createResource(() => commands.isNoctaliaInstalled());
 export const [autoStart, { mutate: mutateAutoStart, refetch: refetchAutoStart }] =
   createResource(() => commands.getAutostart());
 export const [onboarded, { mutate: mutateOnboarded, refetch: refetchOnboarded }] =
