@@ -152,6 +152,8 @@ pub fn run() {
             cmd::mark_as_ready,
             cmd::onboard,
             cmd::is_onboarded,
+            // Flags
+            cmd::is_noctalia_installed,
             // Config
             cmd::get_tabs,
             cmd::get_tab,
@@ -161,6 +163,7 @@ pub fn run() {
             cmd::move_tab,
             cmd::get_custom_css,
             cmd::save_custom_css,
+            cmd::install_noctalia_template,
             cmd::set_autostart,
             cmd::get_autostart,
             cmd::get_normalize,
@@ -201,8 +204,12 @@ pub fn run() {
                 ])
                 .build(),
         )
-        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
-            show_window(app, "main");
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            if argv.iter().any(|a| a == "--reload-css") {
+                let _ = app.emit("reload-css", ());
+            } else {
+                show_window(app, "main");
+            }
         }))
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -211,6 +218,11 @@ pub fn run() {
             Some(vec!["--hidden"]),
         ))
         .setup(move |app| {
+            // Handle app not running
+            if std::env::args().any(|a| a == "--reload-css") {
+                std::process::exit(0);
+            }
+
             log::info!(
                 "Running Open Soundboard v{v}. {args:?}",
                 v = env!("CARGO_PKG_VERSION"),

@@ -335,6 +335,19 @@ pub fn save_custom_css(state: State<AppState>, css: String) -> Result<(), String
 
 #[tauri::command]
 #[specta::specta]
+pub fn install_noctalia_template(app: tauri::AppHandle) -> Result<String, String> {
+    let path = app
+        .path()
+        .config_dir()
+        .map_err(|e| e.to_string())?
+        .join("noctalia/templates/open-soundboard.css");
+    log::debug!("Writing noctalia theme to {path:#?}");
+    config::Config::install_noctalia_theme(&path)?;
+    Ok(path.display().to_string())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn register_hotkey(
     hk: types::HotKeyEntry,
     state: State<'_, AppState>,
@@ -420,6 +433,20 @@ pub fn onboard(state: State<AppState>) -> Result<(), String> {
 #[specta::specta]
 pub fn is_onboarded(state: State<AppState>) -> bool {
     state.cfg.lock().onboarded
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn is_noctalia_installed(app: tauri::AppHandle) -> bool {
+    if !cfg!(target_os = "linux") {
+        return false;
+    }
+
+    return app
+        .path()
+        .config_dir()
+        .map(|d| d.join("noctalia").is_dir())
+        .unwrap_or(false);
 }
 
 #[tauri::command]
