@@ -133,7 +133,7 @@ pub fn seek_sound(id: u32, secs: f32, state: State<AppState>) {
 #[tauri::command]
 #[specta::specta]
 pub fn set_general_volume(volume: f32, state: State<AppState>) {
-    for (_, h) in state.playing_sounds.lock().iter() {
+    for h in state.playing_sounds.lock().values() {
         h.set_volume(volume);
     }
     state.cfg.lock().volume = volume;
@@ -442,11 +442,10 @@ pub fn is_noctalia_installed(app: tauri::AppHandle) -> bool {
         return false;
     }
 
-    return app
-        .path()
+    app.path()
         .config_dir()
         .map(|d| d.join("noctalia").is_dir())
-        .unwrap_or(false);
+        .unwrap_or(false)
 }
 
 #[tauri::command]
@@ -461,7 +460,7 @@ pub fn set_normalize(state: State<AppState>, normalize: bool) -> Result<(), Stri
     log::debug!("Setting normalization to {normalize}");
     state.cfg.lock().normalize = normalize;
 
-    for (_, h) in state.playing_sounds.lock().iter() {
+    for h in state.playing_sounds.lock().values() {
         h.set_normalize(normalize);
     }
 

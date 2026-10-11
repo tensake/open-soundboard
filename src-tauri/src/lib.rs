@@ -52,10 +52,10 @@ fn show_window(app: &tauri::AppHandle, label: &str) {
 /// Check if the system uses tiling window manager.
 fn is_tiling_wm() -> bool {
     let wms = ["sway", "i3", "hyprland"];
-    if let Ok(d) = std::env::var("XDG_CURRENT_DESKTOP") {
-        if wms.iter().any(|wm| d.to_lowercase().contains(wm)) {
-            return true;
-        }
+    if let Ok(d) = std::env::var("XDG_CURRENT_DESKTOP")
+        && wms.iter().any(|wm| d.to_lowercase().contains(wm))
+    {
+        return true;
     }
 
     // Fallback for hyprland
@@ -87,10 +87,10 @@ fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {
-            if let tauri::tray::TrayIconEvent::Click { button, .. } = event {
-                if button == tauri::tray::MouseButton::Left {
-                    show_window(tray.app_handle(), "main");
-                }
+            if let tauri::tray::TrayIconEvent::Click { button, .. } = event
+                && button == tauri::tray::MouseButton::Left
+            {
+                show_window(tray.app_handle(), "main");
             }
         })
         .build(app)?;
@@ -318,23 +318,17 @@ pub fn run() {
             // https://v2.tauri.app/plugin/global-shortcut/
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(move |app, shortcut, event| {
-                    if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
-                        if let Some(state) = app.try_state::<AppState>() {
-                            if let Some(hk) = state
-                                .cfg
-                                .lock()
-                                .get_hotkeys()
-                                .iter()
-                                .find(|h| h.binding == shortcut.to_string())
-                            {
-                                log::info!(
-                                    "Hotkey {0} pressed! Context: {1}",
-                                    hk.binding,
-                                    hk.context
-                                );
-                                let _ = app.emit("hotkey-pressed", hk.clone());
-                            }
-                        }
+                    if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed
+                        && let Some(state) = app.try_state::<AppState>()
+                        && let Some(hk) = state
+                            .cfg
+                            .lock()
+                            .get_hotkeys()
+                            .iter()
+                            .find(|h| h.binding == shortcut.to_string())
+                    {
+                        log::info!("Hotkey {0} pressed! Context: {1}", hk.binding, hk.context);
+                        let _ = app.emit("hotkey-pressed", hk.clone());
                     }
                 })
                 .build(),

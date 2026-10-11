@@ -126,7 +126,12 @@ fn microphone_loop(
 
             // Channel remix to match cable
             if input_channels == 2 && cable_channels == 1 {
-                chunk = chunk.chunks_exact(2).map(|c| (c[0] + c[1]) * 0.5).collect();
+                chunk = chunk
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
+                    .map(|c| (c[0] + c[1]) * 0.5)
+                    .collect();
             } else if input_channels == 1 && cable_channels == 2 {
                 chunk = chunk.iter().flat_map(|&s| [s, s]).collect();
             }

@@ -44,11 +44,11 @@ impl Config {
 
         // Read config file
         let file = path.join(DATA_FILE);
-        if let Ok(s) = fs::read_to_string(&file) {
-            if let Ok(mut cfg) = serde_json::from_str::<Config>(&s) {
-                cfg.path = path;
-                return cfg;
-            }
+        if let Ok(s) = fs::read_to_string(&file)
+            && let Ok(mut cfg) = serde_json::from_str::<Config>(&s)
+        {
+            cfg.path = path;
+            return cfg;
         }
 
         Config {

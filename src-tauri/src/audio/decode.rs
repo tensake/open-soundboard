@@ -126,14 +126,18 @@ pub fn decode_loop(
         let mut bytes = vec![0u8; decoded.frames() * decoded.spec().channels().count() * 4];
         decoded.copy_bytes_interleaved_as::<f32, _>(&mut bytes);
         let mut chunk: Vec<f32> = bytes
-            .chunks_exact(4)
-            .map(|b| f32::from_le_bytes(b.try_into().unwrap()))
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|b| f32::from_le_bytes(*b))
             .collect();
 
         // Downmix for cable if needed
         if audio_params.channels == 2 && cfg.cable_channels == 1 {
             chunk = chunk
-                .chunks_exact(2)
+                .as_chunks::<2>()
+                .0
+                .iter()
                 .map(|c| (c[0] + c[1]) * 0.707)
                 .collect();
         }
