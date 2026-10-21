@@ -45,7 +45,7 @@ rayon = "1.12.0"
 mp3-duration = "0.1.10"
 ringbuf = "0.5"
 symphonia = { version = "0.6", features = ["mp3", "wav", "flac", "vorbis", "ogg", "isomp4", "aac", "pcm"] }
-parking_lot = "0.12.5"
+parking_lot = "0.13.0"
 tauri-plugin-dialog = "2"
 uuid = { version = "1.23.3", features = ["v4", "serde"] }
 pitch_shift = "2.1.0"
