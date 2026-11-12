@@ -5,7 +5,7 @@
     "": {
       "name": "open-soundboard",
       "dependencies": {
-        "@lucide/lab": "^0.12.0",
+        "@lucide/lab": "^0.13.0",
         "@tauri-apps/api": "^2.12.2",
         "@tauri-apps/plugin-autostart": "~2.7.0",
         "@tauri-apps/plugin-cli": "~2.5.0",
@@ -79,7 +79,7 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
-    "@lucide/lab": ["@lucide/lab@0.12.0", "", {}, "sha512-x6gNsmSppU1ZUuT5kyYAAUeEC8IhqIAO917/sNzEG7QdIort7x/GJ6d0TP5YfSDczTdmK2OSacPAlvmpg7D2DQ=="],
+    "@lucide/lab": ["@lucide/lab@0.13.0", "", {}, "sha512-M2xhsonyGKrIYYnZE3U97P756iuhxp6H2XRNT+X6y+z1lFSnsEMs/fwuCn2F3MQUGwwB4T9Uf716e/DTHhQkxQ=="],
 
     "@oxc-project/types": ["@oxc-project/types@0.153.0", "", {}, "sha512-jSNrRIyvPVLL5E1z/tS5zLAprosGz/FuI1PWwEOz59j3E4TTTzSpqKb/RDGqJhhW0QHYISGXxq582wGx6T11Tw=="],
 
