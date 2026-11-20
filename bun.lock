@@ -18,7 +18,7 @@
         "@tauri-apps/plugin-updater": "~2.14.0",
         "ldrs": "^1.1.9",
         "lucide-solid": "^1.54.0",
-        "solid-icons": "^1.2.0",
+        "solid-icons": "^2.0.0",
         "solid-js": "^1.9.17",
         "solid-transition-group": "^0.3.0",
       },
@@ -345,7 +345,7 @@
 
     "seroval-plugins": ["seroval-plugins@1.6.9", "", { "peerDependencies": { "seroval": "^1.0" } }, "sha512-kiDK/Tb8IWZ61WEU8pA2PDmAuw37gKph9Y77OZlD56mg0Y2g0Bg7gZ1HeHhs5d40w+nRoUq/wj08V26ilbez9g=="],
 
-    "solid-icons": ["solid-icons@1.2.0", "", { "peerDependencies": { "solid-js": "*" } }, "sha512-yjQxWQMi9l19P5Af9vjsvalTMDFPDL4XD6etrUdNxNVhFp1bMYF0SFwUa5VYDfJ7u0SF3Qkz/F7BZxqcLUwklw=="],
+    "solid-icons": ["solid-icons@2.0.0", "", { "peerDependencies": { "solid-js": ">=1.7.0 || ^2.0.0" } }, "sha512-18EVoC5hM3aC9FJ/5H+3DTymRNiRjpMYbbdgok4G+L3/aWTyWZ4IoKcOfF3Um4v0I0CdnlI2t4lP8hqU6ENS+Q=="],
 
     "solid-js": ["solid-js@1.9.17", "", { "dependencies": { "csstype": "^3.1.0", "seroval": "~1.6.8", "seroval-plugins": "~1.6.8" } }, "sha512-4GAmLOWPfNV8H9Jfn2LSFTpNEG6jiOKPiwd5lnLGQtehHaX6l3TOLzJqQ7mqwB/3k1Yy3zyumFVopmc/tm34ow=="],
 
