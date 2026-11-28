@@ -31,7 +31,7 @@
     "@tauri-apps/plugin-updater": "~2.14.0",
     "ldrs": "^1.1.9",
     "lucide-solid": "^1.54.0",
-    "solid-icons": "^1.2.0",
+    "solid-icons": "^2.0.0",
     "solid-js": "^1.9.17",
     "solid-transition-group": "^0.3.0"
   },
